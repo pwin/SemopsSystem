@@ -47,7 +47,9 @@ function returns its arguments as they came.
 `crates/holos-engine/tests/date_arithmetic.rs` adds the thirty pairs in both orders through the
 whole engine, optimizer included, and compares each sum with `oxsdatatypes` computing it directly;
 dates and times in both orders; and checks that `duration - dateTime` stays unbound. Against the
-registry crate the pair matrix and the known sums fail. The package itself has no tests.
+registry crate the pair matrix and the known sums fail. The package's own tests, 14 unit tests
+and 18 doctests in `src/`, run in this workspace, where the copy is a member, and pass with the
+change.
 
 ## Updating
 
