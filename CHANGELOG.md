@@ -3,7 +3,7 @@
 Notable changes per release. Numbers quoted here are measured; the benchmarks that produce
 them are in `BENCHMARKS.md` and are runnable.
 
-## Unreleased
+## 0.26.4 — 2026-11-18
 
 ### A duration adds to a date, time or dateTime for every value
 
