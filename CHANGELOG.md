@@ -3,6 +3,35 @@
 Notable changes per release. Numbers quoted here are measured; the benchmarks that produce
 them are in `BENCHMARKS.md` and are runnable.
 
+## Unreleased
+
+### A duration adds to a date, time or dateTime for every value
+
+0.26.3 turned on `sep-0002`, and with it the sum of a duration and a dateTime was unbound for
+some values and not others, silently. Of thirty pairs, six dateTimes by five durations, the
+native build bound 7 and the WebAssembly build 24; in the browser every
+`+ "P2Y"^^xsd:yearMonthDuration` was unbound.
+
+Two upstream behaviours met. `sparopt`'s optimizer rebuilds every `+` through `order_pair`,
+which orders the two operands by hash, as if `+` commuted for every type. `spareval` 0.2.9 adds
+a duration to a date, time or dateTime only with the temporal value first. So whenever the
+duration hashed lower, `?d + ?duration` reached the evaluator as `?duration + ?d`, found no case
+and left the variable unbound. A hash of the same value differs between 64-bit and 32-bit
+builds, which is why the native and browser builds failed on different values.
+
+XPath's operator mapping defines `+` with the duration on either side. `vendor/spareval` is
+`spareval` 0.2.9 with that one change: `+` puts the temporal operand first before matching, so
+both orders, and so both outcomes of the hash, give the sum. Subtraction does not commute and
+is unchanged: `duration - dateTime` is still an error. `[patch.crates-io]` puts the copy under
+every crate here, the vendored SHACL engine included, as it does `oxsdatatypes`.
+
+`tests/date_arithmetic.rs` in `holos-engine` adds the thirty pairs in both orders through the
+whole engine, optimizer included, and compares each sum with `oxsdatatypes` computing it
+directly; it fails on 0.26.3. `SPARQL-SURFACE.md`'s `date + duration` probe tried one pair,
+which passed by luck of the hash; it now tries several in both orders, `P2Y` and `P1M` on a
+dateTime among them. The 0.26.3 entry below said a duration adds to a date or a dateTime, and
+now says that was true for some values only.
+
 ## 0.26.3 — 2026-11-18
 
 ### Dates, times and durations compare by value
@@ -31,7 +60,7 @@ With it come:
   `xsd:yearMonthDuration` and `xsd:dayTimeDuration`, following XPath's operators;
 - arithmetic between them: `"2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date` is
   `"P730D"^^xsd:dayTimeDuration`, two `xsd:dateTime`s subtract to a duration, and a duration
-  adds to a date or a dateTime;
+  adds to a date or a dateTime, though in this release only for some values (see 0.26.4);
 - `ADJUST`, to move a date or time into a timezone.
 
 SEP-0002 is the community proposal for SPARQL 1.2 that defines exactly these operators.

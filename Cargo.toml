@@ -17,6 +17,7 @@ members = [
     "crates/holos-wasm",
     "crates/holos-bench",
     "vendor/oxsdatatypes",
+    "vendor/spareval",
 ]
 
 [workspace.package]
@@ -102,6 +103,11 @@ proptest = "1"
 # every crate here resolve it through this patch: see vendor/oxsdatatypes/PROVENANCE.md.
 [patch.crates-io]
 oxsdatatypes = { path = "vendor/oxsdatatypes" }
+# spareval 0.2.9 with `+` accepting a duration on either side of a date, time or dateTime,
+# as XPath's operator mapping does. Upstream takes only the temporal value first, and
+# sparopt reorders the operands of every `+` by hash, so `?dateTime + "P2Y"^^xsd:yearMonthDuration`
+# came out unbound for some values: see vendor/spareval/PROVENANCE.md.
+spareval = { path = "vendor/spareval" }
 
 [profile.release]
 lto = "thin"

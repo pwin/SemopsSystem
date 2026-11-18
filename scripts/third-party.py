@@ -70,13 +70,17 @@ def main():
     out('```sh\npython scripts/third-party.py > THIRD-PARTY.md\n```\n\n')
 
     out('---\n\n## Code copied into this tree\n\n')
-    out('Two components. Everything else is a dependency, not a copy.\n\n')
+    out('Three components. Everything else is a dependency, not a copy.\n\n')
     out('| Component | Origin | Licence | Copyright |\n|---|---|---|---|\n')
     out('| [`holos-shacl-engine`](crates/holos-shacl-engine) | '
         '[pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine) @ `874e6e57` | '
         'MIT OR Apache-2.0 | Peter Winstanley — **the same holder as this project** |\n')
     out('| [`oxsdatatypes`](vendor/oxsdatatypes) | '
         '[oxsdatatypes 0.2.4](https://crates.io/crates/oxsdatatypes/0.2.4) from '
+        '[Oxigraph](https://github.com/oxigraph/oxigraph) | '
+        'MIT OR Apache-2.0 | Oxigraph developers |\n')
+    out('| [`spareval`](vendor/spareval) | '
+        '[spareval 0.2.9](https://crates.io/crates/spareval/0.2.9) from '
         '[Oxigraph](https://github.com/oxigraph/oxigraph) | '
         'MIT OR Apache-2.0 | Oxigraph developers |\n\n')
     out('Each keeps its `LICENSE-MIT` and `LICENSE-APACHE` beside a `PROVENANCE.md` that\n')
@@ -88,6 +92,10 @@ def main():
     out('digits where upstream returned an error\n')
     out('([`PROVENANCE.md`](vendor/oxsdatatypes/PROVENANCE.md)). A `[patch.crates-io]` entry\n')
     out('makes every crate here, `spareval` included, resolve this copy.\n\n')
+    out('`spareval`: copyright in it remains with the Oxigraph developers. It is in the\n')
+    out('tree for one change: `+` takes a duration on either side of a date, time or\n')
+    out('dateTime, as XPath does, where upstream took it only second and the optimizer\n')
+    out('reorders `+` by hash ([`PROVENANCE.md`](vendor/spareval/PROVENANCE.md)).\n\n')
 
     out('## Approaches reimplemented rather than copied\n\n')
     out('Neither of these contributed any source. A technique is not the thing a licence\n')

@@ -181,7 +181,7 @@ A yes means *this build evaluates it*, not that every edge case of the specifica
 | `< on durations` | SEP-0002 | ✅ yes | xsd:duration, xsd:yearMonthDuration, xsd:dayTimeDuration |
 | `xsd:date - xsd:date` | SEP-0002 | ✅ yes | a duration |
 | `xsd:dateTime - xsd:dateTime` | SEP-0002 | ✅ yes | a duration |
-| `date + duration` | SEP-0002 | ✅ yes | also dateTime and time |
+| `date + duration` | SEP-0002 | ✅ yes | also dateTime and time, with the duration on either side |
 | `ADJUST` | SEP-0002 | ✅ yes |  |
 
 ### Hash functions

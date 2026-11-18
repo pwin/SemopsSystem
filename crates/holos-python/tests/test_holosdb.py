@@ -674,3 +674,31 @@ def test_validate_returns_each_result_and_both_engines_agree(tmp_path):
 def test_a_syntax_error_is_still_a_syntax_error():
     with pytest.raises(holosdb.SyntaxError):
         Store().query("SELECT WHERE")
+
+
+def test_a_duration_adds_to_a_date_time_in_either_order():
+    # The optimizer orders the operands of `+` by hash, and before 0.26.4 the evaluator took a
+    # duration only after the dateTime, so a sum was unbound whenever the duration hashed
+    # lower. On the native build that was 23 of these 30 pairs.
+    s = Store()
+    prefixes = "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> "
+    date_times = ["2025-03-08T00:00:00Z", "2024-01-01T12:00:00Z", "2026-11-18T09:30:00",
+                  "1999-12-31T23:59:59Z", "2025-07-15T00:00:00", "2030-02-28T10:00:00Z"]
+    durations = ['"P1D"^^xsd:dayTimeDuration', '"PT1H"^^xsd:dayTimeDuration',
+                 '"P1M"^^xsd:yearMonthDuration', '"P2Y"^^xsd:yearMonthDuration',
+                 '"P1DT2H"^^xsd:duration']
+    unbound = []
+    for dt in date_times:
+        for dur in durations:
+            lit = f'"{dt}"^^xsd:dateTime'
+            sums = []
+            for expr in (f"{lit} + {dur}", f"{dur} + {lit}"):
+                v = s.query(prefixes + f"SELECT ?v WHERE {{ BIND({expr} AS ?v) }}")[0]["v"]
+                if v is None:
+                    unbound.append(expr)
+                sums.append(v)
+            assert sums[0] == sums[1], (dt, dur, sums)
+    assert unbound == []
+    row = s.query(prefixes + 'SELECT ?v WHERE { BIND("2025-03-08T00:00:00Z"^^xsd:dateTime'
+                  ' + "P2Y"^^xsd:yearMonthDuration AS ?v) }')[0]
+    assert row.term("v") == '"2027-03-08T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>'

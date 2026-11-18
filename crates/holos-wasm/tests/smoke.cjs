@@ -554,5 +554,29 @@ check('xsd:date values compare in a FILTER, and subtract to a duration', () => {
   }
 });
 
+// The optimizer orders the operands of `+` by hash, and before 0.26.4 the evaluator took a duration
+// only after the dateTime, so a sum was unbound whenever the duration hashed lower. In this build
+// that was every `+ "P2Y"^^xsd:yearMonthDuration`.
+check('a duration adds to a dateTime with the duration on either side', () => {
+  const s4 = new holos.Store();
+  try {
+    const sum = (e) => {
+      const row = s4.query(`PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> SELECT ?v WHERE { BIND(${e} AS ?v) }`, undefined)[0];
+      return row && row.v ? row.v.value : undefined;
+    };
+    for (const dt of ['2025-03-08T00:00:00Z', '2026-11-18T09:30:00', '1999-12-31T23:59:59Z']) {
+      for (const dur of ['"P2Y"^^xsd:yearMonthDuration', '"P1M"^^xsd:yearMonthDuration', '"P1D"^^xsd:dayTimeDuration']) {
+        const lit = `"${dt}"^^xsd:dateTime`;
+        const a = sum(`${lit} + ${dur}`);
+        assert.ok(a, `${lit} + ${dur} is unbound`);
+        assert.strictEqual(sum(`${dur} + ${lit}`), a);
+      }
+    }
+    assert.strictEqual(sum('"2025-03-08T00:00:00Z"^^xsd:dateTime + "P2Y"^^xsd:yearMonthDuration'), '2027-03-08T00:00:00Z');
+  } finally {
+    s4.free?.();
+  }
+});
+
 console.log(failures === 0 ? '\nall checks passed' : `\n${failures} check(s) failed`);
 process.exit(failures === 0 ? 0 : 1);

@@ -12,12 +12,13 @@ python scripts/third-party.py > THIRD-PARTY.md
 
 ## Code copied into this tree
 
-Two components. Everything else is a dependency, not a copy.
+Three components. Everything else is a dependency, not a copy.
 
 | Component | Origin | Licence | Copyright |
 |---|---|---|---|
 | [`holos-shacl-engine`](crates/holos-shacl-engine) | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine) @ `874e6e57` | MIT OR Apache-2.0 | Peter Winstanley — **the same holder as this project** |
 | [`oxsdatatypes`](vendor/oxsdatatypes) | [oxsdatatypes 0.2.4](https://crates.io/crates/oxsdatatypes/0.2.4) from [Oxigraph](https://github.com/oxigraph/oxigraph) | MIT OR Apache-2.0 | Oxigraph developers |
+| [`spareval`](vendor/spareval) | [spareval 0.2.9](https://crates.io/crates/spareval/0.2.9) from [Oxigraph](https://github.com/oxigraph/oxigraph) | MIT OR Apache-2.0 | Oxigraph developers |
 
 Each keeps its `LICENSE-MIT` and `LICENSE-APACHE` beside a `PROVENANCE.md` that
 records every change made to it.
@@ -30,6 +31,11 @@ tree for one change: decimal multiplication and division round to 18 fractional
 digits where upstream returned an error
 ([`PROVENANCE.md`](vendor/oxsdatatypes/PROVENANCE.md)). A `[patch.crates-io]` entry
 makes every crate here, `spareval` included, resolve this copy.
+
+`spareval`: copyright in it remains with the Oxigraph developers. It is in the
+tree for one change: `+` takes a duration on either side of a date, time or
+dateTime, as XPath does, where upstream took it only second and the optimizer
+reorders `+` by hash ([`PROVENANCE.md`](vendor/spareval/PROVENANCE.md)).
 
 ## Approaches reimplemented rather than copied
 

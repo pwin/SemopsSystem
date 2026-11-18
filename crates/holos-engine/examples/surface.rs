@@ -364,11 +364,22 @@ fn datetime_functions() -> Vec<Probe> {
             holds(r#"("2026-11-20T14:00:00Z"^^xsd:dateTime - "2026-11-20T13:28:00Z"^^xsd:dateTime) = "PT32M"^^xsd:dayTimeDuration"#),
             "a duration",
         ),
+        // Several values and both orders, not one: sparopt orders the operands of `+` by hash,
+        // and before 0.26.4 a sum came out unbound whenever the duration hashed lower. The
+        // single-value probe that stood here passed by luck of the hash while `P2Y` and `P1M`
+        // on a dateTime failed.
         p(
             "date + duration",
             "SEP-0002",
-            holds(r#"("2026-11-04"^^xsd:date + "P1D"^^xsd:dayTimeDuration) = "2026-11-05"^^xsd:date"#),
-            "also dateTime and time",
+            holds(concat!(
+                r#"("2026-11-04"^^xsd:date + "P1D"^^xsd:dayTimeDuration) = "2026-11-05"^^xsd:date"#,
+                r#" && ("P1D"^^xsd:dayTimeDuration + "2026-11-04"^^xsd:date) = "2026-11-05"^^xsd:date"#,
+                r#" && ("2025-03-08T00:00:00Z"^^xsd:dateTime + "P2Y"^^xsd:yearMonthDuration) = "2027-03-08T00:00:00Z"^^xsd:dateTime"#,
+                r#" && ("P2Y"^^xsd:yearMonthDuration + "2025-03-08T00:00:00Z"^^xsd:dateTime) = "2027-03-08T00:00:00Z"^^xsd:dateTime"#,
+                r#" && ("2025-03-08T00:00:00Z"^^xsd:dateTime + "P1M"^^xsd:yearMonthDuration) = "2025-04-08T00:00:00Z"^^xsd:dateTime"#,
+                r#" && ("10:00:00"^^xsd:time + "PT1H"^^xsd:dayTimeDuration) = "11:00:00"^^xsd:time"#,
+            )),
+            "also dateTime and time, with the duration on either side",
         ),
         p(
             "ADJUST",
