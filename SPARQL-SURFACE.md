@@ -175,6 +175,14 @@ A yes means *this build evaluates it*, not that every edge case of the specifica
 | `seconds` | 17.4.5.7 | ✅ yes |  |
 | `timezone` | 17.4.5.8 | ✅ yes |  |
 | `tz` | 17.4.5.9 | ✅ yes |  |
+| `year on xsd:date` | SEP-0002 | ✅ yes | also month and day; before 0.26.3, dateTime only |
+| `< on xsd:date` | SEP-0002 | ✅ yes | also <=, >, >= |
+| `< on xsd:time` | SEP-0002 | ✅ yes |  |
+| `< on durations` | SEP-0002 | ✅ yes | xsd:duration, xsd:yearMonthDuration, xsd:dayTimeDuration |
+| `xsd:date - xsd:date` | SEP-0002 | ✅ yes | a duration |
+| `xsd:dateTime - xsd:dateTime` | SEP-0002 | ✅ yes | a duration |
+| `date + duration` | SEP-0002 | ✅ yes | also dateTime and time |
+| `ADJUST` | SEP-0002 | ✅ yes |  |
 
 ### Hash functions
 
@@ -210,6 +218,9 @@ A yes means *this build evaluates it*, not that every edge case of the specifica
 | `xsd:string` | 17.5 | ✅ yes |  |
 | `xsd:boolean` | 17.5 | ✅ yes |  |
 | `xsd:dateTime` | 17.5 | ✅ yes |  |
+| `xsd:date` | SEP-0002 | ✅ yes |  |
+| `xsd:time` | SEP-0002 | ✅ yes |  |
+| `xsd:dayTimeDuration` | SEP-0002 | ✅ yes | also xsd:duration, xsd:yearMonthDuration |
 
 ### SPARQL 1.2 additions
 

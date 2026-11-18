@@ -116,6 +116,20 @@ def test_a_decimal_product_is_rounded_rather_than_left_unbound(store):
     )
 
 
+def test_dates_compare_in_a_filter():
+    # xsd:date values come from spareval's sep-0002 feature, which the wheel has to resolve as
+    # the native build does. Without it `<` between two dates is a type error, the FILTER
+    # drops the row, and this returns nothing.
+    s = Store()
+    prefixes = "PREFIX ex: <http://example.com/> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> "
+    s.update(
+        prefixes + 'INSERT DATA { ex:a ex:on "2025-06-12"^^xsd:date . '
+        'ex:b ex:on "2023-05-10"^^xsd:date }'
+    )
+    rows = s.query(prefixes + 'SELECT ?s WHERE { ?s ex:on ?d FILTER(?d >= "2024-11-04"^^xsd:date) }')
+    assert [r.term("s") for r in rows] == ["<http://example.com/a>"]
+
+
 def test_an_unknown_variable_raises(store):
     rows = store.query(f"SELECT ?n WHERE {{ GRAPH ?g {{ ?s <{EX}name> ?n }} }} LIMIT 1")
     with pytest.raises(KeyError):

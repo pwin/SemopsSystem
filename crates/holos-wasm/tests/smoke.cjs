@@ -531,5 +531,28 @@ check('a decimal product is rounded to 18 digits rather than left unbound', () =
   assert.strictEqual(row.x.value, '41.058333333333333333');
 });
 
+// xsd:date values come from spareval's sep-0002 feature, which the wasm build has to resolve
+// as the native one does. Without it `<` between two dates is a type error and the FILTER
+// drops every row: the Turtle Editor Viewer's SPARQL panel answered "closed" for a place in
+// season. Equality, sorting and dateTime worked either way, so they are not what this tests.
+check('xsd:date values compare in a FILTER, and subtract to a duration', () => {
+  const s3 = new holos.Store();
+  try {
+    s3.load(`@prefix ex: <http://example.com/> . @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+      ex:centre ex:from "2026-03-06"^^xsd:date ; ex:to "2026-11-08"^^xsd:date .
+      ex:skellig ex:from "2026-05-12"^^xsd:date ; ex:to "2026-09-21"^^xsd:date .`, 'turtle');
+    const open = (day) => s3.query(`PREFIX ex: <http://example.com/> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+      SELECT ?p WHERE { VALUES ?day { "${day}"^^xsd:date } ?p ex:from ?f ; ex:to ?t FILTER(?f <= ?day && ?day <= ?t) }`, undefined).length;
+    assert.strictEqual(open('2026-07-15'), 2);
+    assert.strictEqual(open('2026-10-01'), 1);
+    assert.strictEqual(open('2026-11-21'), 0);
+    const gap = s3.query('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> SELECT ("2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date AS ?g) WHERE {}', undefined)[0];
+    assert.ok(gap.g, JSON.stringify(gap));
+    assert.strictEqual(gap.g.value, 'P730D');
+  } finally {
+    s3.free?.();
+  }
+});
+
 console.log(failures === 0 ? '\nall checks passed' : `\n${failures} check(s) failed`);
 process.exit(failures === 0 ? 0 : 1);

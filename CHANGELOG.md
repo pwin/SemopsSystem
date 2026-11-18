@@ -3,6 +3,53 @@
 Notable changes per release. Numbers quoted here are measured; the benchmarks that produce
 them are in `BENCHMARKS.md` and are runnable.
 
+## 0.26.3 — 2026-11-18
+
+### Dates, times and durations compare by value
+
+`<`, `<=`, `>` and `>=` between two `xsd:date` values were a type error, and so were the same
+comparisons on `xsd:time` and the duration types. An error inside a FILTER removes the row, so
+a query that compared dates returned nothing, and said nothing:
+
+```sparql
+SELECT ?m WHERE { ?m ex:on ?d FILTER(?d >= "2024-11-04"^^xsd:date) }   # no rows, ever
+```
+
+Inside `EXISTS` the same error made `EXISTS` false. The report that found it was a "what is
+open on this day?" query over seasons with `xsd:date` bounds, which answered "closed" for every
+place on every day. On the day it was written for, in November, that was the right answer, for
+the wrong reason. Equality worked, `ORDER BY` worked (ISO dates happen to sort as text), and
+`xsd:dateTime` compared, which is why it went unnoticed.
+
+The cause was a feature flag. `spareval` gives these datatypes values only with its `sep-0002`
+feature, and the workspace did not enable it, so the evaluator treated a date as an opaque
+typed literal. It is now on for `spargebra`, `sparopt` and `spareval`, and so for the command
+line, the server, Python, the WebAssembly packages and the vendored SHACL engine at once.
+With it come:
+
+- comparison and sorting by value for `xsd:date`, `xsd:time`, `xsd:duration`,
+  `xsd:yearMonthDuration` and `xsd:dayTimeDuration`, following XPath's operators;
+- arithmetic between them: `"2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date` is
+  `"P730D"^^xsd:dayTimeDuration`, two `xsd:dateTime`s subtract to a duration, and a duration
+  adds to a date or a dateTime;
+- `ADJUST`, to move a date or time into a timezone.
+
+SEP-0002 is the community proposal for SPARQL 1.2 that defines exactly these operators.
+Oxigraph's further `calendar-ext` feature, which also orders `xsd:gYear` and the other
+Gregorian types, is not enabled: XPath defines equality for those types and no order, so
+`?y < "2000"^^xsd:gYear` is still an error.
+
+The top-k sort in `holos-engine` keeps its own copy of the evaluator's order, and now orders
+dates, times and durations by value too; its property test holds the two orders to each other.
+A SHACL-SPARQL constraint that compares dates now fires, where before an expired certificate
+passed validation silently. `sh:lessThan` and the other Core comparisons were never affected,
+because the SHACL engine makes those comparisons itself.
+
+`SPARQL-SURFACE.md` now probes date, time and duration comparison, subtraction and `ADJUST`.
+Its probes also count a query that evaluates but returns no rows as a failure, as the probe's
+own documentation always said: an expression that errors inside a FILTER is the silent kind of
+unsupported, and is what let this go unreported.
+
 ## 0.26.2 — 2026-11-13
 
 ### Decimal arithmetic rounds to 18 digits instead of failing

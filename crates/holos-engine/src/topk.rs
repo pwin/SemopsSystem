@@ -748,9 +748,12 @@ fn cmp_triples(a: &ExpressionTriple, b: &ExpressionTriple) -> Ordering {
 /// SPARQL's `<` between two literals, where it is defined.
 ///
 /// Numbers of any of the four numeric types compare with each other; strings with strings,
-/// language-tagged strings with the same tag, `xsd:dateTime` with `xsd:dateTime`. A
-/// datatype the evaluator does not give a value to — `xsd:date` in this build, and every
-/// user-defined type — is not comparable by value, and falls to the lexical order.
+/// language-tagged strings with the same tag; `xsd:dateTime`, `xsd:date` and `xsd:time`
+/// each with their own kind; and the three duration types with each other. This is
+/// `spareval`'s own `partial_cmp_literals` with the workspace's features (`sep-0002`, not
+/// `calendar-ext`), which that crate does not export. A datatype the evaluator does not
+/// give a value to — `xsd:gYear` and its kin, and every user-defined type — is not
+/// comparable by value, and falls to the lexical order.
 fn partial_cmp_literals(a: &ExpressionTerm, b: &ExpressionTerm) -> Option<Ordering> {
     use ExpressionTerm as T;
     use oxsdatatypes::{Decimal, Double, Float};
@@ -795,6 +798,17 @@ fn partial_cmp_literals(a: &ExpressionTerm, b: &ExpressionTerm) -> Option<Orderi
         (T::DecimalLiteral(a), T::IntegerLiteral(b)) => a.partial_cmp(&Decimal::from(*b)),
         (T::DecimalLiteral(a), T::DecimalLiteral(b)) => a.partial_cmp(b),
         (T::DateTimeLiteral(a), T::DateTimeLiteral(b)) => a.partial_cmp(b),
+        (T::DateLiteral(a), T::DateLiteral(b)) => a.partial_cmp(b),
+        (T::TimeLiteral(a), T::TimeLiteral(b)) => a.partial_cmp(b),
+        (T::DurationLiteral(a), T::DurationLiteral(b)) => a.partial_cmp(b),
+        (T::DurationLiteral(a), T::YearMonthDurationLiteral(b)) => a.partial_cmp(b),
+        (T::DurationLiteral(a), T::DayTimeDurationLiteral(b)) => a.partial_cmp(b),
+        (T::YearMonthDurationLiteral(a), T::DurationLiteral(b)) => a.partial_cmp(b),
+        (T::YearMonthDurationLiteral(a), T::YearMonthDurationLiteral(b)) => a.partial_cmp(b),
+        (T::YearMonthDurationLiteral(a), T::DayTimeDurationLiteral(b)) => a.partial_cmp(b),
+        (T::DayTimeDurationLiteral(a), T::DurationLiteral(b)) => a.partial_cmp(b),
+        (T::DayTimeDurationLiteral(a), T::YearMonthDurationLiteral(b)) => a.partial_cmp(b),
+        (T::DayTimeDurationLiteral(a), T::DayTimeDurationLiteral(b)) => a.partial_cmp(b),
         _ => None,
     }
 }
@@ -802,9 +816,11 @@ fn partial_cmp_literals(a: &ExpressionTerm, b: &ExpressionTerm) -> Option<Orderi
 /// The order two literals fall back to when `<` is not defined between them: lexical form,
 /// then datatype, then language tag — what `spareval` does, and what makes the order total.
 ///
-/// Two literals of a datatype the evaluator does not value — which is every `xsd:date` in
-/// this build, and so every key of the query this module was written for — are compared
-/// in place. The general case goes back through `Term`, which canonicalises a valued
+/// Two literals of a datatype the evaluator does not value — `xsd:gYear` and its kin, or a
+/// user-defined type — are compared in place. (Until 0.26.3 that was every `xsd:date`, and
+/// so every key of the query this module was written for; dates now compare by value in
+/// [`partial_cmp_literals`] and reach this only against a term of another kind.) The
+/// general case goes back through `Term`, which canonicalises a valued
 /// literal's lexical form the way the evaluator does; it is reached only for a pair of
 /// different kinds, which a well-typed sort key seldom produces.
 fn lexical_cmp(a: &ExpressionTerm, b: &ExpressionTerm) -> Ordering {

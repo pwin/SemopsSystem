@@ -180,6 +180,13 @@ fn expr(e: &str) -> String {
     format!("{} SELECT ({e} AS ?v) WHERE {{}}", prefixes())
 }
 
+/// `SELECT * WHERE { FILTER(cond) }` — one row if `cond` is true, none if it is false or an
+/// error. For operators, whose failure is an error inside the expression rather than a
+/// query that will not run.
+fn holds(cond: &str) -> String {
+    format!("{} SELECT * WHERE {{ FILTER({cond}) }}", prefixes())
+}
+
 /// A probe that needs data under it.
 fn over_data(body: &str) -> String {
     format!("{} SELECT * WHERE {{ {body} }}", prefixes())
@@ -319,6 +326,56 @@ fn datetime_functions() -> Vec<Probe> {
         p("seconds", "17.4.5.7", expr("seconds(now())"), ""),
         p("timezone", "17.4.5.8", expr("STR(timezone(now()))"), ""),
         p("tz", "17.4.5.9", expr("tz(now())"), ""),
+        // An expression that errors leaves `?v` unbound and the row still there, so these
+        // are FILTERs: unsupported means no row, which `section` reports as a failure.
+        p(
+            "year on xsd:date",
+            "SEP-0002",
+            holds(r#"YEAR("2025-03-08"^^xsd:date) = 2025"#),
+            "also month and day; before 0.26.3, dateTime only",
+        ),
+        p(
+            "< on xsd:date",
+            "SEP-0002",
+            holds(r#""2024-11-04"^^xsd:date < "2025-06-12"^^xsd:date"#),
+            "also <=, >, >=",
+        ),
+        p(
+            "< on xsd:time",
+            "SEP-0002",
+            holds(r#""08:30:00"^^xsd:time < "09:00:00"^^xsd:time"#),
+            "",
+        ),
+        p(
+            "< on durations",
+            "SEP-0002",
+            holds(r#""PT32M"^^xsd:dayTimeDuration < "PT45M"^^xsd:dayTimeDuration"#),
+            "xsd:duration, xsd:yearMonthDuration, xsd:dayTimeDuration",
+        ),
+        p(
+            "xsd:date - xsd:date",
+            "SEP-0002",
+            holds(r#"("2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date) = "P730D"^^xsd:dayTimeDuration"#),
+            "a duration",
+        ),
+        p(
+            "xsd:dateTime - xsd:dateTime",
+            "SEP-0002",
+            holds(r#"("2026-11-20T14:00:00Z"^^xsd:dateTime - "2026-11-20T13:28:00Z"^^xsd:dateTime) = "PT32M"^^xsd:dayTimeDuration"#),
+            "a duration",
+        ),
+        p(
+            "date + duration",
+            "SEP-0002",
+            holds(r#"("2026-11-04"^^xsd:date + "P1D"^^xsd:dayTimeDuration) = "2026-11-05"^^xsd:date"#),
+            "also dateTime and time",
+        ),
+        p(
+            "ADJUST",
+            "SEP-0002",
+            holds(r#"ADJUST("2026-01-01T12:00:00Z"^^xsd:dateTime, "PT1H"^^xsd:dayTimeDuration) = "2026-01-01T13:00:00+01:00"^^xsd:dateTime"#),
+            "",
+        ),
     ]
 }
 
@@ -370,6 +427,16 @@ fn casts() -> Vec<Probe> {
             expr(r#"STR(xsd:dateTime("2026-01-01T00:00:00Z"))"#),
             "",
         ),
+        // A cast that fails leaves the variable unbound in a row that is still there, so these
+        // compare the cast's result in a FILTER, and fail as no row.
+        p("xsd:date", "SEP-0002", holds(r#"xsd:date("2026-01-01") = "2026-01-01"^^xsd:date"#), ""),
+        p("xsd:time", "SEP-0002", holds(r#"xsd:time("12:00:00") = "12:00:00"^^xsd:time"#), ""),
+        p(
+            "xsd:dayTimeDuration",
+            "SEP-0002",
+            holds(r#"xsd:dayTimeDuration("P1D") = "P1D"^^xsd:dayTimeDuration"#),
+            "also xsd:duration, xsd:yearMonthDuration",
+        ),
     ]
 }
 
@@ -408,7 +475,12 @@ fn sparql12() -> Vec<Probe> {
         p(
             "triple term pattern",
             "1.2",
-            over_data("?r rdf:reifies <<( ex:alice ex:name \"Alice\" )>>"),
+            // ASK, because no reifier is in the probe data, so a SELECT would correctly
+            // return no rows and `section` would count that as a failure.
+            format!(
+                "{} ASK {{ ?r rdf:reifies <<( ex:alice ex:name \"Alice\" )>> }}",
+                prefixes()
+            ),
             "matches a triple term in object position; zero rows here is correct",
         ),
         p(
@@ -779,7 +851,14 @@ fn section(title: &str, spec: &str, probes: Vec<Probe>, engine: &Engine, session
     println!("| {spec} | Spec | Status | Notes |");
     println!("|---|---|---|---|");
     for entry in probes {
-        let (status, note) = match probe(engine, session, &entry) {
+        // A query that runs and returns nothing is not "supported": an operator that errors
+        // inside a FILTER fails exactly that way, silently, which is how xsd:date comparison
+        // went unreported until 0.26.3. Every probe is written to return a row when it works.
+        let outcome = match probe(engine, session, &entry) {
+            Ok(0) => Err("evaluated, but returned no rows".to_owned()),
+            other => other,
+        };
+        let (status, note) = match outcome {
             Ok(_) => ("✅ yes".to_owned(), entry.note.to_owned()),
             Err(reason) => {
                 let combined = if entry.note.is_empty() {
