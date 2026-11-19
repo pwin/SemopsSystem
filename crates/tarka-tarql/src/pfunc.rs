@@ -14,6 +14,7 @@
 //! a row, and are refused, as is a property function anywhere but the top level of the
 //! WHERE group: a query that relied on one would otherwise make nothing, and say nothing.
 
+use holos_engine::{oxrdf, spargebra};
 use std::collections::HashMap;
 
 use oxrdf::vocab::{rdf, xsd};

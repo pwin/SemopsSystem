@@ -7,6 +7,8 @@
 //! `BOUND(?column)` is true when the cell has a value. (oxi-gen substitutes cells
 //! into the query instead, after which `BOUND(?column)` is false.)
 
+use holos_engine::{oxiri, oxrdf, spargebra};
+
 mod afn;
 pub mod eval;
 pub mod inject;
@@ -25,6 +27,12 @@ use thiserror::Error;
 pub use afn::AFN_NAMESPACES;
 pub use eval::{EvalError, Solution, SparqlEvaluator, TARQL_NAMESPACES};
 
+/// The evaluator tarka runs SPARQL with: HOLOS's (`holos_engine::Engine::evaluator()`), with
+/// Jena's `afn:` functions as Jena has them in place of HOLOS's.
+pub fn evaluator() -> holos_engine::spareval::QueryEvaluator {
+    afn::register(holos_engine::Engine::evaluator())
+}
+
 #[derive(Debug, Error)]
 pub enum TarqlError {
     #[error("{0}")]
@@ -33,7 +41,8 @@ pub enum TarqlError {
     NotConstruct,
     #[error("{0} is not supported (tarka works with RDF 1.1 and SPARQL 1.1)")]
     Unsupported(&'static str),
-    /// A Jena property function written wrongly, or one tarka cannot evaluate.
+    /// A Jena property function written wrongly, or a Jena function or property function tarka
+    /// cannot evaluate.
     #[error("{0}")]
     PropertyFunction(String),
 }
@@ -48,7 +57,7 @@ pub fn parse_tarql(text: &str, name: &str) -> Result<Plan, TarqlError> {
     let Query::Construct { template, dataset, pattern, base_iri } = parser().parse_query(text)? else {
         return Err(TarqlError::NotConstruct);
     };
-    sparql11::check(&template, &pattern)?;
+    sparql11::check_local(&template, &pattern)?;
     pfunc::staged(&pattern)?;
     let mut plan = Plan::new(name, Lifting::Given);
     plan.prefixes = prefixes;
@@ -97,7 +106,7 @@ pub fn sparql_lifting(
     let Query::Construct { pattern, base_iri, .. } = parser().parse_query(&text)? else {
         return Err(TarqlError::NotConstruct);
     };
-    sparql11::check(&[], &pattern)?;
+    sparql11::check_local(&[], &pattern)?;
     pfunc::staged(&pattern)?;
     // the outputs are read from row columns too (a parameter that no BIND makes)
     let mut variables = scan::variables(&text);
@@ -212,14 +221,39 @@ mod tests {
     fn errors() {
         assert!(matches!(parse_tarql("SELECT * WHERE {}", "q"), Err(TarqlError::NotConstruct)));
         assert!(matches!(parse_tarql("CONSTRUCT { ?s ?p }", "q"), Err(TarqlError::Syntax(_))));
+        // HOLOS has an afn:sprintf that takes %s and %d only: tarka refuses it rather than format otherwise than Jena
+        let sprintf = "PREFIX afn: <http://jena.apache.org/ARQ/function#> CONSTRUCT { <http://s> <http://p> ?f } WHERE { BIND(afn:sprintf(\"%05d\", ?n) AS ?f) }";
+        assert!(matches!(parse_tarql(sprintf, "q"), Err(TarqlError::PropertyFunction(m)) if m.contains("afn:sprintf is not supported")));
         let plan = parse_tarql(
-            "PREFIX x: <http://www.w3.org/2001/XMLSchema#> CONSTRUCT { <http://s> <http://p> ?d } WHERE { BIND(x:date(?v) AS ?d) }",
+            "PREFIX ex: <http://example.com/> CONSTRUCT { <http://s> <http://p> ?d } WHERE { BIND(ex:nothing(?v) AS ?d) }",
             "q",
         )
         .unwrap();
         let Lifting::Sparql(l) = &plan.lifting else { panic!() };
         let check = SparqlEvaluator::new(l, &plan.prefixes, &["v".to_owned()]).check();
         assert!(check.is_err(), "{check:?}");
+    }
+
+    /// `xsd:date()`, `xsd:time()` and `xsd:duration()` cast as Jena does (HOLOS's evaluator has
+    /// them: spareval's `sep-0002` feature), and give nothing for what is not one.
+    #[test]
+    fn date_casts_give_what_tarql_gives() {
+        let q = "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX ex: <http://ex/>
+            CONSTRUCT { ex:s ex:date ?d ; ex:time ?t ; ex:duration ?u } WHERE {
+              BIND(xsd:date(?v) AS ?d) BIND(xsd:time(?v) AS ?t) BIND(xsd:duration(?v) AS ?u) }";
+        let rows: &[&[Option<&str>]] =
+            &[&[Some("2024-03-05+02:00")], &[Some("2024-03-05T10:15:00Z")], &[Some("10:15:00")], &[Some("P1Y2M")], &[Some("05/03/2024")]];
+        let mut got = run(q, &["v"], rows);
+        got.sort();
+        let xsd = "http://www.w3.org/2001/XMLSchema#";
+        assert_eq!(
+            got,
+            [
+                format!("<http://ex/s> <http://ex/date> \"2024-03-05+02:00\"^^<{xsd}date>"),
+                format!("<http://ex/s> <http://ex/duration> \"P1Y2M\"^^<{xsd}duration>"),
+                format!("<http://ex/s> <http://ex/time> \"10:15:00\"^^<{xsd}time>"),
+            ]
+        );
     }
 
     /// SPARQL 1.2 is refused, whether or not spargebra was built to parse it (a build

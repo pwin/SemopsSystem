@@ -3,21 +3,39 @@
 //! (`org.apache.jena.sparql.function.library`), as TARQL 1.3 runs it; an argument it
 //! cannot take leaves the result unbound, as an error in an expression does in SPARQL.
 //!
+//! They are registered over HOLOS's evaluator, whose own `afn:` functions they replace: those
+//! follow other rules (`afn:localname` splits at the last `#` or `/`, not before an XML name).
+//!
 //! Not here: `afn:bnode`, which gives a blank node's label (tarka makes those afresh on
 //! every run), and `afn:sprintf`, which formats as Java's `String.format` does. A query
-//! that calls either is refused before any input is read, as for any unknown function.
+//! that calls either is refused before any input is read: `afn:bnode` as any unknown
+//! function is, and `afn:sprintf` by [`refused`], since HOLOS has one that takes only `%s`
+//! and `%d` and would give any other format unchanged.
 
+use holos_engine::{oxrdf, oxsdatatypes, spareval};
 use oxrdf::vocab::xsd;
 use oxrdf::{Literal, NamedNode, Term};
 use sha1::{Digest, Sha1};
 use spareval::QueryEvaluator;
 
+use crate::TarqlError;
 use crate::pfunc::{number, split_xml};
 
 /// Jena's namespaces for its functions: the current one, the one it had before it moved
 /// to Apache, and the Java package that loads them directly.
 pub const AFN_NAMESPACES: [&str; 3] =
     ["http://jena.apache.org/ARQ/function#", "http://jena.hpl.hp.com/ARQ/function#", "java:org.apache.jena.sparql.function.library."];
+
+/// Fails on a function tarka would not evaluate as Jena does, in a query it evaluates
+/// itself (`sparql11::check_local`): `afn:sprintf`.
+pub fn refused(name: &NamedNode) -> Result<(), TarqlError> {
+    if AFN_NAMESPACES.iter().any(|ns| name.as_str().strip_prefix(ns) == Some("sprintf")) {
+        return Err(TarqlError::PropertyFunction(
+            "afn:sprintf is not supported: Jena formats as Java's String.format does, which tarka does not reproduce".into(),
+        ));
+    }
+    Ok(())
+}
 
 /// `evaluator` with Jena's functions.
 pub fn register(mut evaluator: QueryEvaluator) -> QueryEvaluator {

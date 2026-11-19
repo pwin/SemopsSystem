@@ -26,15 +26,12 @@ repository = "https://github.com/pwin/tarka"
 authors = ["Peter Winstanley"]
 
 [workspace.dependencies]
-# The Oxigraph crates, as used by oxi-gen, HOLOS and SHACL_Engine. RDF 1.2 features
-# stay off: tarka works with RDF 1.1 and SPARQL 1.1 (matches over these types keep
-# wildcard arms, so a build that unifies `rdf-12`/`sparql-12` on still compiles).
-oxrdf = "0.3"
-oxrdfio = "0.2"
-oxsdatatypes = "0.2.3"
-spargebra = "0.4.7"
-spareval = "0.2.7"
-sparesults = "0.3"
+# HOLOS (github.com/pwin/triplestore): the SPARQL evaluator and the RDF types, parsers and
+# serialisers, through holos-engine, which re-exports the Oxigraph crates it is built on
+# (oxrdf, oxrdfio, spargebra, spareval, sparesults, oxsdatatypes, oxiri) with HOLOS's RDF 1.2
+# and SPARQL 1.2 features on. tarka still accepts RDF 1.1 and SPARQL 1.1 only: its own checks
+# refuse the rest. HOLOS is git-only; the revision is pinned, as SHACL_Engine's is below.
+holos-engine = { git = "https://github.com/pwin/triplestore", rev = "51181fd9eaff5d900b1f98ed486c47467cef1cf0" }
 csv = "1.4"
 flate2 = "1"
 # insertion-ordered sets: the output window is written in the order its triples were made
@@ -47,8 +44,8 @@ rayon = "1"
 ureq = { version = "3.4", default-features = false, features = ["rustls"] }
 polars = { version = "0.55", default-features = false, features = ["fmt", "parquet", "ipc", "lazy", "dtype-full", "timezones"] }
 # SHACL_Engine 0.3.4 (github.com/pwin/SHACL_Engine); the crates.io crate called shacl is another project.
-# Without its default features: no `rdf-12`, so the whole build stays RDF 1.1.
-shacl = { git = "https://github.com/pwin/SHACL_Engine", rev = "986c31ba4e071560d51fed36e99abd8cb3747a87", default-features = false }
+# Its `rdf-12` feature on, as HOLOS turns on the Oxigraph crates' own; `parallel` off.
+shacl = { git = "https://github.com/pwin/SHACL_Engine", rev = "986c31ba4e071560d51fed36e99abd8cb3747a87", default-features = false, features = ["rdf-12"] }
 
 tarka-core = { path = "crates/tarka-core", version = "0.2.2" }
 tarka-io = { path = "crates/tarka-io", version = "0.2.2" }
@@ -65,3 +62,11 @@ codegen-units = 1
 strip = true
 # Unwinding, not abort: a panic must never take the whole run down without an error
 # message, and the Python bindings need unwinding to turn panics into exceptions.
+
+# HOLOS's two fixes to the Oxigraph crates, so that tarka evaluates SPARQL as HOLOS does: a
+# decimal product too long to hold exactly is rounded rather than refused (oxsdatatypes), and
+# a duration may come first in `+` with a date, time or dateTime (spareval). A [patch] applies
+# only from the workspace that builds, so HOLOS's own does not reach tarka: these repeat it.
+[patch.crates-io]
+oxsdatatypes = { git = "https://github.com/pwin/triplestore", rev = "51181fd9eaff5d900b1f98ed486c47467cef1cf0" }
+spareval = { git = "https://github.com/pwin/triplestore", rev = "51181fd9eaff5d900b1f98ed486c47467cef1cf0" }

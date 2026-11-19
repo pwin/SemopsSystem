@@ -20,6 +20,20 @@
   the order the mapping makes them, a duplicate where it first came. The window that removes
   duplicates was a hash set, which wrote in an order that changed from run to run, so two runs
   over the same data gave the same triples in different files. Turtle was already sorted.
+- tarka is built on [HOLOS](https://github.com/pwin/triplestore): WHERE clauses and bOTTR's
+  RDF sources are evaluated with HOLOS's engine (`holos-engine`), and the RDF terms, parsers and
+  serialisers are the ones it re-exports. tarka no longer depends on the Oxigraph crates itself.
+  - HOLOS's fixes come with it: a decimal product too long to hold exactly is rounded rather
+    than left unbound, and a duration may come first in `+` with a date, time or dateTime.
+  - So do its functions: `xsd:date()`, `xsd:time()` and `xsd:duration()` casts, as TARQL
+    (Jena) has them, and HOLOS's `geof:`, `fn:` and `spif:` libraries. Its `afn:` functions are
+    replaced by tarka's, which give what Jena gives, in bOTTR's RDF sources too, where Lutra
+    has Jena's. `afn:sprintf`, which HOLOS has for `%s` and `%d` only, is refused, as before.
+  - The Oxigraph crates now parse RDF 1.2 and SPARQL 1.2 in every build, as HOLOS builds them.
+    tarka still refuses both, as before; its checks now run against parsers that accept them
+    every time.
+  - A literal with a base direction in a SPARQL endpoint's XML results is now refused, as in
+    JSON results. Before, the XML reader dropped the direction.
 
 ## 0.2.2 (2026-10-30)
 

@@ -1,10 +1,12 @@
-//! Evaluating a SPARQL lifting over rows with spareval.
+//! Evaluating a SPARQL lifting over rows with HOLOS's evaluator (spareval, with HOLOS's
+//! function libraries: GeoSPARQL's `geof:`, and `fn:`, `afn:` and `spif:`).
 //!
 //! A WHERE group with Jena property functions in it (`apf:strSplit` …) is evaluated in
 //! steps: spareval evaluates the patterns up to a property function, tarka applies it to
 //! each solution, and so on, with the solutions so far placed first in the next group as
 //! the rows are (see [`crate::pfunc`]).
 
+use holos_engine::{oxiri, oxrdf, spareval, spargebra};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -16,7 +18,6 @@ use spargebra::term::GroundTerm;
 use tarka_core::{Cell, PrefixMap, Record, SparqlLifting};
 use thiserror::Error;
 
-use crate::afn;
 use crate::inject::{bind_targets, replace_group, with_values};
 use crate::pfunc::{self, Bindings, Staged, Step};
 
@@ -56,7 +57,7 @@ impl SparqlEvaluator {
     /// An evaluator for `lifting` over records with these `columns`.
     pub fn new(lifting: &SparqlLifting, prefixes: &PrefixMap, columns: &[String]) -> Self {
         let prefixes = Arc::new(prefixes.clone());
-        let mut evaluator = QueryEvaluator::new();
+        let mut evaluator = crate::evaluator();
         for ns in TARQL_NAMESPACES {
             let p = Arc::clone(&prefixes);
             evaluator = evaluator.with_custom_function(NamedNode::new_unchecked(format!("{ns}expandPrefixedName")), move |args| {
@@ -66,7 +67,6 @@ impl SparqlEvaluator {
             evaluator =
                 evaluator.with_custom_function(NamedNode::new_unchecked(format!("{ns}expandPrefix")), move |args| expand_prefix(&p, args));
         }
-        let evaluator = afn::register(evaluator);
         let mentioned: Vec<&str> = lifting.variables.iter().map(String::as_str).collect();
         // (a column named as a property function's output is bound, as in Jena:
         // `apf:strSplit` then tests whether it is one of the parts)

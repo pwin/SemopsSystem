@@ -6,6 +6,7 @@
 //! With `TARQL_JAR=path/to/tarql-1.3-all.jar` (and `java` on the path), TARQL is run again
 //! and must agree.
 
+use holos_engine::{oxrdf, oxrdfio};
 mod common;
 
 use std::process::Command;
