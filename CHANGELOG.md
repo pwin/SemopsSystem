@@ -16,6 +16,10 @@
   `test` extra installs `holosdb`, which needs Python 3.11 or later; the module itself still
   supports 3.10. `comparisons/ottr` counts and compares with `holosdb` too, without rdflib or
   pyoxigraph, and counts every tool's distinct triples alike.
+- N-Triples and N-Quads output comes out in the same order every time: each row's triples in
+  the order the mapping makes them, a duplicate where it first came. The window that removes
+  duplicates was a hash set, which wrote in an order that changed from run to run, so two runs
+  over the same data gave the same triples in different files. Turtle was already sorted.
 
 ## 0.2.2 (2026-10-30)
 
