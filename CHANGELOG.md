@@ -5,6 +5,34 @@ them are in `BENCHMARKS.md` and are runnable.
 
 ## Unreleased
 
+### `sh:datatype` checks the datatypes both validators were letting through
+
+Each validator accepted any lexical form for some datatypes, so `sh:datatype` passed data it
+was asked to reject. `"not-a-year"^^xsd:gYear` satisfied `sh:datatype xsd:gYear`. Reported
+from work on tarka.
+
+The two sets differed, which is the part worth knowing. The adapted engine was missing gYear,
+gYearMonth, gMonth, gDay, gMonthDay, dayTimeDuration and yearMonthDuration; the native
+evaluator already had both duration subtypes and `xsd:dateTimeStamp` and was missing
+`xsd:date`, `xsd:time` and the five gregorian types. Neither gap predicted the other. The
+parsers were in `oxsdatatypes` throughout, so both lists were reached by omission rather than
+by any decision.
+
+Both duration subtypes need their own parser rather than a near relative: they restrict the
+value space, not only the lexical form, so `"P1Y"` parses perfectly as an `xsd:duration` and
+is still not an `xsd:dayTimeDuration`.
+
+One deviation from `oxsdatatypes` is deliberate and pinned by a test on each side. `--02-29`
+is a valid `xsd:gMonthDay` and the library rejects it, having measured February at 28 days
+with no year to go on. XSD 1.1 §3.3.12.1 caps February at 29 for this type precisely because
+the year is absent. Only that bound is ours; the rest of the form, timezone included, stays
+the library's, and `--02-30` and `--04-31` are still refused.
+
+Conformance is unchanged for both validators — shacl-core 98/98 and shacl12-core 138/138,
+native and adapted alike — because neither suite has a test for any of these datatypes. That
+is why the gap survived this long on both sides. The native evaluator had no tests for its
+`lexical_is_valid` at all and now has four.
+
 ### holos-engine re-exports the Oxigraph crates it is built on
 
 `holos_engine::{oxiri, oxrdf, oxrdfio, oxsdatatypes, sparesults, spareval, spargebra, sparopt}`.
