@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-11-20)
 
 - OTTR over tables (`tarka run -l … -T …`, Parquet and Polars frames): a mandatory parameter
   without a default that has no column of its name stops the run before any row is read, with a
@@ -16,6 +16,9 @@
 - SHACL_Engine 0.3.9: `--validate` and `--shapes` check the lexical forms of `xsd:gYear`,
   `xsd:gYearMonth`, `xsd:gMonth`, `xsd:gDay`, `xsd:gMonthDay`, `xsd:dayTimeDuration` and
   `xsd:yearMonthDuration`, so `"c.1972"^^xsd:gYear` breaks `sh:datatype xsd:gYear`.
+- HOLOS 0.27.0 and SHACL_Engine 0.3.9 are pinned by their release tags (`v0.27.0`, `v0.3.9`),
+  not by commit, `[patch.crates-io]` entries included. HOLOS was 0.26.4. The Python tests ask
+  for `holosdb` 0.27 and `shacl` 0.3.9 or later.
 - A list column of typed values (Parquet, Arrow IPC or a Polars data frame) gives its items
   as they are: a list of decimals `9.99`, of dates `2025-03-08`, of datetimes, durations and
   times their XSD forms. Before, each item came through as Polars stores it: a decimal as its
