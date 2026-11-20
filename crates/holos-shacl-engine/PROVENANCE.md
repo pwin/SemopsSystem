@@ -32,15 +32,16 @@ and finds none of the thousands of lines that actually differ.
 
 ## Measured divergence
 
-Line counts and differing lines, `diff` against v0.3.4, counting changed lines
-on both sides, re-measured after the SHACL-SPARQL ports below:
+Line counts and differing lines, `diff` against upstream `75cdb43` (0.3.9),
+counting changed lines on both sides, re-measured after the SHACL-SPARQL ports
+below and after the datatype port described further down:
 
 | file | here | upstream | differing |
 |---|---:|---:|---:|
 | `sparql.rs` | 1249 | 1242 | 2491 |
 | `report.rs` | 914 | 897 | 1811 |
 | `model/graph.rs` | 467 | 334 | 801 |
-| `model/vocab.rs` | 380 | 396 | 776 |
+| `model/vocab.rs` | 387 | 403 | 790 |
 | `shapes.rs` | 1798 | 1623 | 631 |
 | `validate.rs` | 1723 | 1834 | 297 |
 | `model/interner.rs` | 144 | 177 | 321 |
@@ -52,6 +53,33 @@ on both sides, re-measured after the SHACL-SPARQL ports below:
 In `sparql.rs`, `report.rs`, `model/graph.rs` and `model/vocab.rs` the differing
 lines outnumber the lines in either copy. Those are rewrites. A three-way merge
 on them is not a merge, it is a rewrite with extra steps.
+
+## The datatype port, and why `datatypes.rs` is still byte-identical
+
+Upstream 0.3.9 fixed `sh:datatype` accepting any lexical form for seven
+datatypes -- gYear, gYearMonth, gMonth, gDay, gMonthDay, dayTimeDuration and
+yearMonthDuration -- which had no branch in `is_well_formed` and fell through to
+"an unknown datatype places no constraint". Reported from work on tarka.
+
+That fix was taken here by copying upstream's `datatypes.rs` whole, because the
+file was byte-identical before and the point was to keep it so. `model/vocab.rs`
+needed the eight new `xsd:` terms added by hand instead, since it is one of the
+rewritten files. The copy is the reason the row for `datatypes.rs` is still in
+the byte-identical list below rather than in the table above.
+
+The native evaluator in [`holos-shacl`](../holos-shacl/src/validate.rs) needed
+its own fix for the same class of gap over a *different* set: its
+`lexical_is_valid` already had both duration subtypes and `xsd:dateTimeStamp`,
+and was missing `xsd:date`, `xsd:time` and all five gregorian types. Neither
+copy's gap predicted the other's, which is what two hand-maintained tables of
+the same thing look like after a while, and is the strongest argument yet for
+the shared module the "Keeping in step" section asks for.
+
+Both copies also carry one deliberate deviation from `oxsdatatypes`, pinned by
+its own test on each side: `--02-29` is a valid `xsd:gMonthDay` and the library
+rejects it, having measured February at 28 days with no year to go on. XSD 1.1
+S3.3.12.1 caps February at 29 for this type precisely because the year is
+absent. Only that bound is ours; the rest of the form stays the library's.
 
 Seven files are byte-identical to upstream: `datatypes.rs`, `error.rs`,
 `lib.rs`, `model/loader.rs`, `path.rs`, `rules.rs`, `valueset.rs`. Those are the

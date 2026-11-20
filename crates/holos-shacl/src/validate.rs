@@ -1318,7 +1318,142 @@ fn lexical_is_valid(value: &str, datatype: &str) -> bool {
         d if d == xsd("duration") => value.parse::<xs::Duration>().is_ok(),
         d if d == xsd("dayTimeDuration") => value.parse::<xs::DayTimeDuration>().is_ok(),
         d if d == xsd("yearMonthDuration") => value.parse::<xs::YearMonthDuration>().is_ok(),
+        d if d == xsd("date") => value.parse::<xs::Date>().is_ok(),
+        d if d == xsd("time") => value.parse::<xs::Time>().is_ok(),
+        // The gregorian types. Each has a lexical form specific enough to get
+        // wrong by hand -- `gYearMonth` is `1066-10`, `gMonth` is `--10`,
+        // `gDay` is `---14` -- and until now every one of them fell through to
+        // the arm below and was accepted whatever it held.
+        d if d == xsd("gYear") => value.parse::<xs::GYear>().is_ok(),
+        d if d == xsd("gYearMonth") => value.parse::<xs::GYearMonth>().is_ok(),
+        d if d == xsd("gMonth") => value.parse::<xs::GMonth>().is_ok(),
+        d if d == xsd("gDay") => value.parse::<xs::GDay>().is_ok(),
+        d if d == xsd("gMonthDay") => g_month_day_is_valid(value),
+        // `xsd:string`, `xsd:anyURI` and anything this does not know land here.
+        // For the first two that is correct -- every string is a valid
+        // `xsd:string` -- and for an unrecognised datatype it is the only safe
+        // answer. It was not correct for the nine types above, whose parsers
+        // were in `oxsdatatypes` the whole time.
         _ => true,
+    }
+}
+
+/// `xsd:gMonthDay`, the leap day included.
+///
+/// `oxsdatatypes` rejects `--02-29`: with no year to go on it measures February
+/// at 28 days. XSD 1.1 requires the opposite. gMonthDay holds no year, so
+/// S3.3.12.1 caps February at 29 for this type exactly because the year is
+/// absent, and S3.3.12 says so in passing: "days beyond 28 cannot occur in all
+/// Februaries; 29 is nonetheless permitted". The 28-or-29 leap-year split
+/// belongs to `xsd:date`, which has a year to apply it to.
+///
+/// So the parse is retried with the one day the library miscounts swapped for
+/// the day before it. The rest of the form, the timezone included, is still
+/// checked by the library; only February's upper bound comes from the
+/// specification. The adapted engine carries the same compensation, in
+/// `holos-shacl-engine`'s `datatypes::is_well_formed_g_month_day`.
+fn g_month_day_is_valid(value: &str) -> bool {
+    if value.parse::<oxsdatatypes::GMonthDay>().is_ok() {
+        return true;
+    }
+    match value.strip_prefix("--02-29") {
+        Some(timezone) => format!("--02-28{timezone}")
+            .parse::<oxsdatatypes::GMonthDay>()
+            .is_ok(),
+        None => false,
+    }
+}
+
+#[cfg(test)]
+mod lexical_tests {
+    use super::lexical_is_valid;
+
+    fn ok(value: &str, datatype: &str) -> bool {
+        lexical_is_valid(
+            value,
+            &format!("http://www.w3.org/2001/XMLSchema#{datatype}"),
+        )
+    }
+
+    /// `date`, `time` and the five gregorian types reached the catch-all arm
+    /// and were accepted whatever their lexical form. The adapted engine had
+    /// the same class of gap over a different set -- it covered date and time
+    /// and missed both duration subtypes -- which is what two hand-maintained
+    /// copies of one table look like after a while.
+    ///
+    /// Good and bad cases are paired throughout: a checker that rejected
+    /// everything would satisfy a test built only from malformed input, and
+    /// refusing valid data is the worse failure of the two.
+    #[test]
+    fn checks_dates_times_and_the_gregorian_types() {
+        assert!(ok("1066-10-14", "date"));
+        assert!(!ok("14 October", "date"));
+        assert!(!ok("1066-02-30", "date"), "February has no thirtieth");
+
+        assert!(ok("09:30:00", "time"));
+        assert!(ok("09:30:00Z", "time"));
+        assert!(!ok("half nine", "time"));
+        assert!(!ok("25:00:00", "time"));
+
+        assert!(ok("1066", "gYear"));
+        assert!(ok("1066Z", "gYear"));
+        assert!(ok("-0044", "gYear"));
+        assert!(!ok("not-a-year", "gYear"));
+        assert!(!ok("66", "gYear"));
+
+        assert!(ok("1066-10", "gYearMonth"));
+        assert!(!ok("1066", "gYearMonth"));
+        assert!(!ok("1066-13", "gYearMonth"));
+
+        assert!(ok("--10", "gMonth"));
+        assert!(!ok("10", "gMonth"));
+        assert!(!ok("--13", "gMonth"));
+
+        assert!(ok("---14", "gDay"));
+        assert!(ok("---31", "gDay"), "no month, so 31 is always allowed");
+        assert!(!ok("14", "gDay"));
+        assert!(!ok("---32", "gDay"));
+
+        assert!(ok("--10-14", "gMonthDay"));
+        assert!(!ok("February", "gMonthDay"));
+        assert!(!ok("--04-31", "gMonthDay"), "April has thirty days");
+    }
+
+    /// Pinned on its own because the answer here is the specification's and not
+    /// the library's, so a later `oxsdatatypes` correcting this must not change
+    /// it, and the bounds either side of it must stay the library's.
+    #[test]
+    fn allows_the_leap_day_as_a_g_month_day() {
+        assert!(ok("--02-29", "gMonthDay"));
+        assert!(ok("--02-29Z", "gMonthDay"));
+        assert!(ok("--02-29+01:00", "gMonthDay"));
+        assert!(ok("--02-28", "gMonthDay"));
+        assert!(!ok("--02-30", "gMonthDay"));
+        assert!(!ok("--02-29!", "gMonthDay"));
+        assert!(!ok("--02-29+99:00", "gMonthDay"));
+    }
+
+    /// The duration subtypes restrict the value space rather than the lexical
+    /// form, so `"P1Y"` parses as a duration and is still not a dayTimeDuration.
+    /// This evaluator already had both; the test is here so the pair cannot
+    /// quietly be collapsed back into `xsd:duration`.
+    #[test]
+    fn keeps_the_duration_subtypes_apart() {
+        assert!(ok("P1DT2H", "dayTimeDuration"));
+        assert!(!ok("P1Y", "dayTimeDuration"));
+        assert!(ok("P1Y2M", "yearMonthDuration"));
+        assert!(!ok("PT1H", "yearMonthDuration"));
+        assert!(ok("P1Y", "duration"));
+        assert!(ok("PT1H", "duration"));
+    }
+
+    /// Still the right answer for a datatype this evaluator does not know, and
+    /// for the two whose lexical space is every string.
+    #[test]
+    fn unknown_datatypes_and_strings_constrain_nothing() {
+        assert!(ok("whatever", "string"));
+        assert!(ok("not a uri either", "anyURI"));
+        assert!(lexical_is_valid("whatever", "http://example.org/ns#Custom"));
     }
 }
 
