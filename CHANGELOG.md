@@ -3,7 +3,12 @@
 Notable changes per release. Numbers quoted here are measured; the benchmarks that produce
 them are in `BENCHMARKS.md` and are runnable.
 
-## Unreleased
+## 0.27.0 — 2026-11-20
+
+A minor rather than a patch because the first item below changes an answer: a graph that
+validated before can fail now. That is the point of it, and it will look like a regression on
+the first run after upgrading, so it is worth knowing which it is beforehand. If a gate starts
+failing on `sh:datatype`, the data was never valid and the previous answer was wrong.
 
 ### `sh:datatype` checks the datatypes both validators were letting through
 
