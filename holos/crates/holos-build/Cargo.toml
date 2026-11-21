@@ -2,7 +2,7 @@
 name = "holos-build"
 description = "HOLOS — what a binary was built from: its version, its commit, and whether the tree was clean"
 version.workspace = true
-edition.workspace = true
+edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,0 +1,28 @@
+# Build output. Each engine directory keeps its own .gitignore for what is particular to it
+# (HOLOS's fetched test suites and RocksDB leftovers, for instance); this covers the root.
+/target/
+**/target/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local configuration and secrets
+*.env.local
+.env
+.env.*

@@ -3,7 +3,9 @@
 This is **spareval 0.2.9** from the [Oxigraph](https://github.com/oxigraph/oxigraph) project,
 as published on [crates.io](https://crates.io/crates/spareval/0.2.9), with the one change below.
 The workspace `Cargo.toml` puts it in place of the registry crate with `[patch.crates-io]`, so
-every crate here, the vendored SHACL engine included, resolves this copy.
+every crate here resolves this copy: HOLOS, its adaptation of the SHACL engine, SHACL_Engine
+itself and tarka. Before SemOps System, HOLOS and SHACL_Engine each vendored the same `src/`
+and tarka took HOLOS's by git tag; this is that one copy.
 
 | | |
 |---|---|
@@ -14,7 +16,9 @@ every crate here, the vendored SHACL engine included, resolves this copy.
 
 The package on crates.io carries no licence files, so `LICENSE-MIT` and `LICENSE-APACHE` here
 were taken from the root of the Oxigraph repository. `Cargo.toml` is the normalised manifest
-cargo publishes, unchanged; `Cargo.toml.orig` is the one it was normalised from and is not read
+cargo publishes, unchanged but for one line: its `resolver = "2"` is removed, because cargo
+ignores a resolver set by a package that is not the workspace root and warns about it on every
+command. `Cargo.toml.orig` is the one it was normalised from and is not read
 by cargo.
 
 ## The change
@@ -61,3 +65,19 @@ which is self-contained in `src/expression.rs`: the `Expression::Add` evaluator'
 
 `spareval` must stay at the version the other Oxigraph crates in the lock expect, and pins
 `oxsdatatypes` to an exact version, which the copy in `vendor/oxsdatatypes` has to match.
+
+## In SemOps System
+
+HOLOS (pwin/triplestore 0.27.0) and SHACL_Engine (0.3.9) each carried this package with the
+same `src/`; the only difference was that SHACL_Engine's copy of the new function had been
+through rustfmt. This copy takes that formatting, so `cargo fmt --all --check` passes over it.
+It is a workspace member, as it was in HOLOS, so its 32 tests run here. CI runs clippy with
+`--exclude spareval`: under clippy's defaults Oxigraph's code draws `type_complexity` and
+`too_many_arguments`, which are its design choices, not defects. That is why SHACL_Engine had
+excluded it from its workspace altogether.
+
+Clippy still reaches it, though: it lints every workspace member a build compiles, selected
+or not, so `cargo clippy -p shacl -- -D warnings` failed here on 17 of these (16
+`type_complexity`, 1 `too_many_arguments`). The manifest's `[lints.clippy]` table therefore
+allows those two, under a comment saying so. That is the only change to `Cargo.toml` besides
+the `resolver` line; upstream's other lint settings are kept.

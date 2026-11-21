@@ -27,7 +27,6 @@ readme = "README.md"
 keywords = ["SPARQL"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/oxigraph/oxigraph/tree/main/lib/spareval"
-resolver = "2"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -97,6 +96,10 @@ version = "=0.3.9"
 version = ">=1.0.50, <3.0"
 
 [lints.clippy]
+# Added in SemOps System, not upstream: two default lints Oxigraph's design trips, allowed so
+# that `-D warnings` on the crates that depend on this one does not fail here. See PROVENANCE.md.
+too_many_arguments = "allow"
+type_complexity = "allow"
 allow_attributes = "warn"
 as_pointer_underscore = "warn"
 as_underscore = "warn"

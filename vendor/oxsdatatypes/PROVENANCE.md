@@ -37,8 +37,8 @@ custom_ox_now` -- which reads as a broken toolchain and is a feature nobody aske
 not warn.
 
 Membership is deliberate and worth keeping: it is what runs this copy's own 82 tests here, and
-those tests are the only thing guarding the `decimal.rs` change below. `vendor/spareval` is
-excluded instead and has its tests run in HOLOS's workspace.
+those tests are the only thing guarding the `decimal.rs` change below. `vendor/spareval` is a
+member too, for the same reason.
 
 ## The change
 
@@ -95,3 +95,10 @@ ignores the patch with a warning and builds the registry crate.
 This copy was 0.2.2, under `spareval` 0.2.6, until the move to 0.2.4. The move took the
 Oxigraph crates `spareval` 0.2.9 needs: `spargebra` 0.4.8, `sparopt` 0.3.9 and their
 family, which fix arithmetic and filter scoping that 0.2.6 answered wrongly.
+
+## In SemOps System
+
+HOLOS (pwin/triplestore 0.27.0) and SHACL_Engine (0.3.9) each carried this package with the
+same `src/`. This copy is SHACL_Engine's, because its manifest has the three changes above and
+HOLOS's did not: with HOLOS's, `cargo test --workspace --all-features` in this workspace would
+fail at the linker on `custom_ox_now`, exactly as it did in SHACL_Engine.
