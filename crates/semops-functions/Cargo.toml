@@ -1,0 +1,31 @@
+[package]
+name = "semops-functions"
+description = "The SPARQL extension functions every SemOps System evaluator registers: XPath fn: and math:, Jena ARQ afn: and apf:, SPIN spif:"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Not the workspace's Oxigraph specs. Those turn RDF 1.2 and SPARQL 1.2 on, and this crate
+# is a dependency of the SHACL engine's RDF 1.1 build. An inherited dependency can gain
+# features but never lose them, so inheriting would make that build RDF 1.2 too (see
+# shacl/crates/shacl/Cargo.toml). Nothing here needs either: the code compiles both ways.
+oxrdf = { version = "0.3", features = ["oxsdatatypes"] }
+oxsdatatypes = "0.2"
+spargebra = "0.4"
+spareval = "0.2"
+regex.workspace = true
+# afn:sha1sum.
+sha1 = "0.11"
+
+[dev-dependencies]
+oxrdfio = "0.2"
+
+# `wasm32-unknown-unknown` has no clock or process id to seed spif:generateUUID and
+# spif:random from, so the host's entropy is asked instead. .cargo/config.toml carries the
+# `getrandom_backend` cfg that is the other half.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }

@@ -82,9 +82,10 @@ jobs:
       # HOLOS was never formatted with rustfmt (74 diffs upstream at 0.27.0). Reformatting it
       # here would turn every `git subtree pull` from pwin/triplestore into a conflict, so it
       # waits until that repository stops taking commits; until then the gate covers the rest.
-      - name: rustfmt (SHACL_Engine, tarka, vendor)
+      - name: rustfmt (SemOps crates, SHACL_Engine, tarka, vendor)
         run: >
           cargo fmt --check
+          -p semops-functions
           -p shacl -p shacl-cli -p shacl-python -p shacl-wasm
           -p tarka -p tarka-bottr -p tarka-cli -p tarka-core -p tarka-io -p tarka-ottr
           -p tarka-polars -p tarka-python -p tarka-shacl -p tarka-tarql
@@ -92,7 +93,7 @@ jobs:
       # Clippy lints every workspace member a build compiles, selected or not, so
       # `-D warnings` cannot be aimed at some crates and not others: tarka depends on
       # holos-engine, and HOLOS carries about 270 warnings it was never gated on. So the gate
-      # is by directory instead: no warning at all in shacl/, tarka/ or vendor/, as
+      # is by directory instead: no warning at all in crates/, shacl/, tarka/ or vendor/, as
       # SHACL_Engine's and tarka's own CI required, and HOLOS's count reported, to be worked
       # down once pwin/triplestore stops taking commits (the same reasoning as rustfmt above).
       # The Python modules are left to the python job, which builds them as maturin does.
@@ -103,8 +104,8 @@ jobs:
           cargo clippy --locked --all-targets --workspace \
             --exclude holos-python --exclude shacl-python --exclude tarka-python \
             --message-format=short 2>&1 | tee clippy.txt
-          if grep -E '^(shacl|tarka|vendor)/[^:]+:[0-9]+:[0-9]+: (warning|error)' clippy.txt; then
-            echo "::error::clippy warnings in shacl/, tarka/ or vendor/ (listed above)"
+          if grep -E '^(crates|shacl|tarka|vendor)/[^:]+:[0-9]+:[0-9]+: (warning|error)' clippy.txt; then
+            echo "::error::clippy warnings in crates/, shacl/, tarka/ or vendor/ (listed above)"
             exit 1
           fi
           n=$(grep -cE '^holos/[^:]+:[0-9]+:[0-9]+: warning' clippy.txt || true)
