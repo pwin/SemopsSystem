@@ -1,0 +1,261 @@
+"""The Python module gives the RDF the Rust tests expect, from data frames and CSV files."""
+
+import datetime as dt
+from pathlib import Path
+
+import polars as pl
+import pytest
+from graphs import difference, parse, read
+
+import tarka_rdf
+
+FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures"
+XSD = "http://www.w3.org/2001/XMLSchema#"
+
+
+def expected(rel):
+    return read(FIXTURES / rel, "ntriples")
+
+
+def frame_graph(triples):
+    """The graph of a frame of N-Triples terms."""
+    return parse("".join(f"{s} {p} {o} .\n" for s, p, o in triples.iter_rows()), "ntriples")
+
+
+def assert_same(want, got, what):
+    """The graphs are isomorphic, lexical forms compared as written."""
+    only_want, only_got = difference(want, got)
+    if only_want or only_got:
+        lines = lambda triples: "\n".join(f"  {s} {p} {o}" for s, p, o in triples)
+        pytest.fail(f"{what}: graphs differ\nonly expected:\n{lines(only_want)}\nonly actual:\n{lines(only_got)}")
+
+
+def text_frame(rel):
+    """A CSV fixture as string columns (null for an empty cell)."""
+    return pl.read_csv(FIXTURES / rel, infer_schema=False)
+
+
+def test_tarql_over_a_frame():
+    m = tarka_rdf.Mapping.tarql_file(FIXTURES / "extra" / "people.rq")
+    assert m.name == "people"
+    assert ("foaf", "http://xmlns.com/foaf/0.1/") in m.prefixes
+    triples = m.triplify(text_frame("extra/people.csv"))
+    assert triples.columns == ["subject", "predicate", "object"]
+    assert triples.n_unique() == triples.height
+    assert_same(expected("extra/expected/people.nt"), frame_graph(triples), "people.rq")
+
+
+def test_jena_functions():
+    """apf:strSplit and afn:localname, as TARQL proper (on Jena) has them."""
+    m = tarka_rdf.Mapping.tarql(
+        "PREFIX apf: <http://jena.apache.org/ARQ/property#> PREFIX afn: <http://jena.apache.org/ARQ/function#>\n"
+        "PREFIX ex: <http://example.com/>\n"
+        "CONSTRUCT { ?s ex:tag ?tag ; ex:local ?local } WHERE {\n"
+        '  BIND(IRI(CONCAT("http://example.com/", ?id)) AS ?s)\n'
+        "  BIND(afn:localname(?s) AS ?local)\n"
+        '  ?tag apf:strSplit (?tags ";")\n'
+        "}"
+    )
+    triples = m.triplify(pl.DataFrame({"id": ["a", "b"], "tags": ["x; y", "z"]}))
+    tags = sorted(o for _, p, o in triples.iter_rows() if p == "<http://example.com/tag>")
+    assert tags == ['"x"', '"y"', '"z"']
+    assert ("<http://example.com/a>", "<http://example.com/local>", '"a"') in triples.rows()
+    with pytest.raises(ValueError, match="list:member is not supported"):
+        tarka_rdf.Mapping.tarql("PREFIX list: <http://jena.apache.org/ARQ/list#> CONSTRUCT { ?s ?p ?o } WHERE { ?l list:member ?o }")
+
+
+def test_ottr_over_a_frame_with_text_or_list_cells():
+    employee = expected("people/expected/employee.nt")
+    library = [FIXTURES / "people" / "people.stottr"]
+    # a text column split on ";"
+    m = tarka_rdf.Mapping.ottr(library, ["ex:Employee"], lists={"skills": ";"})
+    assert_same(employee, frame_graph(m.triplify(text_frame("people/people.csv"))), "text skills")
+    # a list column needs no separator
+    df = pl.DataFrame(
+        {
+            "person": ["ex:alice", "ex:bob", "ex:carol"],
+            "name": ["Alice", "Bob", "Carol"],
+            "email": ["alice@example.com", None, "carol@example.com"],
+            "manager": ["ex:carol", "ex:carol", None],
+            "skills": [["python", "rust", "sparql"], ["sparql"], None],
+        }
+    )
+    m = tarka_rdf.Mapping.ottr(library, ["ex:Employee"])
+    assert_same(employee, frame_graph(m.triplify(df)), "list skills")
+
+
+def test_tarql_and_ottr_mappings_agree_on_csv():
+    for dataset, root in [("customers", "rt:CustomerRow"), ("products", "rt:ProductRow"), ("orders", "rt:OrderRow")]:
+        want = expected(f"retail/expected/{dataset}.nt")
+        csv = FIXTURES / "retail" / f"{dataset}.csv"
+        native_tarql = tarka_rdf.Mapping.tarql_file(FIXTURES / "retail" / "tarql" / f"{dataset}.rq")
+        native_ottr = tarka_rdf.Mapping.ottr([FIXTURES / "retail" / "ottr"], [root])
+        for m in (native_tarql, native_ottr):
+            assert_same(want, parse(m.run_csv(csv, format="ntriples"), "ntriples"), f"{dataset} with {m!r}")
+
+
+def test_typed_columns(tmp_path):
+    (tmp_path / "row.stottr").write_text(
+        """@prefix ex: <http://example.com/> . @prefix ottr: <http://ns.ottr.xyz/0.4/> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        ex:Row [ ottr:IRI ?id, ? xsd:integer ?n, ? xsd:decimal ?price, ? xsd:boolean ?ok, ? xsd:date ?day,
+                 ? xsd:dateTime ?at ] :: {
+          ottr:Triple(?id, ex:n, ?n), ottr:Triple(?id, ex:price, ?price), ottr:Triple(?id, ex:ok, ?ok),
+          ottr:Triple(?id, ex:day, ?day), ottr:Triple(?id, ex:at, ?at) } .""",
+        encoding="utf-8",
+    )
+    df = pl.DataFrame(
+        {
+            "id": ["ex:a", "ex:b"],
+            "n": [7, None],
+            "price": [9.5, 0.25],
+            "ok": [True, False],
+            "day": [dt.date(2024, 3, 5), dt.date(2024, 12, 31)],
+            "at": [dt.datetime(2024, 3, 5, 10, 15), None],
+        }
+    ).with_columns(pl.col("at").dt.replace_time_zone("UTC"))
+    m = tarka_rdf.Mapping.ottr([tmp_path], ["http://example.com/Row"])
+    got = frame_graph(m.triplify(df))
+    ex = lambda name: f"<http://example.com/{name}>"
+    lit = lambda v, t: f'"{v}"^^<{XSD}{t}>'
+    assert got == {
+        (ex("a"), ex("n"), lit("7", "integer")),
+        (ex("a"), ex("price"), lit("9.5", "decimal")),
+        (ex("b"), ex("price"), lit("0.25", "decimal")),
+        (ex("a"), ex("ok"), lit("true", "boolean")),
+        (ex("b"), ex("ok"), lit("false", "boolean")),
+        (ex("a"), ex("day"), lit("2024-03-05", "date")),
+        (ex("b"), ex("day"), lit("2024-12-31", "date")),
+        (ex("a"), ex("at"), lit("2024-03-05T10:15:00Z", "dateTime")),
+    }
+
+
+def test_write(tmp_path):
+    m = tarka_rdf.Mapping.tarql_file(FIXTURES / "extra" / "people.rq")
+    df = text_frame("extra/people.csv")
+    want = expected("extra/expected/people.nt")
+    out = tmp_path / "people.ttl"
+    assert m.write(df, out) is None
+    assert_same(want, read(out, "turtle"), "Turtle file")
+    assert_same(want, parse(m.write(df, format="ntriples"), "ntriples"), "N-Triples text")
+    quads = m.write(df, format="nquads", graph="http://example.com/g")
+    assert quads and all(line.endswith("<http://example.com/g> .") for line in quads.splitlines())
+
+
+def test_expand():
+    lib = [FIXTURES / "people" / "people.stottr"]
+    for name in ("person", "employee"):
+        text = tarka_rdf.expand(lib, [FIXTURES / "people" / f"{name}.inst.stottr"])
+        assert_same(expected(f"people/expected/{name}.nt"), parse(text, "turtle"), f"{name} instances")
+
+
+def test_shapes():
+    m = tarka_rdf.Mapping.tarql_file(FIXTURES / "extra" / "people.rq")
+    shapes = m.shapes()
+    g = parse(shapes, "turtle")
+    assert ("<urn:tarka:shapes:PersonShape>", "<http://www.w3.org/ns/shacl#targetClass>", "<http://xmlns.com/foaf/0.1/Person>") in g
+    assert "@prefix shape: <http://example.com/s#> ." in m.shapes(base="http://example.com/s#")
+    with pytest.raises(ValueError):
+        m.shapes(base="not an IRI")
+
+
+def test_validation_with_shacl_engine(tmp_path):
+    shacl = pytest.importorskip("shacl")
+    m = tarka_rdf.Mapping.tarql_file(FIXTURES / "extra" / "people.rq")
+    shapes = shacl.Shapes.from_turtle(m.shapes())
+    assert shapes.validate_turtle(m.write(text_frame("extra/people.csv"))).conforms
+    # an ill-typed value breaks the shapes of a typed OTTR parameter
+    (tmp_path / "items.stottr").write_text(
+        """@prefix ex: <http://example.com/> . @prefix ottr: <http://ns.ottr.xyz/0.4/> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> . @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        ex:Item [ ottr:IRI ?id, ? xsd:integer ?qty ] :: { ottr:Triple(?id, rdf:type, ex:Item), ottr:Triple(?id, ex:qty, ?qty) } .""",
+        encoding="utf-8",
+    )
+    items = tarka_rdf.Mapping.ottr([tmp_path], ["http://example.com/Item"])
+    df = pl.DataFrame({"id": ["ex:a", "ex:b"], "qty": ["7", "seven"]})
+    report = shacl.Shapes.from_turtle(items.shapes()).validate_turtle(items.write(df))
+    assert not report.conforms
+    assert [r.focus_node for r in report.results] == ["<http://example.com/b>"]
+
+
+def test_bottr(tmp_path):
+    out = tmp_path / "people.ttl"
+    assert tarka_rdf.bottr([FIXTURES / "people" / "people.stottr"], [FIXTURES / "bottr" / "people.bottr.ttl"], out) is None
+    assert_same(read(FIXTURES / "bottr" / "expected" / "people.ttl"), read(out), "people.bottr.ttl")
+    templates, args = [FIXTURES / "bottr" / "templates.stottr"], [FIXTURES / "bottr" / "args.bottr.ttl"]
+    with pytest.raises(ValueError, match="1 instance left out"):
+        tarka_rdf.bottr(templates, args)
+    text = tarka_rdf.bottr(templates, args, strict=False)
+    assert_same(read(FIXTURES / "bottr" / "expected" / "args.ttl"), parse(text, "turtle"), "args.bottr.ttl")
+
+
+def test_errors():
+    with pytest.raises(ValueError, match="CONSTRUCT"):
+        tarka_rdf.Mapping.tarql("SELECT * WHERE { }")
+    with pytest.raises(ValueError):
+        tarka_rdf.Mapping.ottr([FIXTURES / "people" / "people.stottr"], ["ex:Nobody"])
+    with pytest.raises(OSError):
+        tarka_rdf.Mapping.tarql_file(FIXTURES / "missing.rq")
+    m = tarka_rdf.Mapping.tarql_file(FIXTURES / "extra" / "people.rq")
+    df = text_frame("extra/people.csv")
+    with pytest.raises(ValueError, match="format"):
+        m.write(df, format="rdfxml")
+    with pytest.raises(ValueError, match="graph"):
+        m.write(df, format="nquads")
+    # a list parameter's text cells need a separator; a list column needs none
+    employee = tarka_rdf.Mapping.ottr([FIXTURES / "people" / "people.stottr"], ["ex:Employee"])
+    with pytest.raises(ValueError, match=r'lists=\{"skills": ";"\}'):
+        employee.triplify(text_frame("people/people.csv"))
+
+
+def test_columns_and_languages(tmp_path):
+    """A mandatory parameter needs a column of its name, and an rdf:langString parameter
+    a language for its column."""
+    library = tmp_path / "shop.stottr"
+    library.write_text(
+        "@prefix ex: <http://example.com/> . @prefix ottr: <http://ns.ottr.xyz/0.4/> .\n"
+        "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+        "ex:Shop [ ottr:IRI ?id, rdf:langString ?name, ?floorArea ] :: {\n"
+        "  ottr:Triple(?id, ex:name, ?name), ottr:Triple(?id, ex:area, ?floorArea) } .\n"
+    )
+    with pytest.raises(ValueError, match=r'languages=\{"name": TAG\}'):
+        tarka_rdf.Mapping.ottr([library], ["ex:Shop"])
+    with pytest.raises(ValueError, match="'en GB', given as the language of \\?name, is not a language tag"):
+        tarka_rdf.Mapping.ottr([library], ["ex:Shop"], languages={"name": "en GB"})
+    m = tarka_rdf.Mapping.ottr([library], ["ex:Shop"], languages={"name": "cy"})
+    df = pl.DataFrame({"id": ["ex:a"], "name": ["Dwy Afon"], "floor_area": ["80"]})
+    with pytest.raises(ValueError, match=r"mandatory parameter floorArea \(is it floor_area\?\)"):
+        m.triplify(df)
+    nt = m.write(df.rename({"floor_area": "floorArea"}), format="ntriples")
+    assert '<http://example.com/name> "Dwy Afon"@cy .' in nt
+
+
+def test_rows_that_cannot_be_made(tmp_path):
+    """An IRI cell is read as bOTTR reads it (mailto: needs no prefix), and a row with a cell
+    its parameter cannot take is left out and listed in a ValueError, unless strict=False."""
+    library = tmp_path / "person.stottr"
+    library.write_text(
+        "@prefix ex: <http://example.com/> . @prefix foaf: <http://xmlns.com/foaf/0.1/> . @prefix ottr: <http://ns.ottr.xyz/0.4/> .\n"
+        "ex:Person [ ottr:IRI ?person, ? ottr:IRI ?mbox, ?name ] :: {\n"
+        "  ottr:Triple(?person, foaf:name, ?name), ottr:Triple(?person, foaf:mbox, ?mbox) } .\n"
+    )
+    m = tarka_rdf.Mapping.ottr([library], ["ex:Person"])
+    good = pl.DataFrame({"person": ["ex:ada"], "mbox": ["mailto:ada@example.com"], "name": ["Ada"]})
+    assert "<mailto:ada@example.com>" in m.write(good, format="ntriples")
+    bad = pl.DataFrame({"person": ["ex:ada", "ex:bo"], "mbox": ["mailto:ada@example.com", "n/a"], "name": ["Ada", "Bo"]})
+    csv = tmp_path / "bad.csv"
+    bad.write_csv(csv)
+    message = r"1 row left out:\nrow 2: column mbox: 'n/a' is not an IRI"
+    out = tmp_path / "out.nt"
+    for run in (
+        lambda **kw: m.triplify(bad, **kw),
+        lambda **kw: m.write(bad, out, format="ntriples", **kw),
+        lambda **kw: m.run_csv(csv, out, format="ntriples", **kw),
+    ):
+        with pytest.raises(ValueError, match=message):
+            run()
+    # the rest is written all the same, and with strict=False nothing is raised
+    assert len(out.read_text().splitlines()) == 2
+    triples = m.triplify(bad, strict=False)
+    assert triples.height == 2 and not triples.filter(pl.col("subject") == "<http://example.com/bo>").height
+    assert m.run_csv(csv, format="ntriples", strict=False).count("\n") == 2

@@ -1,0 +1,28 @@
+[package]
+name = "tarka-python"
+description = "Python bindings for tarka: triplify Polars data frames with TARQL queries or OTTR templates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lib]
+name = "tarka_py"
+crate-type = ["cdylib"]
+# documented for Python, as the `tarka` module; tested with pytest
+doc = false
+test = false
+doctest = false
+
+[dependencies]
+holos-engine.workspace = true
+# abi3: one wheel per platform serves every CPython from 3.10 on
+pyo3 = { version = "0.29", features = ["abi3-py310"] }
+pyo3-polars = "0.28"
+tarka.workspace = true
+tarka-bottr.workspace = true
+tarka-polars.workspace = true
+tarka-shacl.workspace = true

@@ -1,0 +1,39 @@
+[package]
+name = "tarka-cli"
+description = "The tarka command: triplify CSV with TARQL queries or OTTR templates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "tarka"
+path = "src/main.rs"
+# the library is called tarka too; its documentation is the one to keep
+doc = false
+
+[features]
+default = ["polars", "shacl", "gsp"]
+# Parquet and Arrow IPC input, through Polars (a large dependency)
+polars = ["dep:tarka-polars"]
+# Validation of the output with SHACL_Engine (--validate, --shapes, --report)
+shacl = ["tarka-shacl/validate"]
+# Loading into a store over the SPARQL Graph Store Protocol (--post)
+gsp = ["dep:ureq"]
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+holos-engine.workspace = true
+tarka.workspace = true
+tarka-polars = { workspace = true, optional = true }
+tarka-bottr.workspace = true
+tarka-shacl.workspace = true
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+flate2.workspace = true
+tarka-polars.workspace = true
+ureq.workspace = true

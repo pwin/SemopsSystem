@@ -1,0 +1,340 @@
+# Design
+
+tarka compiles every mapping, whether a TARQL query or OTTR templates, to one **plan**, and
+runs plans with a backend. This document describes the plan, how each front end compiles to it,
+how the row backend runs it, how data frames reach it, and how shapes are read from it.
+
+```
+ TARQL query ──► tarka-tarql ─┐
+                              ├─► Plan ──► row backend (tarka) ──► RDF writer (tarka-io)
+ OTTR library ──► tarka-ottr ─┘                   ▲              └► triples frame (tarka-polars)
+                                                  ├── CSV records (tarka-io)
+                                                  └── frame cells (tarka-polars) ◄── Parquet, IPC, Python
+
+ Plan ──► tarka-shacl ──► SHACL shapes ──► SHACL_Engine ◄── the triples a run makes
+```
+
+## 1. The plan
+
+A plan (`tarka_core::Plan`) has two layers.
+
+**Lifting** turns one input record into values for the plan's variables. There are three
+kinds:
+
+| Lifting | Used for | How |
+|---|---|---|
+| `Sparql` | TARQL; OTTR roots with `tq:` annotations | a SPARQL WHERE clause, evaluated with each record's cells bound |
+| `Columns` | OTTR roots | each variable reads the column of its name and converts it by type |
+| `Given` | OTTR instances | the values are given directly |
+
+A record can give several solutions (a WHERE clause with `VALUES` or `UNION`, for example);
+the shape layer runs once per solution.
+
+**Shape** turns a solution into triples. It is a tree of blocks:
+
+* A `Pattern` is a triple of term patterns (constant, variable, blank node, a variable with a
+  default, or a list), plus the variables it `requires`. It is emitted when its own terms are
+  bound and every required variable is bound. A literal subject or a non-IRI predicate makes no
+  triple, as in SPARQL `CONSTRUCT`.
+* A `Block` makes fresh blank nodes each time it runs.
+* A `Repeat` runs a block once per element of one or more list values: their cross product, or
+  zipped to the shortest or the longest list.
+
+A list value in object position becomes an RDF collection.
+
+## 2. TARQL
+
+The CONSTRUCT template becomes the root block: one pattern per template triple, and one blank
+node per template blank node, fresh for every solution. The WHERE clause becomes a `Sparql`
+lifting.
+
+**The evaluator** is HOLOS's (`holos_engine::Engine::evaluator()`): spareval, as HOLOS builds
+it, with HOLOS's function libraries (GeoSPARQL's `geof:`, `fn:` and `spif:`), and tarka's own
+added over them: TARQL's, and Jena's `afn:` functions as Jena has them, which replace HOLOS's
+(`tarka_tarql::evaluator()`, also used for bOTTR's RDF sources). HOLOS's `afn:sprintf` takes
+`%s` and `%d` only, where Jena formats as Java's `String.format` does, so a query tarka
+evaluates itself is refused if it calls `afn:sprintf` (`sparql11::check_local`); a query sent
+to a SPARQL endpoint is left to the endpoint. tarka names the Oxigraph crates through `holos-engine`, which
+re-exports them, and has no dependency of its own on them, so there is one copy of each, with
+HOLOS's features: RDF 1.2 and SPARQL 1.2 parsing (§8), and spareval's `sep-0002`, which gives
+`xsd:date()`, `xsd:time()` and `xsd:duration()` casts as Jena has them. HOLOS's fixes to spareval
+and oxsdatatypes come through `[patch.crates-io]` in tarka's workspace, which repeats HOLOS's:
+Cargo applies a patch only from the workspace being built.
+
+**Binding rows.** TARQL binds each row as a solution that the WHERE group starts from, as if
+`VALUES (?col …) { (…) }` came first in the group. spargebra has already turned the group into
+algebra, in which BINDs and FILTERs wrap the patterns they follow and joins fold to the left. So
+`tarka-tarql` puts a VALUES table of the batch's rows in place of the group's left-most pattern,
+below the projection spargebra adds and below any solution modifiers. A hidden variable carries
+each row's position in the batch, so solutions go back to their rows.
+
+* Only columns the query mentions are bound. A column with the same name as a variable the
+  group itself BINDs is left out, so the BIND wins.
+* `?ROWNUM` is bound to the row number (from 0), unless the CSV has a column of that name.
+* With solution modifiers at the top (`LIMIT`, `ORDER BY` …), rows are evaluated one at a time,
+  so the modifiers apply per row, as in oxi-gen.
+* spareval's `BNODE()` makes random labels; they are renamed per record so output is stable.
+
+Because the row's cells are bound, not substituted, `BOUND(?column)` is true when the cell has a
+value. This is TARQL's behaviour; oxi-gen differs (see the README).
+
+**Checking the query.** Before reading input, the WHERE clause is evaluated once on a record of
+empty cells. A function spareval does not have (`xsd:date()`, for example) fails there, with a
+message, instead of failing on the first row.
+
+**Prefixes.** spargebra does not keep the prologue, which `tarql:expandPrefixedName` needs, so
+`tarka-tarql` scans it separately (skipping comments, strings and IRIs).
+
+**Jena's functions.** TARQL proper runs on Jena, and queries written for it use Jena ARQ's
+property functions: `?tag apf:strSplit (?tags ";")` binds `?tag` to each part of `?tags`. A
+property function is a triple pattern with a reserved predicate, evaluated where it stands in
+the group with what the patterns before it have bound; against a row's empty dataset it would
+match nothing, and a query that relied on it would make nothing, silently. SPARQL 1.1 has no way
+to make several solutions of one, so `tarka-tarql` (`pfunc`) unwinds the group's left-folded
+algebra into steps instead: spareval evaluates the SPARQL steps up to a property function, tarka
+applies the function to each solution, and the solutions it makes are placed first in the group
+of the next steps, as the rows are. The group's FILTER and the query's modifiers go with the
+last steps. The solutions carry the hidden row variable, so they still go back to their rows,
+and a blank node, which a VALUES table cannot hold, crosses a step as a stand-in IRI. A group
+without property functions is evaluated in one, as before.
+
+Each property function does what Jena 4.8's does, as TARQL 1.3 runs it, down to the edge cases:
+`apf:strSplit` is Java's `String.split` on a regular expression, each part trimmed (empty parts
+in the middle kept, those at the end dropped), and tests a bound subject for membership;
+`apf:splitIRI` splits before the longest XML name at the end of the IRI, as do `afn:localname`
+and `afn:namespace`. The ones that read the data (`list:member`, `rdfs:member`, `apf:bag` …),
+search a text index or give a blank node's label are refused when the query is compiled, as is a
+property function anywhere but the top of the group. Jena's scalar functions (`afn:strjoin`,
+`afn:substr`, `afn:sha1sum` …) are custom functions to spareval, registered over HOLOS's (see
+the evaluator, above). `tests/fixtures/jena` holds
+queries and the RDF TARQL 1.3 made of them, which tarka must make too.
+
+## 3. OTTR
+
+A template compiles by symbolic expansion down to `ottr:Triple`:
+
+| OTTR | In the plan |
+|---|---|
+| a mandatory parameter given a variable | the variable is required by every pattern the instance makes, so the whole instance disappears when it is unbound |
+| a mandatory parameter given `none` | the instance is dropped when compiling |
+| a default, given a variable | `Default(variable, fallback)` |
+| a blank node in a template body | a blank node of the block the instance is expanded into: fresh per instance |
+| `cross`/`zipMin`/`zipMax` over constant lists | unrolled when compiling |
+| `cross`/`zipMin`/`zipMax` over a list value | a `Repeat`, with one element variable per list |
+| a list term | an RDF collection |
+
+The root template's parameters become the plan's variables. Where their values come from:
+
+1. **`tq:` annotations** on the root (`tq:Bind`, `tq:Where`, `tq:Prefix` …, as ottr2sparql's
+   `decompose` writes them): a `Sparql` lifting built from them. Parameters that no BIND makes
+   are read from columns of the same name.
+2. Otherwise **columns**: each parameter reads the column of its name, converted by its type.
+   IRI types (`ottr:IRI` and its OWL subtypes) expand a prefixed name whose prefix is declared,
+   and take anything else as a full IRI, so `mailto:…` and `urn:…` need no prefix
+   (`PrefixMap::resolve`, which bOTTR uses too, as Lutra reads an IRI type); `xsd:*` types
+   (except `xsd:string`) make a typed literal; anything else a plain string. A list type
+   splits the cell on its separator and converts each part. A parameter named `ROWNUM` takes
+   the row number.
+3. For **instances**, the given arguments.
+
+**Rows left out.** An empty cell is OTTR's `none`, and leaves its variable unbound. A cell
+that cannot be converted (text that is not an IRI, for an IRI type) is not `none`: leaving it
+unbound would drop the instance, or a triple, with nothing said, which is how a forgotten
+prefix once emptied a whole mapping. So its record is left out instead, as bOTTR leaves out an
+instance, and reported with every bad cell (`row 2: column mbox: 'n/a' is not an IRI`). The run
+goes on; the CLI exits with status 1 once the output is written, and Python raises a
+`ValueError` unless `strict=False`. A whole record goes, even where the parameter is optional,
+so `run -l` and bOTTR make the same output from the same rows. A typed value outside its
+datatype's lexical space is still kept, as §4 says.
+
+**Several roots.** `compile_many` instantiates several root templates for each record. Each
+root's parameters read the columns of the same names; roots share a variable when they convert a
+column the same way, and read it separately when their types differ. A root's mandatory
+parameters drop only its own instance.
+
+**Libraries.** A library is every `.stottr` file under the paths given. A template with a
+pattern wins over a signature of the same IRI, whatever the order. Only `/*** … ***/` block
+comments are allowed, as in Lutra.
+
+## 4. Typed values
+
+spareval writes every typed value an expression makes in canonical form (`"129.90"` as
+`"129.9"^^xsd:decimal`, `"1"` as `true`, `"…+00:00"` as `"…Z"`). The OTTR route's conversions use
+the same forms (through `oxsdatatypes`, which spareval uses), so a TARQL mapping and its OTTR
+equivalent give the same terms. A value outside a datatype's lexical space is kept as written,
+an ill-typed literal, as `STRDT` keeps it.
+
+One difference is deliberate. spareval changes the datatype of `STRDT(?x, xsd:int)` and the other
+types derived from `xsd:integer` to `xsd:integer`, and of `xsd:dateTimeStamp` to `xsd:dateTime`.
+The OTTR route keeps the declared datatype.
+
+## 5. The row backend
+
+`tarka::run` reads records in batches (512 by default), lifts and shapes several batches in
+parallel, and writes each record's triples in input order. Blank node labels are made from a
+record's position in the input (`b{record}x{n}`), so the output does not depend on how the work
+was split. A record left out (§3) keeps its position, with no triples, so the labels of the
+others do not move; its reason goes to a callback in input order, and `RunStats` counts it.
+Duplicates are removed within each record, or within a window of distinct triples
+(`--dedup N`), as in oxi-gen; Turtle output sorts each window, so a subject's triples come out
+together.
+
+The command line writes a file as the store takes a load (§9): all or nothing. `-o FILE` is
+written to `.FILE.tarka-PID.tmp` beside it, closed (which also ends a gzip stream) and renamed
+to `FILE` once the run is complete; a run that fails, at any point, drops the writer and removes
+the temporary file, so it leaves an earlier `FILE` as it was. Standard output is written as it
+goes.
+
+## 6. Data frames
+
+A record's cells are text or lists (`Cell::Text`, `Cell::List`). tarka-polars converts a frame
+column by column, and only the columns the plan reads: each Polars type has one text form (see
+the README), and a `List` column gives list cells. The row backend then runs unchanged, so a
+frame gives the same RDF as a CSV file holding the same text, and the tests check exactly that
+on every fixture.
+
+The text forms are chosen so that conversion by an OTTR type gives the canonical literal: a
+`Float64` is written in its shortest round-trip form, a `Datetime` with a time zone in UTC
+with `Z`. A list cell feeds an OTTR list parameter directly. A column binding records whether
+its parameter takes a list, and the check that cells fit happens as they are read, since only
+the input says whether a cell is text or a list: a text cell for a list parameter needs a
+separator, and a list cell for any other parameter is an error. So is a list column used by a
+TARQL query, whose rows bind strings.
+
+That is how a TARQL query's rows are made. A plan whose lifting reads columns (OTTR) skips the
+cells: each binding's column becomes its parameter's terms directly, the columns in parallel,
+and the rows go to the shape layer (`tarka::run_envs`). Integer columns for integer or decimal
+parameters, boolean columns for `xsd:boolean` and string columns are converted without writing
+values out as text; the rest go through the same text conversion as cells. A row with a value
+that cannot be converted reaches `run_envs` as `RunError::LeftOut`, with its problems gathered
+across the columns in binding order. A test compares the two routes term for term on every fast
+path and its edges, and requires them to leave out and report the same rows. On the 200,000-row
+orders file the column route does a fifth less work than the cells did (single-threaded: 3.8 s
+against 4.8 s from Parquet); with every core busy the shape layer dominates, and the run is a
+few percent faster.
+
+## 7. Python
+
+`tarka-python` is a PyO3 module built with maturin: the `tarka-rdf` distribution, imported as
+`tarka_rdf`, against Python's stable ABI (one wheel per platform for CPython 3.10 on). A `Mapping` holds a compiled plan; frames
+cross with pyo3-polars, which passes each column's chunks through the Arrow C data interface
+without copying. Mapping runs release the GIL. Errors become `ValueError`, or `OSError` when a
+file cannot be read.
+
+## 8. Shapes
+
+`tarka-shacl` reads a plan's shape layer as a description of the RDF it makes.
+
+**Where a subject is known to exist.** Each triple pattern sits in a block (the root, or a
+repeat's body) and needs some variables bound: those in its terms (a default needs only its
+fallback's), those it `requires`, and those of the repeats around it. A pattern P is made
+whenever pattern T is made when P's block encloses T's and P needs nothing T does not, besides
+variables bound in every solution (the row number). A class assertion (`?s rdf:type C`, C
+constant) says where its subject exists; a shape for C collects the patterns on that subject,
+and a property is required when it is made whenever the class assertion is, in every place C is
+asserted.
+
+**What values are.** A variable's kind comes from its lifting. Columns lifting: the OTTR
+conversion (an IRI, a typed or plain literal, a list), with list elements bound by repeats
+taking the element conversion. SPARQL lifting: the expression its BINDs give it, inferred over
+SPARQL's functions, XSD casts and TARQL's, through `IF` and `COALESCE`; a variable no BIND sets
+can only hold a column's string. Casts follow what spareval writes: `xsd:int` values come out as
+`xsd:integer`. A property's kinds are those of all its objects, and become `sh:datatype` when
+they are one datatype, else `sh:nodeKind` when they agree on one.
+
+**Objects.** An object gets `sh:class C` when its own class assertion is made whenever the
+property is; a blank node object without a class gets a `sh:node` shape built the same way.
+
+The tests generate shapes for every fixture mapping and validate the mapping's output against
+them, which checks the inference against what the engine really makes.
+
+**Validation** runs SHACL_Engine in process: tarka's triples and the shapes go into its term
+store directly. tarka is built on HOLOS's crates (§2), which turn the Oxigraph crates' RDF 1.2
+features on for the whole build, and SHACL_Engine with its `rdf-12` feature to match. So the
+parsers read RDF 1.2 and SPARQL 1.2, and tarka's RDF 1.1 scope is checked explicitly
+(`tarka_tarql::sparql11`): triple terms, SPARQL 1.2 functions and literals with a base
+direction are refused, and every test run checks that against parsers that accept them. The
+Python module leaves validation to SHACL_Engine's own package and is built without it.
+
+## 9. Loading into a store
+
+`--post` loads the output over the SPARQL 1.1 Graph Store Protocol rather than into a store
+linked in. tarka evaluates SPARQL with HOLOS's engine crate (§2), which builds without RocksDB
+by default, but then keeps its store in memory; a store that persists is RocksDB, a C++ build.
+And the protocol reaches HOLOS, Oxigraph, Fuseki and GraphDB alike.
+
+The run writes N-Triples into one end of an OS pipe; the request, on its own thread, sends the
+other end as a chunked body (ureq, with rustls). Nothing is buffered beyond the pipe, and the
+store sees one request, so a POST or PUT is one transaction there. If the run fails, the
+request body ends in an error instead of its last chunk: the connection drops before the body
+is complete, and the store takes nothing. If the store refuses the request first, the run sees
+a broken pipe, and the store's answer is reported instead. Rows left out (§3) do not fail the
+run: the store takes the others, and the exit status says so afterwards, as a failed
+validation does.
+
+One transaction has a ceiling. HOLOS reads the whole body, and parses all of it, before it
+writes any (which is also why a body cut short loads nothing), so tarka's memory stays flat
+while the server's grows with the load. A persistent HOLOS (0.21.0) buffers a request's writes
+in one RocksDB batch and refuses a batch of more than 4,194,304 writes, about 419,000 quads at
+its estimate of ten a quad: the retail orders mapping, over its rows repeated with new order
+IRIs, loads 388,500 triples in one request and is refused at 444,000, with a 400, and the store
+takes nothing. An output that size goes into a persistent HOLOS as a file, through HOLOS's own
+bulk load (`--data`), which is not atomic. The in-memory store has no ceiling.
+
+The tests check the requests against a small HTTP server (method, graph parameter, headers,
+body), and, with `HOLOS_SERVER` set, load every retail mapping into a live HOLOS, read each graph
+back and compare it with the reference output, and check that a failed run loads nothing. That
+HOLOS is given no `--store`, so it runs in memory and never meets the ceiling.
+
+## 10. Types and lint
+
+`tarka_ottr::types` is OTTR's type system as Lutra implements it, worked out by running Lutra's
+linter on cases at the edges:
+
+* Basic types form a tree under `rdfs:Resource` (XSD's numeric and string types, `rdf:langString`
+  under `ottr:string`, the OWL and RDFS IRI types under `ottr:IRI`); a type the tree does not name
+  is read as `rdfs:Resource`, and so is an untyped parameter. `NEList<T>` is a subtype of
+  `List<T>`, lists are covariant, and everything is a subtype of `rdfs:Resource`.
+* A literal's type is exact: its datatype, `xsd:string` when plain, `rdf:langString` when
+  tagged. An IRI's is `LUB<ottr:IRI>` and a blank node's `LUB<rdfs:Resource>`: a least upper
+  bound fits any type above or below it, so an IRI fits `owl:Class` but an `ottr:IRI` parameter
+  does not.
+* A list constant is checked item by item against the element type; `++` lifts the parameter's
+  type to a list of it.
+* One argument given to several parameters must be able to have all their types: two basic
+  types must be on one branch of the tree.
+
+`tarka_ottr::lint` applies it to every template body, with the structural checks (undefined
+templates, arity, cycles, unused and undeclared variables, duplicates, and Lutra's non-blank
+flags: a parameter not marked `!` given to one that is, `ottr:Triple`'s predicate among them),
+and returns findings
+with a file, a line and a check name. A live test runs Lutra's linter on the same library of
+mistakes and requires the same findings, as often, in the same templates.
+
+## 11. bOTTR
+
+`tarka-bottr` reads bOTTR files and runs their instance maps. The semantics are Lutra's, read
+from its bytecode and confirmed by running it: a value goes through, in order, the null value,
+the labelled blank prefix, the fresh blank values, the translation table, and then the
+argument map's type (a list type through Lutra's list syntax, with nesting). Text from CSV is
+a plain literal by default; an RDF term is kept when its own type is a subtype of the map's,
+and otherwise read again from its lexical form or IRI. Typed literals keep their lexical form
+(`007` stays `"007"^^xsd:integer`), as Lutra writes them, unlike the TARQL and OTTR routes,
+which write spareval's canonical forms; a value outside its datatype's lexical space leaves
+the instance out instead of becoming an ill-typed literal.
+
+Each instance is then type-checked against the template's parameters with `tarka_ottr::types`
+and expanded like any OTTR instance (the template compiled once, with given values). H2's
+SQL is not embedded: tarka parses the part of it that reads a CSV file, and H2's CSV dialect,
+whose quirks the fixtures pin (trimming, NULL for empty fields, the column list split on the
+field separator). RDF sources are loaded into one dataset and queried with HOLOS's evaluator;
+a SPARQL endpoint gets the query as an `application/sparql-query` POST, and its JSON or XML
+results (sparesults) are read like the evaluator's solutions. A term in them that is RDF 1.2 (a
+triple term, or a literal with a base direction, both of which HOLOS can return) is an error,
+as in an RDF file source, in JSON and XML alike. tarka asks for JSON first, and HOLOS sends
+it. The endpoint tests check the
+request, and, with `HOLOS_SERVER` set, run the RDF file fixture's map against HOLOS serving the
+same data: the output must be the file source's, and Lutra's against the same endpoint.
+
+The fixtures under `tests/fixtures/bottr` were run through Lutra to make their expected
+output; a live test runs Lutra again when `LUTRA_JAR` is set.

@@ -1,0 +1,26 @@
+[package]
+name = "tarka-bottr"
+description = "bOTTR instance maps for tarka: OTTR templates over CSV (H2's CSVREAD) and RDF files"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[features]
+default = ["endpoints"]
+# SPARQL endpoint sources, over HTTP
+endpoints = ["dep:ureq"]
+
+[dependencies]
+holos-engine.workspace = true
+tarka-core.workspace = true
+tarka-io.workspace = true
+tarka-ottr.workspace = true
+tarka-tarql.workspace = true
+thiserror.workspace = true
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+tarka.workspace = true

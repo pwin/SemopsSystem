@@ -1,0 +1,5 @@
+maplib==0.20.26
+tarka-rdf==0.1.1
+polars==2.0.0
+psutil==7.2.2
+holosdb==0.26.3
