@@ -1,0 +1,56 @@
+[package]
+name = "shacl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "A high-performance SHACL validation engine"
+
+[features]
+# On by default, so a plain `cargo build`/`cargo test` and every existing
+# consumer keep the multi-threaded Turtle parse and RDF 1.2 with no change.
+default = ["parallel", "rdf-12"]
+# RDF 1.2 and SPARQL 1.2: triple terms and base directions, in the data, the
+# shapes and SHACL-SPARQL. Turn it off (`default-features = false`) for an RDF 1.1
+# build -- one that embeds the engine in an RDF 1.1 tool. Cargo enables a feature
+# for every crate in a build, so with it on, the Oxigraph crates parse RDF 1.2
+# for everything else in that build too.
+#
+# `sparql-12` must track `rdf-12`: enabling triple terms in the term model
+# without it leaves the SPARQL crates unable to match on `Term::Triple`.
+rdf-12 = ["oxrdf/rdf-12", "oxrdfio/rdf-12", "oxttl/rdf-12", "spargebra/sparql-12", "spareval/sparql-12"]
+# Splits the Turtle parse across worker threads (rayon). Turn it off for
+# targets with no threads to split across -- `wasm32-unknown-unknown` in
+# particular, where rayon cannot build at all. With it off the loader takes the
+# sequential whole-document path it already falls back to whenever a document
+# can't be chunked safely; the two produce an identical graph, which is what
+# the `parallel_matches_sequential` test pins.
+parallel = ["dep:rayon"]
+
+[dependencies]
+oxrdf.workspace = true
+oxrdfio.workspace = true
+oxttl = "0.2"
+oxsdatatypes.workspace = true
+# `sep-0002` gives xsd:date, xsd:time and the duration types values in SHACL-SPARQL, so that
+# `FILTER(?until < "2026-11-10"^^xsd:date)` compares rather than erroring. Without it the
+# comparison is a type error, the FILTER drops the row, and a constraint that should fire
+# reports nothing. Always on, unlike `rdf-12`: no build wants dates opaque. (The Core
+# comparisons, `sh:lessThan` and the range components, never used the evaluator and were not
+# affected.) Oxigraph's `calendar-ext`, which also orders xsd:gYear and its kin, is
+# deliberately not enabled: XPath defines no order for those types.
+spargebra = { workspace = true, features = ["sep-0002"] }
+spareval = { workspace = true, features = ["sep-0002"] }
+rayon = { workspace = true, optional = true }
+hashbrown.workspace = true
+regex.workspace = true
+foldhash = "0.2"
+# `rust_backend` keeps this pure Rust: no zlib to find at link time, which
+# matters for the three-platform release builds -- and is what lets this crate
+# build for wasm32 too, where there is no C zlib to link against.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+
+
+[dev-dependencies]
+mimalloc = { version = "0.1", default-features = false }
+anyhow.workspace = true

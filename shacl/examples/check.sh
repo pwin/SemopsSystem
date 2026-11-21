@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# Runs the examples and checks the CLI behaves as documented.
+#
+#   examples/check.sh [path-to-shacl]
+#
+# Defaults to target/release/shacl, so it works against a source build; pass a
+# path to check a downloaded release binary instead.
+#
+# Exit status is 0 only if every expectation holds, so this is usable as a
+# smoke test for a build you did not make yourself.
+set -uo pipefail
+cd "$(dirname "$0")"
+
+SHACL="${1:-../target/release/shacl}"
+[ -x "$SHACL" ] || SHACL="$SHACL.exe"
+if ! "$SHACL" --version >/dev/null 2>&1; then
+  echo "cannot run $SHACL — build it with: cargo build --release -p shacl-cli" >&2
+  exit 2
+fi
+echo "checking $("$SHACL" --version)"
+
+fails=0
+check() { # check <description> <expected> <actual>
+  if [ "$2" = "$3" ]; then
+    printf '  ok    %s\n' "$1"
+  else
+    printf '  FAIL  %s\n        expected %s, got %s\n' "$1" "$2" "$3"
+    fails=$((fails + 1))
+  fi
+}
+
+# --- conforming data
+out=$("$SHACL" -d person-valid.ttl -s person-shapes.ttl --quiet); rc=$?
+check "valid data conforms"        "conforms: true" "$out"
+check "valid data exits 0"         "0"              "$rc"
+
+# --- non-conforming data
+out=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl --quiet); rc=$?
+check "invalid data does not conform" "conforms: false" "$out"
+# A non-conforming graph is a normal outcome, not an error: 1 rather than 2.
+check "invalid data exits 1"          "1"               "$rc"
+
+n=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl | grep -c 'ConstraintComponent')
+check "one violation per subject"     "10"              "$n"
+
+# Every subject in person-invalid.ttl names the component it should trip.
+for c in MinCount MaxCount MinLength Datatype MaxInclusive Pattern In Class; do
+  got=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl | grep -c "${c}ConstraintComponent" || true)
+  [ "$got" -gt 0 ] && r=present || r=missing
+  check "reports ${c}ConstraintComponent" "present" "$r"
+done
+
+# --- shapes read from the data graph itself
+out=$("$SHACL" -d self-contained.ttl --quiet)
+check "self-contained document"       "conforms: false" "$out"
+
+# --- the RDF report
+rdf=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl -f turtle)
+for want in "sh:ValidationReport" "sh:conforms false" "sh:resultSeverity"; do
+  case "$rdf" in *"$want"*) r=present ;; *) r=missing ;; esac
+  check "turtle report contains $want" "present" "$r"
+done
+
+# The report must be a graph another tool can read, so feed it back in. There
+# are no shapes to check it against and none are wanted -- parsing it is the
+# whole test -- so this is the case --allow-no-shapes exists for.
+echo "$rdf" > /tmp/shacl-report.$$.ttl
+out=$("$SHACL" -d /tmp/shacl-report.$$.ttl --allow-no-shapes --quiet); rc=$?
+rm -f /tmp/shacl-report.$$.ttl
+check "report parses as RDF"          "conforms: true"  "$out"
+
+# The cap counts only results that break conformance. Stopping on a warning
+# while a violation sat unreached elsewhere reported `conforms: true` on a
+# graph that does not conform -- the worst kind of wrong answer.
+cat > /tmp/shacl-sev.$$.ttl <<'TTL'
+@prefix ex: <http://example.org/ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+ex:WarnShape a sh:NodeShape ; sh:targetNode ex:a ;
+  sh:property [ sh:path ex:w ; sh:minCount 1 ; sh:severity sh:Warning ] .
+ex:ViolShape a sh:NodeShape ; sh:targetNode ex:b ;
+  sh:property [ sh:path ex:v ; sh:minCount 1 ; sh:severity sh:Violation ] .
+TTL
+cat > /tmp/shacl-sevd.$$.ttl <<'TTL'
+@prefix ex: <http://example.org/ns#> .
+ex:a ex:x 1 .
+ex:b ex:y 2 .
+TTL
+out=$("$SHACL" -d /tmp/shacl-sevd.$$.ttl -s /tmp/shacl-sev.$$.ttl --abort --quiet); rc=$?
+check "--abort is severity-aware"      "conforms: false" "$out"
+check "--abort keeps the exit status"  "1"               "$rc"
+rm -f /tmp/shacl-sev.$$.ttl /tmp/shacl-sevd.$$.ttl
+
+# pySHACL spells the format overrides with one dash and two letters.
+out=$("$SHACL" -d person-valid.ttl -df ttl -s person-shapes.ttl -sf ttl --quiet)
+check "pySHACL -df/-sf spelling"       "conforms: true"  "$out"
+
+# Compressed input, which is how published RDF usually arrives. The syntax
+# comes from underneath the `.gz`, so no --data-format is needed.
+gzip -cf person-valid.ttl > /tmp/shacl-pv.$$.ttl.gz 2>/dev/null
+if [ -s /tmp/shacl-pv.$$.ttl.gz ]; then
+  out=$("$SHACL" -d /tmp/shacl-pv.$$.ttl.gz -s person-shapes.ttl --quiet)
+  check "reads a gzipped data graph"   "conforms: true"  "$out"
+  gzip -cf person-shapes.ttl > /tmp/shacl-ps.$$.ttl.gz
+  out=$("$SHACL" -d /tmp/shacl-pv.$$.ttl.gz -s /tmp/shacl-ps.$$.ttl.gz --quiet)
+  check "gzipped shapes graph too"     "conforms: true"  "$out"
+  gzip -cf person-invalid.ttl > /tmp/shacl-pi.$$.ttl.gz
+  n=$("$SHACL" -d /tmp/shacl-pi.$$.ttl.gz -s person-shapes.ttl | grep -c "ConstraintComponent")
+  check "gzip changes nothing else"    "10"              "$n"
+  rm -f /tmp/shacl-pv.$$.ttl.gz /tmp/shacl-ps.$$.ttl.gz /tmp/shacl-pi.$$.ttl.gz
+fi
+
+# --- the flags added in the CLI round-out
+out=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl --abort | grep -c "ConstraintComponent")
+check "--abort stops at one result"   "1"  "$out"
+out=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl --max-results 3 | grep -c "ConstraintComponent")
+check "--max-results caps the report" "3"  "$out"
+
+# -o writes the same bytes the terminal would have seen.
+"$SHACL" -d person-invalid.ttl -s person-shapes.ttl -f turtle -o /tmp/shacl-o.$$.ttl
+piped=$("$SHACL" -d person-invalid.ttl -s person-shapes.ttl -f turtle)
+[ "$piped" = "$(cat /tmp/shacl-o.$$.ttl)" ] && r=same || r=different
+rm -f /tmp/shacl-o.$$.ttl
+check "-o matches stdout"             "same"            "$r"
+
+# Two documents that only validate once merged.
+out=$("$SHACL" -d person-valid.ttl person-shapes.ttl --quiet)
+check "repeated -d merges documents"  "conforms: true"  "$out"
+
+# Reading the data graph from a pipe.
+out=$(cat person-valid.ttl | "$SHACL" -d - --data-format ttl -s person-shapes.ttl --quiet)
+check "reads the data graph from -"   "conforms: true"  "$out"
+
+# The shapes here are well formed, so SHACL-SHACL should not object.
+out=$("$SHACL" -d person-valid.ttl -s person-shapes.ttl -m --quiet)
+check "--meta-shacl accepts them"     "conforms: true"  "$out"
+
+# pySHACL spellings people will already have in their fingers.
+out=$("$SHACL" -d person-valid.ttl --df ttl -s person-shapes.ttl --sf ttl -w --quiet)
+check "pySHACL flag aliases"          "conforms: true"  "$out"
+
+# The readable format carries the severity and every sh:message. Both were in
+# the RDF report from the start and only this format dropped them, which is the
+# default and the one a person reads -- so a shape author's own wording never
+# reached the screen.
+cat > /tmp/shacl-msg.$$.ttl <<'TTL'
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:S a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property [ sh:path ex:age ; sh:datatype xsd:integer ;
+                sh:message "Age must be an integer." ] ;
+  sh:property [ sh:path ex:nick ; sh:minCount 1 ; sh:severity sh:Warning ;
+                sh:message "A nickname is optional." ] .
+TTL
+cat > /tmp/shacl-msgdata.$$.ttl <<'TTL'
+@prefix ex: <http://example.org/ns#> .
+ex:bob a ex:Person ; ex:age "x" .
+TTL
+out=$("$SHACL" -d /tmp/shacl-msgdata.$$.ttl -s /tmp/shacl-msg.$$.ttl)
+case "$out" in *"Age must be an integer."*) r=shown ;; *) r=missing ;; esac
+check "human output shows sh:message"  "shown"           "$r"
+case "$out" in *"A nickname is optional."*) r=shown ;; *) r=missing ;; esac
+check "...every message, not just one" "shown"           "$r"
+# Since 0.3.0 a warning breaks conformance, so which result is to blame cannot
+# be read off the output unless the severity is on it.
+case "$out" in *Warning*) r=shown ;; *) r=missing ;; esac
+check "human output shows severity"    "shown"           "$r"
+case "$out" in *Violation*) r=shown ;; *) r=missing ;; esac
+check "...for violations too"          "shown"           "$r"
+rm -f /tmp/shacl-msg.$$.ttl /tmp/shacl-msgdata.$$.ttl
+
+# A shapes graph with no shapes in it conforms, because there is nothing to
+# violate, and that is the worst answer this tool can give: a CI job branches
+# on `conforms: true` and exit 0, so a run that checked nothing passes the
+# gate. Both ways of arriving there are refused unless asked for.
+out=$("$SHACL" -d person-valid.ttl --quiet 2>&1); rc=$?
+check "forgotten -s is refused"       "2"               "$rc"
+case "$out" in
+  *"no --shapes was given"*) r=explains ;;
+  *)                         r="$out" ;;
+esac
+check "...and says why"               "explains"        "$r"
+
+# Shapes given explicitly, but the file declares none. Different cause, so a
+# different message: the file is the one to look at, not the missing flag.
+out=$("$SHACL" -d person-valid.ttl -s person-valid.ttl --quiet 2>&1); rc=$?
+check "empty shapes graph is refused" "2"               "$rc"
+case "$out" in
+  *"declares no shapes"*) r=explains ;;
+  *)                      r="$out" ;;
+esac
+check "...and names the file"          "explains"       "$r"
+
+# Deliberately validating against nothing stays available, which is what the
+# report-parses check above relies on.
+out=$("$SHACL" -d person-valid.ttl --allow-no-shapes --quiet); rc=$?
+check "--allow-no-shapes permits it"  "conforms: true"  "$out"
+check "...and exits 0"                "0"               "$rc"
+
+# sh:datatype has to reject a malformed literal, and until 0.3.9 seven datatypes
+# were never checked at all: the well-formedness test had no branch for them and
+# fell through to "an unknown datatype places no constraint". They were not
+# unknown. Reported from work on tarka.
+cat > /tmp/shacl-dt.$$.ttl <<'TTL'
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:S a sh:NodeShape ; sh:targetClass ex:Rec ;
+  sh:property [ sh:path ex:year ; sh:datatype xsd:gYear ] ;
+  sh:property [ sh:path ex:md   ; sh:datatype xsd:gMonthDay ] ;
+  sh:property [ sh:path ex:dtd  ; sh:datatype xsd:dayTimeDuration ] .
+TTL
+cat > /tmp/shacl-dtbad.$$.ttl <<'TTL'
+@prefix ex: <http://example.org/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:x a ex:Rec ; ex:year "not-a-year"^^xsd:gYear .
+TTL
+out=$("$SHACL" -d /tmp/shacl-dtbad.$$.ttl -s /tmp/shacl-dt.$$.ttl --quiet)
+check "a malformed gYear is caught"    "conforms: false" "$out"
+
+# "P1Y" is a well-formed duration and still not a dayTimeDuration: the subtype
+# restricts the value space, so checking it as xsd:duration would pass it.
+cat > /tmp/shacl-dtbad.$$.ttl <<'TTL'
+@prefix ex: <http://example.org/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:x a ex:Rec ; ex:dtd "P1Y"^^xsd:dayTimeDuration .
+TTL
+out=$("$SHACL" -d /tmp/shacl-dtbad.$$.ttl -s /tmp/shacl-dt.$$.ttl --quiet)
+check "a year is not a dayTimeDuration" "conforms: false" "$out"
+
+# The other direction matters more: a checker that rejects everything would pass
+# the two checks above. --02-29 is a valid gMonthDay -- February is capped at 29
+# for a type with no year in it -- and oxsdatatypes rejects it, so this is the
+# one bound taken from the specification rather than the library.
+cat > /tmp/shacl-dtgood.$$.ttl <<'TTL'
+@prefix ex: <http://example.org/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:x a ex:Rec ; ex:year "1066Z"^^xsd:gYear ;
+  ex:md "--02-29"^^xsd:gMonthDay ; ex:dtd "P1DT2H"^^xsd:dayTimeDuration .
+TTL
+out=$("$SHACL" -d /tmp/shacl-dtgood.$$.ttl -s /tmp/shacl-dt.$$.ttl --quiet)
+check "well-formed values still pass"  "conforms: true"  "$out"
+rm -f /tmp/shacl-dt.$$.ttl /tmp/shacl-dtbad.$$.ttl /tmp/shacl-dtgood.$$.ttl
+
+echo
+if [ "$fails" -eq 0 ]; then
+  echo "all checks passed"
+else
+  echo "$fails check(s) failed"
+fi
+exit $((fails > 0))

@@ -1,0 +1,361 @@
+name: release
+
+# Tag a commit `v0.1.0` to cut a release. Artefacts are built natively on each
+# platform rather than cross-compiled, so every binary and wheel is tested on
+# the system it targets before it ships.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish_to_pypi:
+        description: "Upload the distributions to an index (run this against a tag, not a branch)"
+        type: boolean
+        default: false
+      pypi_repository:
+        description: "Which index. Rehearse on testpypi first: a version can never be re-uploaded."
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+      publish_to_npm:
+        description: "Publish the WebAssembly packages to npm (run this against a tag)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # `shacl-python` is excluded because it contains no Rust tests, and
+      # building it here would link against libpython for no benefit — the
+      # `wheels` job builds it properly with `extension-module` and runs its
+      # pytest suite on every platform. Clippy and rustfmt still cover it,
+      # since neither links.
+      - run: cargo test --workspace --exclude shacl-python
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo fmt --all --check
+
+  cli:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          # Apple Silicon only. `macos-13` was the last free Intel runner and
+          # has been removed; the surviving Intel labels are large runners,
+          # which are billed even on public repositories. Intel Mac users can
+          # build the CLI from source, and the Python wheel below is universal
+          # so it covers them regardless.
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: .exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: cargo build --release -p shacl-cli --target ${{ matrix.target }}
+      # A binary that cannot report its own version did not link correctly.
+      - name: Smoke test
+        shell: bash
+        run: ./target/${{ matrix.target }}/release/shacl${{ matrix.ext }} --version
+      # Archived rather than shipped bare, for two reasons: a raw file
+      # downloaded from a release arrives without its executable bit, and the
+      # licences have to travel with the binary.
+      - name: Package
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$VERSION" = "$GITHUB_REF_NAME" ] && VERSION=dev
+          NAME="shacl-$VERSION-${{ matrix.target }}"
+          mkdir -p "staging/$NAME" dist
+          cp "target/${{ matrix.target }}/release/shacl${{ matrix.ext }}" "staging/$NAME/"
+          cp LICENSE-MIT LICENSE-APACHE README.md "staging/$NAME/"
+          cd staging
+          if [ -n "${{ matrix.ext }}" ]; then
+            7z a -tzip "../dist/$NAME.zip" "$NAME" >/dev/null
+          else
+            tar czf "../dist/$NAME.tar.gz" "$NAME"
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.target }}
+          path: dist/*
+
+  wheels:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+          # One universal2 wheel covers both Mac architectures, which is what
+          # lets the Intel runner go without leaving Intel users behind.
+          - os: macos-latest
+            target: universal2-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # One abi3 wheel per platform serves every CPython from 3.9 up, so the
+      # matrix is over operating systems rather than interpreter versions.
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --manifest-path crates/shacl-python/Cargo.toml
+          target: ${{ matrix.target }}
+          manylinux: auto
+      # `--no-index` matters: `shacl` is a plausible name for an unrelated
+      # project on PyPI, and without it a failed local build would quietly test
+      # somebody else's package instead.
+      - name: Smoke test
+        shell: bash
+        run: |
+          python -m pip install --no-index --find-links dist --force-reinstall shacl
+          python -m pip install pytest
+          python -m pytest crates/shacl-python/tests -q
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: dist/*.whl
+
+  # PyPI expects a source distribution alongside the wheels, so anyone on a
+  # platform with no wheel can still build from source. Only one is needed, so
+  # it is not part of the per-OS matrix.
+  sdist:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path crates/shacl-python/Cargo.toml
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    needs: [cli, wheels, sdist]
+    runs-on: ubuntu-latest
+    # Only on a tag push. A manual dispatch is how the PyPI upload is driven,
+    # and that has to be run against an existing tag — without this guard it
+    # would also rewrite the release that tag already published.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: staged
+      # Collected by artefact directory rather than by filename. Each upload
+      # lands in its own subdirectory, so this cannot accidentally pick up or
+      # miss a file the way matching on `shacl-*` would.
+      - name: Collect and checksum
+        run: |
+          mkdir -p dist
+          cp staged/cli-*/* staged/wheels-*/*.whl staged/sdist/*.tar.gz dist/
+          (cd dist && sha256sum ./* > SHA256SUMS)
+          ls -la dist
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+  # Deliberately not triggered by the tag. A PyPI upload cannot be undone —
+  # yanking hides a version but never frees it for re-use — so publishing is a
+  # separate, explicit act. Run this workflow manually with `publish_to_pypi`
+  # set, after the release artefacts have been looked at.
+  #
+  # Authentication is Trusted Publishing: PyPI is configured to trust this
+  # repository and workflow, and the job exchanges a short-lived OIDC token for
+  # upload rights. No API token is stored anywhere.
+  pypi:
+    needs: [cli, wheels, sdist]
+    if: inputs.publish_to_pypi
+    runs-on: ubuntu-latest
+    # The environment name follows the chosen index, so each can carry its own
+    # protection rules and reviewers.
+    environment: ${{ inputs.pypi_repository }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: staged
+      # Only the Python distributions. The CLI archives are also `.tar.gz` and
+      # must not be uploaded to PyPI, so this takes them from the artefact
+      # directories that hold Python builds rather than filtering by name.
+      - name: Collect distributions
+        run: |
+          mkdir -p dist
+          cp staged/wheels-*/*.whl staged/sdist/*.tar.gz dist/
+          ls -la dist
+      # Real PyPI must come from a tag: dispatching from a branch would upload
+      # whatever that branch currently holds, under the version in Cargo.toml,
+      # which need not be what the tag of that version published. TestPyPI is
+      # disposable, so a rehearsal may run from anywhere — and has to be able
+      # to, since a workflow_dispatch uses the workflow file from the ref it is
+      # given, so a tag cut before this job existed cannot run it.
+      - name: Check the ref suits the index
+        env:
+          INDEX: ${{ inputs.pypi_repository }}
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/*) echo "publishing $GITHUB_REF_NAME to $INDEX" ;;
+            *) if [ "$INDEX" = "pypi" ]; then
+                 echo "::error::Publishing to PyPI needs a tag, not $GITHUB_REF_NAME"; exit 1
+               fi
+               echo "::warning::Rehearsing $GITHUB_REF_NAME on $INDEX; only a tag may reach PyPI" ;;
+          esac
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ inputs.pypi_repository == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+
+  # The WebAssembly packages. Deliberately not triggered by the tag, for the
+  # same reason as `pypi`: an npm version cannot be re-published, and unpublish
+  # is only allowed for 72 hours and only when nothing depends on it.
+  #
+  # Two packages come out of one crate, because wasm-pack's two targets are not
+  # interchangeable: `shacl-wasm` is ESM for bundlers, `shacl-wasm-node` is
+  # CommonJS for `require()`. They are built here rather than taken from a
+  # checked-in `pkg-*` directory, so what is published is what this commit
+  # produces.
+  npm:
+    needs: [test]
+    if: inputs.publish_to_npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Both halves of authentication depend on this. npm exchanges the OIDC
+      # token minted here for publish rights, and records a signed link from
+      # each tarball back to this workflow run and commit — worth having for a
+      # package whose payload is a 3 MB binary nobody can read.
+      id-token: write
+    steps:
+      # Full history and tags: the guard below compares this tree against the
+      # tag for its version, which a shallow clone cannot see.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      # Trusted publishing landed in npm 11.5.1, and Node 20 ships npm 10. The
+      # older client has no idea OIDC exists: it looks for a token, finds none,
+      # and fails with ENEEDAUTH rather than anything mentioning OIDC. Upgrading
+      # the client is what makes the exchange possible at all.
+      # Pinned to a major version, not `latest`. npm 12 requires Node 22 or
+      # newer and the runner here is on 20, so `npm@latest` began failing the
+      # install outright — a moving dependency that broke a release without
+      # anything in this repository changing. npm 11 is the version trusted
+      # publishing needs (11.5.1+) and still runs on Node 20.
+      - name: Use an npm that can do trusted publishing
+        run: |
+          npm install -g npm@11
+          npm --version
+      # `curl … | sh` takes its exit status from `sh`, not from `curl`. When the
+      # download failed — `curl: (35) Recv failure: Connection reset by peer`,
+      # which happened once — curl wrote nothing, `sh` read empty input and
+      # exited 0, so this step passed with wasm-pack not installed and the
+      # failure surfaced two steps later as `ENOENT: spawnSync wasm-pack`.
+      #
+      # `pipefail` makes the download's failure the step's failure, the retries
+      # cover it being transient, and the version check refuses to continue on
+      # anything that got this far without producing a usable binary.
+      - name: Install wasm-pack
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            if curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh; then
+              break
+            fi
+            echo "wasm-pack install attempt $attempt failed"
+            [ "$attempt" = 3 ] && exit 1
+            sleep 5
+          done
+          wasm-pack --version
+
+      # The version published comes from Cargo.toml, and npm has no disposable
+      # rehearsal registry, so it must tie to a commit anyone can find again.
+      #
+      # That used to be spelled "the ref must be a tag", which is a proxy for
+      # the real rule and turned out to be a trap: a dispatch runs the workflow
+      # file *from the ref it is given*, so any fix to this job could only ever
+      # be used by a tag cut after the fix — and the tag needing to be
+      # published is always older than that. Repairing npm publishing was
+      # impossible without moving a tag that had already been released.
+      #
+      # So the rule is stated directly instead: a tag for this version must
+      # exist, and everything that ends up in the packages must be identical to
+      # it. CI configuration may differ, because it is not shipped.
+      - name: Check the ref suits a publish
+        run: |
+          VERSION="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          TAG="v$VERSION"
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Cargo.toml says $VERSION but there is no tag $TAG"
+            exit 1
+          fi
+          if ! git diff --quiet "$TAG" HEAD -- crates Cargo.toml Cargo.lock; then
+            echo "::error::What this ref would publish differs from $TAG:"
+            git diff --stat "$TAG" HEAD -- crates Cargo.toml Cargo.lock
+            exit 1
+          fi
+          echo "publishing $VERSION; the shippable tree matches $TAG"
+
+      - name: Build both packages
+        run: node crates/shacl-wasm/build.mjs
+
+      # Trusted publishing: npm exchanges the OIDC token minted by the
+      # `id-token: write` permission above for publish rights. There is
+      # deliberately no `env:` block — no stored credential to leak, to rotate,
+      # or to quietly stop working.
+      #
+      # It replaces an automation token that did exactly that. The token was
+      # stored on 2026-08-14 and published 0.1.10 that day; by 0.1.12 it was
+      # answering `E404 Not Found - PUT`, which is how the registry says "no
+      # write access" without revealing whether a package exists — so a dead
+      # credential reads like a missing package. npm is separately restricting
+      # tokens that bypass 2FA for direct publishing, which this was.
+      #
+      # Trusted publishing needs a publisher configured on npmjs.com for *each*
+      # package (repository `pwin/SHACL_Engine`, workflow `release.yml`). The
+      # token below is the fallback for while that is being set up: npm 11.5.1+
+      # uses OIDC when the package has a trusted publisher and the token
+      # otherwise, so this publishes either way rather than depending on which
+      # of the two is in place first. Once a run reports trusted publishing,
+      # this `env:` block and both secrets can go.
+      #
+      # `--access public` is explicit rather than relied upon: these names are
+      # unscoped and so public by default, but the flag means a later move to a
+      # scope does not silently publish a private package instead.
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in pkg-bundler pkg-node; do
+            echo "=== $dir ==="
+            (cd "crates/shacl-wasm/$dir" && npm publish --access public)
+          done
