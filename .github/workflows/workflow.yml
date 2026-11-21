@@ -1,0 +1,120 @@
+# Builds, tests and publishes the `semops-system` Python package.
+#
+# The filename is fixed: PyPI's and TestPyPI's trusted publishers for `semops-system` are
+# registered against pwin/SemopsSystem and `.github/workflows/workflow.yml`. Renaming this
+# file breaks publishing until both publishers are changed to match.
+# (docs/decisions/0002-names-and-registries.md)
+#
+#   Pull request or push to main     build and test only
+#   Run workflow (manual)            build, test, then publish to the index chosen
+#   Tag  py-v*                       build, test, then publish to PyPI
+#
+# The tag is `py-v*`, not `v*`, so that a workspace release tag does not publish the Python
+# package by accident while the two are versioned apart (this package is the 0.29.0.devN
+# bridge; the workspace's own wheel comes with phase 3).
+name: python package
+
+on:
+  # No `paths` filter on push: GitHub applies it to tag pushes too, and a `py-v*` tag on a
+  # commit that touched nothing listed would then publish nothing. The build is cheap.
+  push:
+    branches: [main]
+    tags: ["py-v*"]
+  pull_request:
+    paths:
+      - "python/semops-system/**"
+      - "versions.toml"
+      - ".github/workflows/workflow.yml"
+  workflow_dispatch:
+    inputs:
+      index:
+        description: "Where to publish the build"
+        type: choice
+        options: [none, testpypi, pypi]
+        default: testpypi
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install build twine
+      - run: python -m build python/semops-system --outdir dist
+      - run: python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # The wheel as a user installs it, with the pinned engines from PyPI, on each platform the
+  # engines publish wheels for, at the oldest and newest CPython they support.
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Install and test
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --find-links dist "semops-system[test]"
+          python -c "import semops_system as so; print(so.__version__, so.ENGINES)"
+          python -m pytest python/semops-system/tests -v
+
+  publish-testpypi:
+    name: publish to TestPyPI
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && inputs.index == 'testpypi'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/semops-system
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: ls -l dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: publish to PyPI
+    needs: test
+    if: >
+      (github.event_name == 'workflow_dispatch' && inputs.index == 'pypi') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/py-v'))
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/semops-system
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: ls -l dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
