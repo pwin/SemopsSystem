@@ -1,0 +1,14 @@
+# Build context for holos/deploy/Dockerfile (and later the semops image): the workspace
+# sources and nothing else.
+**/target/
+.git/
+**/testsuites/
+**/node_modules/
+**/__pycache__/
+**/.venv/
+**/dist/
+# Documentation, manuals and comparisons are large and no crate reads them at build time.
+holos/docs/
+tarka/manual/
+tarka/comparisons/
+shacl/benchmarks/
