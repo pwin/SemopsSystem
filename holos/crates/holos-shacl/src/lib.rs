@@ -17,11 +17,13 @@
 //!
 //! # Scope
 //!
-//! SHACL Core, less the parts that need machinery this workspace does not have yet:
-//! SPARQL-based constraints and targets need pre-binding through L3, SHACL-AF rules need
-//! the fixpoint engine of §8, and node expressions are SHACL 1.2. Exact conformance
-//! numbers come from the W3C suite rather than from this paragraph — see
-//! `crates/holos-conformance`.
+//! SHACL Core, evaluated here. SHACL-SPARQL constraints and custom constraint components
+//! are evaluated by the adapted engine and merged into the same report
+//! ([`CompiledShapes::has_sparql`]). Not evaluated, and refused rather than dropped: SPARQL
+//! and node-expression targets, and SHACL 1.2 node expressions. SHACL-AF rules are not
+//! constraints and are `holos_holon::Rules`'s to fire. Exact conformance numbers come from the
+//! W3C suite rather than from this paragraph — see `crates/holos-conformance`, whose
+//! `shacl-sparql` ratchets run SHACL-SPARQL through this validator.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs, clippy::pedantic)]
@@ -43,6 +45,51 @@ pub use vocab::Sh;
 
 use holos_core::TermId;
 use holos_store::{GraphFilter, Store};
+
+const SH: &str = "http://www.w3.org/ns/shacl#";
+
+/// Whether the shapes graph has what only the adapted engine evaluates: a SHACL-SPARQL
+/// constraint, or a custom constraint component (declared as one, or given a SPARQL
+/// validator). None of these IRIs is in the well-known table, so each is looked up.
+fn needs_adapted_engine(graph: GraphView<'_>, sh: &Sh) -> Result<bool, ShaclError> {
+    let id = |local: &str| graph.id(oxrdf::NamedNodeRef::new_unchecked(&format!("{SH}{local}")));
+    for predicate in ["sparql", "validator", "nodeValidator", "propertyValidator"] {
+        if let Some(p) = id(predicate)? {
+            if !graph.subjects_of(p)?.is_empty() {
+                return Ok(true);
+            }
+        }
+    }
+    if let Some(class) = id("ConstraintComponent")? {
+        if !graph.subjects(sh.rdf_type, class)?.is_empty() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// Refuses a `sh:targetNode` that is a SHACL 1.2 node expression (`[ sh:select … ]`,
+/// `[ sh:path … ]` …) rather than a node: this evaluator would take the expression's blank
+/// node for the target, select nothing, and report conforms for data it never looked at.
+fn refuse_node_expression_targets(graph: GraphView<'_>, sh: &Sh) -> Result<(), ShaclError> {
+    for target in graph.objects_of(sh.target_node)? {
+        if access::node_kind(target) != access::NodeKind::BlankNode {
+            continue;
+        }
+        for predicate in graph.predicates_of(target)? {
+            if let Some(oxrdf::Term::NamedNode(p)) = graph.term(predicate)? {
+                if let Some(local) = p.as_str().strip_prefix(SH) {
+                    return Err(ShaclError::Unsupported(format!(
+                        "a sh:targetNode written as a node expression (sh:{local}) is not \
+                         implemented by the native evaluator; validate with the adapted engine \
+                         instead"
+                    )));
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 /// Anything that can go wrong compiling or evaluating shapes.
 #[derive(Debug, thiserror::Error)]
@@ -107,6 +154,13 @@ pub struct Report {
     /// `sh:Debug` and `sh:Trace` do not. A caller with a policy of its own says so here, and
     /// the report then states which rule it used rather than leaving a reader to assume.
     pub conformance_disallows: Option<Vec<TermId>>,
+    /// The terms that [`holos_core::Tag::Ephemeral`] ids in the results stand for.
+    ///
+    /// A SHACL-SPARQL constraint can report a message or value that no graph in the store
+    /// contains: a message with `{?value}` filled in, a count. The store's ids cannot name
+    /// those, so the result names them by position in this list, and rendering the report
+    /// resolves them here. Empty unless the shapes had SPARQL constraints.
+    pub ephemeral: Vec<oxrdf::Term>,
 }
 
 impl Report {
@@ -128,6 +182,7 @@ impl Report {
             conforms: !results.iter().any(is_judgement),
             results,
             conformance_disallows: None,
+            ephemeral: Vec::new(),
         }
     }
 
@@ -209,6 +264,8 @@ pub struct CompiledShapes {
     shapes: Shapes,
     options: Options,
     sh: Sh,
+    /// Whether any shape has a SHACL-SPARQL constraint, which the adapted engine evaluates.
+    sparql: bool,
 }
 
 impl CompiledShapes {
@@ -217,10 +274,13 @@ impl CompiledShapes {
         let sh = Sh::new();
         let graph = GraphView::new(store, options.shapes_graph);
         let shapes = Compiler::new(graph, &sh).compile()?;
+        refuse_node_expression_targets(graph, &sh)?;
+        let sparql = needs_adapted_engine(graph, &sh)?;
         Ok(Self {
             shapes,
             options,
             sh,
+            sparql,
         })
     }
 
@@ -243,8 +303,96 @@ impl CompiledShapes {
     }
 
     /// Validates a store.
+    ///
+    /// SHACL Core here, over the store's own indexes. SHACL-SPARQL constraints, if the shapes
+    /// have any, by the adapted engine over a bridged snapshot, with its results merged in:
+    /// see [`CompiledShapes::has_sparql`].
     pub fn validate(&self, store: &Store) -> Result<Report, ShaclError> {
-        self.validator(store).validate_all()
+        let report = self.validator(store).validate_all()?;
+        self.with_sparql(store, report)
+    }
+
+    /// Whether the shapes have SHACL-SPARQL constraints or custom constraint components.
+    ///
+    /// This evaluator implements neither. It used to refuse `sh:sparql`, since dropping a
+    /// constraint silently would open the gate this evaluator keeps on the write path, and
+    /// custom components went unnoticed, their parameters being in the author's namespace,
+    /// so a shapes graph declaring one was validated without it. Now both go to the adapted
+    /// engine, which implements them (SPARQL-based validators, pre-binding, the shared
+    /// function library), and what it reports for them is merged with what this evaluator
+    /// reports for SHACL Core. So every validation and revalidation with such shapes bridges
+    /// the graph once and evaluates those constraints in full, whatever the delta: correct,
+    /// and visibly more expensive than SHACL Core alone.
+    #[must_use]
+    pub fn has_sparql(&self) -> bool {
+        self.sparql
+    }
+
+    /// `report` with the SHACL-SPARQL constraints' results added, if there are any.
+    fn with_sparql(&self, store: &Store, report: Report) -> Result<Report, ShaclError> {
+        if !self.sparql {
+            return Ok(report);
+        }
+        let mut run = engine::EngineRun::prepare(store, self.options)?;
+        let mut ephemeral: Vec<oxrdf::Term> = Vec::new();
+        let mut results = report.results;
+        {
+            let mut id = |(known, term): &engine::Reported| -> Result<TermId, ShaclError> {
+                if let Some(id) = known {
+                    return Ok(*id);
+                }
+                if let Some(id) = store.lookup_term(term.as_ref())? {
+                    return Ok(id);
+                }
+                let i = if let Some(i) = ephemeral.iter().position(|t| t == term) {
+                    i
+                } else {
+                    ephemeral.push(term.clone());
+                    ephemeral.len() - 1
+                };
+                Ok(TermId::new(holos_core::Tag::Ephemeral, i as u64))
+            };
+            for r in run.sparql_results()? {
+                let focus_node = id(&r.focus)?;
+                let path = match &r.path {
+                    Some(p) => Some(id(p)?),
+                    None => None,
+                };
+                let value = match &r.value {
+                    Some(v) => Some(id(v)?),
+                    None => None,
+                };
+                let source_shape = match &r.shape {
+                    Some(shape) => id(shape)?,
+                    None => focus_node,
+                };
+                let source_constraint = match &r.constraint {
+                    Some(c) => Some(id(c)?),
+                    None => None,
+                };
+                let mut messages = Vec::with_capacity(r.messages.len());
+                for m in &r.messages {
+                    messages.push(id(m)?);
+                }
+                results.push(ValidationResult {
+                    focus_node,
+                    path,
+                    value,
+                    source_shape,
+                    component: id(&r.component)?,
+                    source_constraint,
+                    severity: id(&r.severity)?,
+                    messages,
+                    details: Vec::new(),
+                });
+            }
+        }
+        let mut merged = Report::new(results);
+        if let Some(disallowed) = report.conformance_disallows {
+            merged = merged.with_conformance_disallows(disallowed);
+        }
+        merged.ephemeral = ephemeral;
+        Ok(merged)
     }
 
     /// Revalidates only what a delta could have affected.
@@ -317,7 +465,10 @@ impl CompiledShapes {
 
         let mut work: Vec<(ShapeIdx, TermId)> = attributed.into_iter().collect();
         work.sort_unstable();
-        validator.validate_selected(&work)
+        let report = validator.validate_selected(&work)?;
+        // SPARQL constraints are not attributed to a delta: any change can alter what a
+        // query finds, so they are evaluated in full.
+        self.with_sparql(store, report)
     }
 
     /// Renders a report as RDF, deterministically.

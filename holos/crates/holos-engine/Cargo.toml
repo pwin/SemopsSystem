@@ -15,6 +15,9 @@ oxrdf.workspace = true
 oxiri = "0.2"
 oxrdfio.workspace = true
 spargebra.workspace = true
+# fn:, math:, afn:, spif: and the property functions: one library, shared with both SHACL
+# validators and tarka (docs/decisions/0003-capability-floor-and-functions.md).
+semops-functions.workspace = true
 spareval.workspace = true
 sparopt.workspace = true
 spargeo.workspace = true

@@ -93,6 +93,26 @@ fn in_graph(graph_name: Option<holos_core::TermId>, filter: holos_store::GraphFi
     }
 }
 
+/// `sh:SPARQLConstraintComponent`.
+pub(crate) const SPARQL_CONSTRAINT_COMPONENT: &str = "http://www.w3.org/ns/shacl#SPARQLConstraintComponent";
+
+/// A term of a result from the adapted engine: the store's id where the bridge carried the
+/// term over from the store, and the term itself, for one it did not (a filled-in message).
+pub(crate) type Reported = (Option<holos_core::TermId>, oxrdf::Term);
+
+/// One SHACL-SPARQL result from the adapted engine.
+#[derive(Debug, Clone)]
+pub(crate) struct SparqlResult {
+    pub focus: Reported,
+    pub value: Option<Reported>,
+    pub path: Option<Reported>,
+    pub shape: Option<Reported>,
+    pub constraint: Option<Reported>,
+    pub component: Reported,
+    pub severity: Reported,
+    pub messages: Vec<Reported>,
+}
+
 /// A bridged store with its shapes compiled, ready to validate.
 pub struct EngineRun {
     bridged: Bridged,
@@ -299,6 +319,41 @@ impl EngineRun {
     #[must_use]
     pub fn shapes(&self) -> usize {
         self.shapes.len()
+    }
+
+    /// What SHACL-SPARQL constraints and custom constraint components report, and nothing
+    /// else: the results of `sh:SPARQLConstraintComponent`, and of any component outside the
+    /// SHACL namespace.
+    ///
+    /// The native evaluator validates SHACL Core itself and asks this engine, which
+    /// implements these (with the shared function library registered), for these results
+    /// only, so that no Core result is reported twice.
+    pub(crate) fn sparql_results(&mut self) -> Result<Vec<SparqlResult>, ShaclError> {
+        let report = self.validate()?;
+        // A shapes graph that never names the SPARQL component may still have custom ones.
+        let component = self.term_for_iri(SPARQL_CONSTRAINT_COMPONENT);
+        let terms = &self.bridged.terms;
+        let reverse = self.bridged.reverse();
+        let reported = |id: EngineId| -> Reported { (reverse.get(&id).copied(), terms.to_oxrdf(id)) };
+        let delegated = |c: EngineId| {
+            Some(c) == component
+                || matches!(terms.to_oxrdf(c), oxrdf::Term::NamedNode(n) if !n.as_str().starts_with("http://www.w3.org/ns/shacl#"))
+        };
+        Ok(report
+            .results
+            .iter()
+            .filter(|r| delegated(r.source_constraint_component))
+            .map(|r| SparqlResult {
+                focus: reported(r.focus_node),
+                value: r.value.map(reported),
+                path: r.path.map(reported),
+                shape: r.source_shape.map(reported),
+                constraint: r.source_constraint.map(reported),
+                component: reported(r.source_constraint_component),
+                severity: reported(r.severity),
+                messages: r.messages.iter().map(|m| reported(*m)).collect(),
+            })
+            .collect())
     }
 
     /// Validates everything the shapes target.

@@ -25,3 +25,5 @@ thiserror.workspace = true
 
 [dev-dependencies]
 oxrdfio.workspace = true
+# The function table every evaluator is tested against (tests/sparql_native.rs).
+semops-functions.workspace = true

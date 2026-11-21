@@ -28,6 +28,7 @@ rdf-12 = ["oxrdf/rdf-12", "oxrdfio/rdf-12", "oxttl/rdf-12", "spargebra/sparql-12
 parallel = ["dep:rayon"]
 
 [dependencies]
+semops-functions.workspace = true
 # The Oxigraph crates are spelt out here, not inherited from the workspace. The workspace
 # entries carry HOLOS's `rdf-12` and `sparql-12` features, and a crate can add features to an
 # inherited dependency but never remove them, so inheriting would make RDF 1.2 compulsory and

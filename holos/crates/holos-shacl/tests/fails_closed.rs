@@ -6,8 +6,9 @@
 //! A shapes graph carrying `sh:sparql` compiled without complaint, the constraint was
 //! dropped, and validation returned `conforms = true` for data a full run rejects.
 //!
-//! A gate that fails open is worse than no gate, because it is trusted. These tests pin the
-//! refusal.
+//! A gate that fails open is worse than no gate, because it is trusted. These tests pin
+//! that it does not: `sh:sparql` is now checked (by the adapted engine, its results merged),
+//! and what is still not implemented is refused.
 
 use holos_shacl::{CompiledShapes, Options, ShaclError};
 use holos_store::{GraphFilter, Store};
@@ -46,38 +47,52 @@ ex:bob a ex:Person .
 "#;
 
 #[test]
-fn a_sparql_constraint_is_refused_rather_than_dropped() {
+fn a_sparql_constraint_is_checked_rather_than_dropped() {
+    // It used to be refused here. It is now handed to the adapted engine, which implements
+    // it, and its result merged: the gate stays closed, and the shapes compile.
     let store = load(SPARQL_CONSTRAINT);
+    let shapes = CompiledShapes::compile(&store, options()).expect("compile");
+    assert!(shapes.has_sparql());
+    let report = shapes.validate(&store).expect("validate");
+    assert!(
+        !report.conforms,
+        "ex:bob has no name: the SPARQL constraint must make the data non-conforming"
+    );
+    assert_eq!(report.results.len(), 1);
+}
+
+/// What the native evaluator still cannot check is still refused, by name: a SHACL-AF custom
+/// target would select focus nodes this evaluator never visits.
+#[test]
+fn an_unsupported_construct_is_still_refused_rather_than_dropped() {
+    let store = load(
+        r#"
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+ex:S a sh:NodeShape ;
+    sh:target [ a sh:SPARQLTarget ; sh:select "SELECT ?this WHERE { ?this a <http://example.com/Person> }" ] ;
+    sh:property [ sh:path ex:name ; sh:minCount 1 ] .
+ex:bob a ex:Person .
+"#,
+    );
     match CompiledShapes::compile(&store, options()) {
         Err(ShaclError::Unsupported(what)) => {
-            assert!(
-                what.contains("sh:sparql"),
-                "the refusal should name the construct, got: {what}"
-            );
+            assert!(what.contains("sh:target"), "the refusal should name the construct, got: {what}");
             // The message reaches a Python caller and the CLI as it is, so it names the
-            // engine they can choose. A lost line continuation once left a run of spaces in
-            // it, and the Rust type it named instead is not something either can call.
+            // engine they can choose, in one line.
             assert!(
                 what.contains("adapted engine") && !what.contains("  "),
                 "the refusal should say what to use instead, in one line, got: {what}"
             );
         }
         Err(e) => panic!("expected Unsupported, got {e}"),
-        Ok(shapes) => {
-            let report = shapes.validate(&store).expect("validate");
-            panic!(
-                "the write path compiled a sh:sparql shape and reported conforms={}: a \
-                 constraint it cannot evaluate was silently dropped",
-                report.conforms
-            );
-        }
+        Ok(_) => panic!("a custom target compiled: the focus nodes it selects would go unchecked"),
     }
 }
 
-/// The adapted engine does implement it, and this is what makes the refusal a redirection
-/// rather than a dead end.
+/// The adapted engine implements it, which is what the native evaluator now relies on.
 #[test]
-fn the_adapted_engine_catches_what_the_write_path_refuses() {
+fn the_adapted_engine_catches_what_the_write_path_hands_it() {
     let store = load(SPARQL_CONSTRAINT);
     let mut run = holos_shacl::engine::EngineRun::prepare(&store, options()).expect("prepare");
     let report = run.validate().expect("validate");

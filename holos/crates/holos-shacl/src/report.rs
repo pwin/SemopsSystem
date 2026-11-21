@@ -23,6 +23,8 @@ pub fn to_quads(
     sh: &Sh,
 ) -> Result<Vec<Quad>, ShaclError> {
     let mut out = Vec::new();
+    // Results from the adapted engine (SHACL-SPARQL) may name terms the store has not got.
+    let shapes_graph = shapes_graph.with_ephemeral(&report.ephemeral);
     let report_node = BlankNode::new_unchecked("report");
     let iri = |id: TermId| -> Result<NamedNode, ShaclError> {
         match shapes_graph.term(id)? {

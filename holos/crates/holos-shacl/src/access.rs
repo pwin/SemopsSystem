@@ -18,13 +18,29 @@ use oxrdf::{NamedNodeRef, Term};
 pub struct GraphView<'a> {
     store: &'a Store,
     graph: GraphFilter,
+    /// Terms the store does not hold, named by [`Tag::Ephemeral`] ids: a report's results
+    /// from the adapted engine can carry a message or value no graph contains.
+    ephemeral: &'a [Term],
 }
 
 impl<'a> GraphView<'a> {
     /// Views one graph of a store.
     #[must_use]
     pub fn new(store: &'a Store, graph: GraphFilter) -> Self {
-        Self { store, graph }
+        Self {
+            store,
+            graph,
+            ephemeral: &[],
+        }
+    }
+
+    /// This view, resolving [`Tag::Ephemeral`] ids against `terms` (a report's).
+    #[must_use]
+    pub fn with_ephemeral(self, terms: &'a [Term]) -> Self {
+        Self {
+            ephemeral: terms,
+            ..self
+        }
     }
 
     /// The store behind this view.
@@ -46,6 +62,12 @@ impl<'a> GraphView<'a> {
 
     /// Turns an id back into a term.
     pub fn term(&self, id: TermId) -> Result<Option<Term>> {
+        if id.tag() == Tag::Ephemeral {
+            return Ok(usize::try_from(id.payload())
+                .ok()
+                .and_then(|i| self.ephemeral.get(i))
+                .cloned());
+        }
         self.store.decode_term(id)
     }
 

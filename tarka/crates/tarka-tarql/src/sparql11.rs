@@ -20,10 +20,12 @@ pub fn check(template: &[TriplePattern], pattern: &GraphPattern) -> Result<(), T
     check_with(template, pattern, &|_| Ok(()))
 }
 
-/// [`check`], for a query tarka evaluates itself rather than sends to an endpoint: it also
-/// fails on a function tarka would not evaluate as Jena does ([`crate::afn::refused`]).
+/// [`check`], for a query tarka evaluates itself rather than sends to an endpoint. It used to
+/// refuse `afn:sprintf`, which HOLOS formatted with `%s` and `%d` only; the shared library
+/// formats as Java's `String.format` does, so there is nothing left that tarka would evaluate
+/// differently from Jena, and the hook stays for the next such function.
 pub fn check_local(template: &[TriplePattern], pattern: &GraphPattern) -> Result<(), TarqlError> {
-    check_with(template, pattern, &crate::afn::refused)
+    check_with(template, pattern, &|_| Ok(()))
 }
 
 /// What a custom function's IRI is checked with.

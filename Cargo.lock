@@ -1480,6 +1480,7 @@ dependencies = [
  "oxsdatatypes",
  "rstar 0.12.2",
  "rustc-hash",
+ "semops-functions",
  "sparesults",
  "spareval",
  "spargebra",
@@ -1566,6 +1567,7 @@ dependencies = [
  "oxsdatatypes",
  "regex",
  "rustc-hash",
+ "semops-functions",
  "thiserror 2.0.20",
 ]
 
@@ -1583,6 +1585,7 @@ dependencies = [
  "oxttl",
  "rayon",
  "regex",
+ "semops-functions",
  "spareval",
  "spargebra",
 ]
@@ -3947,6 +3950,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "semops-functions"
+version = "0.29.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "oxrdf",
+ "oxrdfio",
+ "oxsdatatypes",
+ "regex",
+ "sha1 0.11.0",
+ "spareval",
+ "spargebra",
+]
+
+[[package]]
 name = "semver"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4088,6 +4105,7 @@ dependencies = [
  "oxttl",
  "rayon",
  "regex",
+ "semops-functions",
  "spareval",
  "spargebra",
 ]
@@ -4480,6 +4498,7 @@ version = "0.29.0"
 dependencies = [
  "holos-engine",
  "rayon",
+ "semops-functions",
  "tarka-core",
  "tarka-io",
  "tarka-ottr",
@@ -4591,7 +4610,7 @@ version = "0.29.0"
 dependencies = [
  "holos-engine",
  "regex",
- "sha1 0.11.0",
+ "semops-functions",
  "tarka-core",
  "thiserror 2.0.20",
 ]

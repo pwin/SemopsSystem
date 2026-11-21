@@ -802,6 +802,11 @@ impl<'a> Compiler<'a> {
         // path mutually exclusive. Firing them is `holos_holon::Rules`'s job, and whether a
         // pipeline that should have inferred did so is the pipeline's business.
         "rule",
+        // SHACL-SPARQL constraints. Not evaluated here: CompiledShapes hands them to the
+        // adapted engine, which implements them, and merges what it reports (see
+        // `CompiledShapes::sparql_results`). Accepted rather than refused because that
+        // path now checks them, so the gate stays closed without refusing the shapes.
+        "sparql",
     ];
 
     /// Refuses a shape carrying a SHACL construct this validator cannot evaluate.
