@@ -9,7 +9,6 @@
 
 use holos_engine::{oxiri, oxrdf, spargebra};
 
-mod afn;
 pub mod eval;
 pub mod inject;
 pub mod pfunc;
@@ -24,13 +23,15 @@ use spargebra::{Query, SparqlParser, SparqlSyntaxError};
 use tarka_core::{BNodeId, Lifting, Pattern, Plan, PrefixMap, SparqlLifting, TermPat};
 use thiserror::Error;
 
-pub use afn::AFN_NAMESPACES;
 pub use eval::{EvalError, Solution, SparqlEvaluator, TARQL_NAMESPACES};
+pub use semops_functions::AFN_NAMESPACES;
 
-/// The evaluator tarka runs SPARQL with: HOLOS's (`holos_engine::Engine::evaluator()`), with
-/// Jena's `afn:` functions as Jena has them in place of HOLOS's.
+/// The evaluator tarka runs SPARQL with: HOLOS's (`holos_engine::Engine::evaluator()`), which
+/// registers the shared function library (`semops-functions`): Jena's `afn:` as Jena has them,
+/// XPath's `fn:` and `math:`, and TopBraid's `spif:`, the same in a mapping as in a query
+/// against the store or a SHACL shape.
 pub fn evaluator() -> holos_engine::spareval::QueryEvaluator {
-    afn::register(holos_engine::Engine::evaluator())
+    holos_engine::Engine::evaluator()
 }
 
 #[derive(Debug, Error)]
@@ -221,9 +222,10 @@ mod tests {
     fn errors() {
         assert!(matches!(parse_tarql("SELECT * WHERE {}", "q"), Err(TarqlError::NotConstruct)));
         assert!(matches!(parse_tarql("CONSTRUCT { ?s ?p }", "q"), Err(TarqlError::Syntax(_))));
-        // HOLOS has an afn:sprintf that takes %s and %d only: tarka refuses it rather than format otherwise than Jena
+        // afn:sprintf formats as Java's String.format does now (semops-functions), so tarka no
+        // longer refuses it as it did HOLOS's %s-and-%d one
         let sprintf = "PREFIX afn: <http://jena.apache.org/ARQ/function#> CONSTRUCT { <http://s> <http://p> ?f } WHERE { BIND(afn:sprintf(\"%05d\", ?n) AS ?f) }";
-        assert!(matches!(parse_tarql(sprintf, "q"), Err(TarqlError::PropertyFunction(m)) if m.contains("afn:sprintf is not supported")));
+        assert!(parse_tarql(sprintf, "q").is_ok());
         let plan = parse_tarql(
             "PREFIX ex: <http://example.com/> CONSTRUCT { <http://s> <http://p> ?d } WHERE { BIND(ex:nothing(?v) AS ?d) }",
             "q",

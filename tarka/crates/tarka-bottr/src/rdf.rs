@@ -90,6 +90,17 @@ mod tests {
             })
             .collect();
         assert_eq!(locals, ["", "b-1"]);
-        assert!(sprintf.unwrap_err().contains("afn:sprintf is not supported"));
+        // formatted as Java's String.format does (it used to be refused)
+        let mut formatted: Vec<String> = sprintf
+            .unwrap()
+            .1
+            .iter()
+            .map(|r| match &r[0] {
+                Some(Term::Literal(l)) => l.value().to_owned(),
+                other => panic!("{other:?}"),
+            })
+            .collect();
+        formatted.sort();
+        assert_eq!(formatted, ["00001", "00002"]);
     }
 }

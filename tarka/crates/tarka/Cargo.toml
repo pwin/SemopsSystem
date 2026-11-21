@@ -19,3 +19,5 @@ tarka-ottr.workspace = true
 tarka-tarql.workspace = true
 
 [dev-dependencies]
+# The function table every evaluator is tested against (tests/functions.rs).
+semops-functions.workspace = true
