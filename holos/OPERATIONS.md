@@ -86,7 +86,8 @@ redirection.
 
 ### 3. In a container
 
-[deploy/Dockerfile](deploy/Dockerfile) is a two-stage build — the build stage needs clang
+[deploy/Dockerfile](deploy/Dockerfile) is a two-stage build, run from the SemOps System root
+(`docker build -f holos/deploy/Dockerfile .`) — the build stage needs clang
 and a C++ toolchain, the runtime stage carries neither.
 [deploy/docker-compose.yml](deploy/docker-compose.yml) is a complete deployment: the store
 with **no published ports**, reachable only by the Caddy front door on a shared network.

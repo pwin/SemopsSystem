@@ -1,11 +1,13 @@
-# Build:  docker build -f deploy/Dockerfile -t holos:latest .
+# Build, from the root of the SemOps System repository:
+#         docker build -f holos/deploy/Dockerfile -t holos:latest .
 # Run:    docker run --rm -p 7878:7878 -v holos-data:/var/lib/holos holos:latest
 #
 # Two stages: the build needs a C++ toolchain and libclang for RocksDB; the runtime needs
 # neither, so it does not carry them.
 
 # ---- build ----------------------------------------------------------------
-FROM rust:1.87-bookworm AS build
+# The workspace's rust-version. A newer image builds it too; this one proves the floor.
+FROM rust:1.90-bookworm AS build
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         clang libclang-dev cmake \
@@ -13,12 +15,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /src
 
-# Copy manifests first so a source-only change does not re-download the index.
-COPY Cargo.toml Cargo.lock ./
-COPY crates ./crates
-COPY testsuites ./testsuites
+# The whole workspace, less what the root .dockerignore leaves out. Cargo reads every
+# member's manifest before it builds anything, so the SHACL_Engine and tarka crates and the
+# shared vendor/ patches must be present even though only two HOLOS binaries are built.
+#
+# This used to copy `crates` and `testsuites` from HOLOS's own root. `testsuites/` is the
+# fetched W3C suites, which only the tests read and which a fresh clone does not have, so
+# that COPY failed; and `vendor/`, which the [patch] section needs, was never copied at all.
+COPY . .
 
-RUN cargo build --release --workspace --bin holos --bin holos-server
+# `release-abort` is the release profile with `panic = "abort"`, the setting these two
+# binaries have always shipped with (see the workspace Cargo.toml).
+RUN cargo build --locked --profile release-abort -p holos-cli -p holos-server
 
 # ---- runtime --------------------------------------------------------------
 FROM debian:bookworm-slim
@@ -30,10 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir -p /var/lib/holos/store \
     && chown -R holos:holos /var/lib/holos
 
-COPY --from=build /src/target/release/holos        /usr/local/bin/holos
-COPY --from=build /src/target/release/holos-server /usr/local/bin/holos-server
-COPY deploy/smoke.sh /usr/local/bin/holos-smoke
-COPY examples /opt/holos/examples
+COPY --from=build /src/target/release-abort/holos        /usr/local/bin/holos
+COPY --from=build /src/target/release-abort/holos-server /usr/local/bin/holos-server
+COPY holos/deploy/smoke.sh /usr/local/bin/holos-smoke
+COPY holos/examples /opt/holos/examples
 
 RUN chmod +x /usr/local/bin/holos-smoke
 

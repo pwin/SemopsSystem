@@ -7,8 +7,9 @@
 services:
   holos:
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile
+      # The SemOps System root: the build needs the whole workspace, not only holos/.
+      context: ../..
+      dockerfile: holos/deploy/Dockerfile
     image: holos:latest
     restart: unless-stopped
     # No published ports: nothing reaches this except the proxy on the shared network.

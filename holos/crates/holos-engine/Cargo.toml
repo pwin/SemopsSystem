@@ -2,7 +2,7 @@
 name = "holos-engine"
 description = "HOLOS L3 — SPARQL 1.2 evaluation over the HOLOS store, with policy enforced at the scan"
 version.workspace = true
-edition.workspace = true
+edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true

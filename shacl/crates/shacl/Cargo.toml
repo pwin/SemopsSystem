@@ -28,10 +28,15 @@ rdf-12 = ["oxrdf/rdf-12", "oxrdfio/rdf-12", "oxttl/rdf-12", "spargebra/sparql-12
 parallel = ["dep:rayon"]
 
 [dependencies]
-oxrdf.workspace = true
-oxrdfio.workspace = true
+# The Oxigraph crates are spelt out here, not inherited from the workspace. The workspace
+# entries carry HOLOS's `rdf-12` and `sparql-12` features, and a crate can add features to an
+# inherited dependency but never remove them, so inheriting would make RDF 1.2 compulsory and
+# `-p shacl --no-default-features` would stop being an RDF 1.1 build. Built beside HOLOS, cargo
+# unifies the features anyway; built alone, this crate decides.
+oxrdf = { version = "0.3", features = ["oxsdatatypes", "rdfc-10"] }
+oxrdfio = "0.2"
 oxttl = "0.2"
-oxsdatatypes.workspace = true
+oxsdatatypes = "0.2"
 # `sep-0002` gives xsd:date, xsd:time and the duration types values in SHACL-SPARQL, so that
 # `FILTER(?until < "2026-11-10"^^xsd:date)` compares rather than erroring. Without it the
 # comparison is a type error, the FILTER drops the row, and a constraint that should fire
@@ -39,8 +44,8 @@ oxsdatatypes.workspace = true
 # comparisons, `sh:lessThan` and the range components, never used the evaluator and were not
 # affected.) Oxigraph's `calendar-ext`, which also orders xsd:gYear and its kin, is
 # deliberately not enabled: XPath defines no order for those types.
-spargebra = { workspace = true, features = ["sep-0002"] }
-spareval = { workspace = true, features = ["sep-0002"] }
+spargebra = { version = "0.4", features = ["sep-0002"] }
+spareval = { version = "0.2", features = ["sep-0002"] }
 rayon = { workspace = true, optional = true }
 hashbrown.workspace = true
 regex.workspace = true

@@ -69,11 +69,29 @@ fn report_skips(name: &str, report: &Report) {
     }
 }
 
+/// A test's identifier as the same on every machine.
+///
+/// Most manifests give their tests absolute IRIs, but a few (RDF 1.1's RDF/XML manifest
+/// among them) have no base, so their tests are named after the file they were loaded from:
+/// `file:///C:/repos/…/testsuites/rdf-tests/rdf/rdf11/rdf-xml/manifest.ttl#xml-canon-test001`.
+/// A baseline holding that name matched only in the checkout it was recorded in; anywhere
+/// else, CI included, the same known failure read as a regression and its baseline entry as
+/// a fix. Everything up to `testsuites/` is dropped, on both sides of the comparison and in
+/// what is written, so old baselines still match and new ones are portable.
+fn portable_id(id: &str) -> String {
+    if id.starts_with("file:") {
+        if let Some(at) = id.find("/testsuites/") {
+            return id[at + 1..].to_owned();
+        }
+    }
+    id.to_owned()
+}
+
 /// Compares a run against its checked-in baseline, and fails on drift in either direction.
 fn ratchet(name: &str, report: &Report) {
     report_skips(name, report);
     let path = baseline_dir().join(format!("{name}.failures"));
-    let actual: BTreeSet<String> = report.failed.iter().map(|(id, _)| id.clone()).collect();
+    let actual: BTreeSet<String> = report.failed.iter().map(|(id, _)| portable_id(id)).collect();
 
     if std::env::var("HOLOS_UPDATE_CONFORMANCE").is_ok() {
         let mut body = format!(
@@ -82,7 +100,7 @@ fn ratchet(name: &str, report: &Report) {
             report.summary()
         );
         for (id, why) in &report.failed {
-            body.push_str(&format!("{id}\t{}\n", why.replace(['\n', '\t'], " ")));
+            body.push_str(&format!("{}\t{}\n", portable_id(id), why.replace(['\n', '\t'], " ")));
         }
         std::fs::create_dir_all(baseline_dir()).expect("creating the baseline directory");
         std::fs::write(&path, body).expect("writing the baseline");
@@ -94,7 +112,7 @@ fn ratchet(name: &str, report: &Report) {
         .unwrap_or_default()
         .lines()
         .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
-        .map(|l| l.split('\t').next().unwrap_or(l).trim().to_owned())
+        .map(|l| portable_id(l.split('\t').next().unwrap_or(l).trim()))
         .collect();
 
     let regressions: Vec<_> = actual.difference(&expected).cloned().collect();

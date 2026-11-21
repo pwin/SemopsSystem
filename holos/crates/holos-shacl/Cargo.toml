@@ -2,7 +2,7 @@
 name = "holos-shacl"
 description = "HOLOS L4 — SHACL validation over the store's own indexes"
 version.workspace = true
-edition.workspace = true
+edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -2,7 +2,7 @@
 name = "holos-server"
 description = "HOLOS L6 — SPARQL 1.2 Protocol over HTTP, with a YASGUI console"
 version.workspace = true
-edition.workspace = true
+edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true

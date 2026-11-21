@@ -2,7 +2,7 @@
 name = "holos-holon"
 description = "HOLOS L5 — holons: scene, boundary, event log, projections, and the tick"
 version.workspace = true
-edition.workspace = true
+edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true

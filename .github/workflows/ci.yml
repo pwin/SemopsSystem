@@ -1,0 +1,229 @@
+# One CI for the whole workspace. It replaces the separate pipelines of pwin/triplestore
+# (python.yml, wasm.yml), pwin/SHACL_Engine (ci.yml) and pwin/tarka (ci.yml). The copies of
+# those files under holos/, shacl/ and tarka/ came in with the subtrees and do not run:
+# GitHub reads workflows from the root .github/ only.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # No debug info in CI builds. Nothing here reads it, and it is most of what a debug build
+  # of this workspace writes: with it, `cargo test` filled the Ubuntu runner's disk.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  # Every crate but the three Python extension modules (see default-members in Cargo.toml),
+  # with the W3C RDF, SPARQL and SHACL suites fetched so that HOLOS's conformance ratchet
+  # runs rather than skips. This is the phase 2 gate: W3C, HOLOS, SHACL_Engine and tarka
+  # tests green, on each platform the binaries ship for.
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # The Ubuntu image carries toolchains this build never uses (.NET, Android, GHC,
+      # CodeQL); removing them leaves room for the workspace's test binaries.
+      - name: Free disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      # `librocksdb-sys` generates its bindings with bindgen, which loads libclang at build
+      # time. Both hosted runners ship one; neither puts it where bindgen looks.
+      - name: macOS build environment
+        if: runner.os == 'macOS'
+        run: |
+          lib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          test -f "$lib/libclang.dylib" || { echo "no libclang.dylib under $lib"; exit 1; }
+          echo "LIBCLANG_PATH=$lib" >> "$GITHUB_ENV"
+      - name: Point bindgen at libclang (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $lib = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path "$lib\libclang.dll")) { throw "no libclang.dll under $lib" }
+          "LIBCLANG_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+      - name: Fetch the W3C test suites
+        shell: bash
+        run: sh scripts/fetch-testsuites.sh
+      - run: cargo test --locked --no-fail-fast
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: lint
+      # HOLOS was never formatted with rustfmt (74 diffs upstream at 0.27.0). Reformatting it
+      # here would turn every `git subtree pull` from pwin/triplestore into a conflict, so it
+      # waits until that repository stops taking commits; until then the gate covers the rest.
+      - name: rustfmt (SHACL_Engine, tarka, vendor)
+        run: >
+          cargo fmt --check
+          -p shacl -p shacl-cli -p shacl-python -p shacl-wasm
+          -p tarka -p tarka-bottr -p tarka-cli -p tarka-core -p tarka-io -p tarka-ottr
+          -p tarka-polars -p tarka-python -p tarka-shacl -p tarka-tarql
+          -p oxsdatatypes -p spareval
+      # Clippy lints every workspace member a build compiles, selected or not, so
+      # `-D warnings` cannot be aimed at some crates and not others: tarka depends on
+      # holos-engine, and HOLOS carries about 270 warnings it was never gated on. So the gate
+      # is by directory instead: no warning at all in shacl/, tarka/ or vendor/, as
+      # SHACL_Engine's and tarka's own CI required, and HOLOS's count reported, to be worked
+      # down once pwin/triplestore stops taking commits (the same reasoning as rustfmt above).
+      # The Python modules are left to the python job, which builds them as maturin does.
+      - name: clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --locked --all-targets --workspace \
+            --exclude holos-python --exclude shacl-python --exclude tarka-python \
+            --message-format=short 2>&1 | tee clippy.txt
+          if grep -E '^(shacl|tarka|vendor)/[^:]+:[0-9]+:[0-9]+: (warning|error)' clippy.txt; then
+            echo "::error::clippy warnings in shacl/, tarka/ or vendor/ (listed above)"
+            exit 1
+          fi
+          n=$(grep -cE '^holos/[^:]+:[0-9]+:[0-9]+: warning' clippy.txt || true)
+          echo "::notice::HOLOS: $n clippy warnings, reported and not yet gated"
+
+  # SHACL_Engine's RDF 1.1 build: the engine with `rdf-12` off, as an RDF 1.1 tool embeds it.
+  # Built on its own so the workspace's RDF 1.2 features do not unify into it.
+  rdf-11:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: rdf-11
+      - run: cargo clippy --locked -p shacl --all-targets --no-default-features --features parallel -- -D warnings
+      - run: cargo test --locked -p shacl --no-default-features --features parallel
+
+  # The rust-version every crate declares. A dependency update that needs a newer compiler
+  # fails here rather than in someone's build. There are two floors: 1.90 for the workspace,
+  # and 1.95 for tarka's Polars input and the two crates built on it, because polars 0.55
+  # needs sysinfo 0.39 and every sysinfo 0.39 release needs Rust 1.95.
+  msrv:
+    name: msrv (${{ matrix.toolchain }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: "1.90"
+            args: --workspace --exclude tarka-polars --exclude tarka-cli --exclude tarka-python --exclude holos-python --exclude shacl-python
+          - toolchain: "1.95"
+            args: ""
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv-${{ matrix.toolchain }}
+      - run: cargo check --locked ${{ matrix.args }}
+
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: examples
+      - run: cargo build --locked --release -p shacl-cli
+      - run: ./shacl/examples/check.sh
+
+  # Each wheel as maturin builds it, installed and tested as a user would get it.
+  python:
+    name: python (${{ matrix.package.dist }})
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - { dist: holosdb, manifest: holos/crates/holos-python/Cargo.toml, tests: holos/crates/holos-python/tests, extra: "" }
+          - { dist: shacl, manifest: shacl/crates/shacl-python/Cargo.toml, tests: shacl/crates/shacl-python/tests, extra: "" }
+          # tarka-rdf's tests read their results back with holosdb and shacl from PyPI; the
+          # wheels built in the same workspace are the better check, and come with phase 3.
+          - { dist: tarka-rdf, manifest: tarka/crates/tarka-python/Cargo.toml, tests: tarka/crates/tarka-python/tests, extra: "polars holosdb shacl" }
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: python-${{ matrix.package.dist }}
+      - run: python -m pip install maturin pytest ${{ matrix.package.extra }}
+      - run: maturin build --release -m ${{ matrix.package.manifest }} --out dist
+      - run: python -m pip install --no-index --find-links dist ${{ matrix.package.dist }}
+      - run: python -m pytest ${{ matrix.package.tests }} -q
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm
+      - name: Install wasm-pack
+        run: curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+      - name: Build holos-wasm (both targets)
+        run: node holos/crates/holos-wasm/build.mjs
+      - name: Smoke-test the node package
+        run: node holos/crates/holos-wasm/tests/smoke.cjs
+      - name: Build shacl-wasm
+        run: node shacl/crates/shacl-wasm/build.mjs
+
+  # Phase 1's gate, reported rather than enforced until the consumers have caught up:
+  # the editor, the VS Code extension and the suite must run the engine releases in
+  # versions.toml.
+  pins:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check out the consumers
+        run: |
+          mkdir -p consumers
+          for repo in turtle-editor-viewer consolidated-ontology-quality-suite-webapp \
+                      consolidated-ontology-quality-suite-python \
+                      consolidated-ontology-quality-suite-python-testing; do
+            git clone --depth 1 "https://github.com/pwin/$repo.git" "consumers/$repo"
+          done
+      - run: python scripts/check_pins.py --repos consumers
