@@ -1,0 +1,5 @@
+# shacl12-sparql-adapted — tests known to fail. Regenerate with HOLOS_UPDATE_CONFORMANCE=1.
+# 23/26 passed, 3 failed, 0 skipped
+functions/instanceCount-example	validating: unsupported: SPARQL error: The custom function <http://example.com/ns#instanceCount> is not supported
+functions/langLabelCount-example	validating: unsupported: SPARQL error: The custom function <http://example.com/ns#langLabelCount> is not supported
+functions/spacedConcat-example	validating: unsupported: SPARQL error: The custom function <http://example.com/ns#spacedConcat> is not supported

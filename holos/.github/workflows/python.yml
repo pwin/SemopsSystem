@@ -1,0 +1,289 @@
+# Wheels for `holosdb`, and the release that publishes them.
+#
+# Publishing is by PyPI **trusted publishing** (OIDC): https://docs.pypi.org/trusted-publishers/
+# That removes the long-lived API token from repository secrets entirely, which is the
+# single highest-value change available for a package's supply chain.
+#
+# Two destinations, and they are configured separately:
+#
+# | Destination | Trigger | Environment | Where the publisher is configured |
+# |---|---|---|---|
+# | TestPyPI | manual run with `publish_testpypi` ticked | `testpypi` | test.pypi.org |
+# | PyPI | pushing a `v*` tag | `pypi` | pypi.org |
+#
+# Each needs a trusted publisher naming this repository and **this file by name**
+# (`python.yml`) and the environment below. Before a project's first upload it is registered
+# as a *pending* publisher, which is what reserves the name; it becomes an ordinary one once
+# something has been published. Until a publisher exists the corresponding job fails with a
+# permissions error rather than falling back to anything.
+name: python
+
+on:
+  push:
+    tags: ["v*"]
+    # Also on the default branch. Without this the wheel tests ran only at release time,
+    # and a stale assertion in them sat undiscovered across two commits until a tag went up
+    # and the release blocked itself on it -- twice. This project pushes to `develop`
+    # directly rather than through pull requests, so the `pull_request` trigger below covers
+    # a workflow nobody here uses. Building the matrix on every push costs CI minutes; not
+    # building it costs a failed release and a re-tag, which is worse.
+    branches: ["main"]
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/python.yml"
+  workflow_dispatch:
+    inputs:
+      publish_testpypi:
+        description: "Also publish the built artefacts to TestPyPI"
+        type: boolean
+        default: false
+
+# Every job below sets `timeout-minutes`. GitHub's default is six hours, which is six
+# hours of a build nobody is watching.
+#
+# What this does not cover: a job **queued** for a runner is not running, so the timeout
+# never starts. A workflow asking for a retired runner label — `macos-13`, say — sits
+# queued for GitHub's 24-hour limit rather than failing, and blocks everything downstream
+# of it through `needs:`. No timeout here prevents that; only not naming dead labels does.
+# Action versions are the current majors, all of which run on Node 24. Node 20 was
+# deprecated in September 2025, and an action still targeting it is force-run on Node 24
+# with a warning on every job.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # A wheel is a release artefact; build it like one even on a pull request, so what CI
+  # exercises is what would ship.
+  CARGO_PROFILE_RELEASE_DEBUG: "false"
+  # Named explicitly so `maturin-action` does not have to ask `cargo metadata` where the
+  # target directory is. On the containerised Linux builds it asks on the *host*, where no
+  # Rust toolchain is installed — Rust goes into the container — so the call fails and each
+  # of those jobs logs "Failed to get Cargo target directory from `cargo metadata`". The
+  # action then falls back to `target`, which is the right answer for this workspace, so
+  # the warning is cosmetic; saying it up front skips the lookup and the noise. Relative,
+  # so it resolves to the same directory on the host and inside the container.
+  CARGO_TARGET_DIR: target
+
+jobs:
+  # ---------------------------------------------------------------------------------
+  # One wheel per platform. abi3 means each serves every CPython 3.11+, so the matrix is
+  # over operating systems rather than over interpreter versions.
+  # ---------------------------------------------------------------------------------
+  wheels:
+    name: wheel (${{ matrix.platform.os }} / ${{ matrix.platform.target }})
+    runs-on: ${{ matrix.platform.os }}
+    # RocksDB compiles from C++ on every platform. The slowest real one is Windows at
+    # ~12 minutes warm and ~18 cold, so this is generous headroom rather than a target.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          # manylinux_2_28 rather than 2014: `librocksdb-sys` runs bindgen, bindgen needs
+          # libclang, and CentOS 7 — which is what the 2014 image is — has no clang new
+          # enough to provide one. 2_28 is AlmaLinux 8, where `dnf install clang-devel` is
+          # all it takes. The cost is glibc 2.28, so CentOS 7 and Ubuntu 18.04 cannot
+          # install the wheel; both are long out of support.
+          - { os: ubuntu-latest, target: x86_64, manylinux: "2_28" }
+          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: "2_28" }
+          # Both macOS arches come off the arm64 runner. The Intel one used to be
+          # `macos-13`, which GitHub has retired: the label no longer resolves to anything,
+          # so a job asking for it sits queued until something cancels the run — and takes
+          # every downstream job with it. Cross-compiling depends on no runner label at all,
+          # and Xcode's SDKs carry both slices.
+          - { os: macos-latest, target: aarch64, manylinux: "auto" }
+          - { os: macos-latest, target: x86_64, manylinux: "auto" }
+          - { os: windows-latest, target: x64, manylinux: "auto" }
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # `librocksdb-sys` generates its bindings with bindgen, which loads libclang at build
+      # time rather than linking it. Both hosted runners ship one; neither puts it anywhere
+      # bindgen looks by default, so the build aborts with "Library not loaded:
+      # @rpath/libclang.dylib" or a page of undefined `clang_*` symbols. Naming the
+      # directory is the whole fix. (The Linux builds run in a container and are handled by
+      # `before-script-linux` below.)
+      - name: macOS build environment
+        if: runner.os == 'macOS'
+        run: |
+          lib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          test -f "$lib/libclang.dylib" || { echo "no libclang.dylib under $lib"; exit 1; }
+          echo "LIBCLANG_PATH=$lib" >> "$GITHUB_ENV"
+          # RocksDB uses C++17 aligned new/delete, which Clang refuses to emit below
+          # macOS 10.13. rustc's default deployment target for x86_64-apple-darwin is
+          # older than that, so the cross-compile fails on `clock_cache.cc` with "aligned
+          # allocation function ... is only available on macOS 10.13 or newer". arm64
+          # starts at 11.0 and needs nothing.
+          if [ "${{ matrix.platform.target }}" = "x86_64" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=10.13" >> "$GITHUB_ENV"
+          fi
+
+      - name: Point bindgen at libclang (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $lib = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path "$lib\libclang.dll")) { throw "no libclang.dll under $lib" }
+          "LIBCLANG_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build the wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.manylinux }}
+          args: >-
+            --release
+            --out dist
+            --manifest-path crates/holos-python/Cargo.toml
+          sccache: "true"
+          # RocksDB is compiled from C++ and linked statically into the extension module,
+          # so the build container needs a C++ toolchain and a good deal of patience — this
+          # is why a wheel takes minutes rather than seconds. `clang-devel` is the part
+          # bindgen needs: it opens libclang at build time, and the manylinux images do not
+          # ship one. `clang-sys` searches /usr/lib64 by default, which is where this puts
+          # it, so no LIBCLANG_PATH is needed inside the container.
+          before-script-linux: |
+            set -eux
+            if command -v dnf >/dev/null; then
+              dnf install -y gcc-c++ clang-devel llvm-devel
+            elif command -v yum >/dev/null; then
+              yum install -y gcc-c++ clang-devel llvm-devel
+            elif command -v apt-get >/dev/null; then
+              apt-get update && apt-get install -y g++ clang libclang-dev
+            fi
+            # Report where it landed, without being able to fail the build: an earlier
+            # version of this line ended the container with exit 2 because its second glob
+            # matched nothing — while the library it was checking for was present.
+            ls -1 /usr/lib64/libclang.so* 2>/dev/null | head -1 || true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.platform.os }}-${{ matrix.platform.target }}
+          path: dist
+
+  # ---------------------------------------------------------------------------------
+  # The source distribution. PyPI wants one even when wheels cover every platform: it is
+  # what lets an unlisted platform build from source, and what archives cite.
+  # ---------------------------------------------------------------------------------
+  sdist:
+    name: sdist
+    runs-on: ubuntu-latest
+    # No compilation, just an archive. Runs in seconds.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path crates/holos-python/Cargo.toml
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-sdist
+          path: dist
+
+  # ---------------------------------------------------------------------------------
+  # Install the built wheel into a clean interpreter and run the tests against it.
+  #
+  # Against the *wheel*, not the working tree: `maturin develop` would test a build that
+  # nobody receives. This is the step that catches a packaging fault — a missing `.pyi`,
+  # a module renamed in one place and not another — which a `cargo test` cannot see.
+  # ---------------------------------------------------------------------------------
+  test-wheel:
+    name: test the wheel (${{ matrix.os }}, py${{ matrix.python }})
+    needs: wheels
+    runs-on: ${{ matrix.os }}
+    # An install and 38 tests: about a minute.
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # The oldest and newest interpreters the abi3 wheel claims to serve: 3.11, the floor
+        # and the oldest CPython still receiving security fixes, and 3.15, the latest stable.
+        # If abi3 is working, one wheel satisfies both; if it is not, this is where that shows
+        # up. Move both when a release moves them.
+        python: ["3.11", "3.15"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - name: Install and test
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pip install --no-index --find-links dist --only-binary :all: holosdb
+          python -c "import holosdb; print(holosdb.__version__, holosdb.has_rocksdb())"
+          python -m pytest crates/holos-python/tests -v
+
+  # ---------------------------------------------------------------------------------
+  # TestPyPI: the rehearsal.
+  #
+  # Deliberately opt-in rather than automatic on every manual run — an upload cannot be
+  # undone, and a version number cannot be reused even on TestPyPI. `skip-existing` keeps a
+  # repeat run from failing the whole workflow when the version has already gone up, which
+  # is what happens the second time anyone tries the pipeline without bumping.
+  # ---------------------------------------------------------------------------------
+  publish-testpypi:
+    name: publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_testpypi
+    needs: [wheels, sdist, test-wheel]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/holosdb
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - name: What is about to be published
+        run: ls -l dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  # ---------------------------------------------------------------------------------
+  # Publish, on a tag only.
+  # ---------------------------------------------------------------------------------
+  publish:
+    name: publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [wheels, sdist, test-wheel]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/p/holosdb
+    permissions:
+      # Trusted publishing (OIDC). No API token in repository secrets — the single
+      # highest-value thing available for a package's supply chain.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - name: What is about to be published
+        run: ls -l dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

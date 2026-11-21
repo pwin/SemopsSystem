@@ -1,0 +1,115 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/holos-build",
+    "crates/holos-core",
+    "crates/holos-store",
+    "crates/holos-security",
+    "crates/holos-shacl",
+    "crates/holos-shacl-engine",
+    "crates/holos-holon",
+    "crates/holos-stats",
+    "crates/holos-engine",
+    "crates/holos-cli",
+    "crates/holos-server",
+    "crates/holos-conformance",
+    "crates/holos-python",
+    "crates/holos-wasm",
+    "crates/holos-bench",
+    "vendor/oxsdatatypes",
+    "vendor/spareval",
+]
+
+[workspace.package]
+version = "0.27.0"
+edition = "2021"
+rust-version = "1.87"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pwin/triplestore"
+authors = ["HOLOS contributors"]
+
+[workspace.dependencies]
+# --- L0: reused wholesale from the Oxigraph project (MIT OR Apache-2.0).
+# See DESIGN.md §4 — do not rewrite parsers, term models or result serialisers.
+# RDF 1.2 / SPARQL 1.2 features are ON everywhere: triple terms are a v1 requirement
+# (DESIGN.md §5), not an afterthought.
+oxrdf = { version = "0.3", features = ["rdf-12", "oxsdatatypes", "rdfc-10"] }
+oxrdfio = { version = "0.2", features = ["rdf-12"] }
+oxsdatatypes = "0.2"
+sparesults = { version = "0.3", features = ["sparql-12"] }
+# `sep-0002` gives xsd:date, xsd:time and the three duration types values, so that they
+# compare (`?d < "2024-11-04"^^xsd:date`), sort by value and take part in date and duration
+# arithmetic, and adds ADJUST. Without it the evaluator treats them as opaque typed literals:
+# `<` between two dates is an error, a FILTER using it drops every row, and only dateTime
+# compares. SEP-0002 is the SPARQL 1.2 community proposal for exactly these operators,
+# following XPath's; Oxigraph keeps it behind a feature. Oxigraph's further `calendar-ext`
+# (an order on gYear and the other Gregorian types, which XPath defines equality for but no
+# order) is deliberately not enabled. All three crates take the feature so the parser, the
+# optimiser and the evaluator agree.
+spargebra = { version = "0.4", features = ["sparql-12", "sep-0002"] }
+spareval = { version = "0.2", features = ["sparql-12", "sep-0002"] }
+# Only for `sparopt::algebra::Expression`, which is what `spareval`'s public expression
+# evaluator takes. Same version `spareval` itself resolves, so the types match.
+sparopt = { version = "0.3", features = ["sep-0002"] }
+# GeoSPARQL function library, from the Oxigraph family. Same reuse argument as the
+# rest of L0: 43 conformance-heavy geometry functions nobody should rewrite.
+spargeo = "0.5"
+# Gzipped N-Triples and N-Quads are how large RDF is distributed; reading them is not
+# optional for real datasets. Already in the tree via geojson, so no new supply chain.
+flate2 = "1"
+# geof:buffer and geof:boundary are not in spargeo; holos-engine implements them, and
+# needs the same geometry stack spargeo itself uses so literals round-trip identically.
+geo = "0.31"
+wkt = "0.14"
+geojson = "0.24"
+
+# --- internal
+holos-build = { path = "crates/holos-build", version = "0.27.0" }
+holos-core = { path = "crates/holos-core", version = "0.27.0" }
+holos-store = { path = "crates/holos-store", version = "0.27.0" }
+holos-engine = { path = "crates/holos-engine", version = "0.27.0" }
+holos-security = { path = "crates/holos-security", version = "0.27.0" }
+holos-conformance = { path = "crates/holos-conformance", version = "0.27.0" }
+holos-shacl = { path = "crates/holos-shacl", version = "0.27.0" }
+holos-shacl-engine = { path = "crates/holos-shacl-engine", version = "0.27.0" }
+holos-holon = { path = "crates/holos-holon", version = "0.27.0" }
+holos-stats = { path = "crates/holos-stats", version = "0.27.0" }
+
+# --- everything else
+anyhow = "1"
+# Free space on a filesystem, which `std` does not expose and which the maintenance
+# commands need: `compact` writes a second copy of the store and `backup` can, so both
+# can fill a disk. A thin wrapper over statvfs and GetDiskFreeSpaceExW — `default-features`
+# off drops its async integrations, which this project has no runtime for.
+fs4 = { version = "1", default-features = false, features = ["sync"] }
+thiserror = "2"
+rustc-hash = "2"
+# Already in the tree through `geo`; declared because `holos-engine` uses it directly for
+# the spatial index, and a transitive dependency is not a contract.
+rstar = "0.12"
+# `bindgen-runtime` is in rocksdb's default features, and `default-features = false` drops
+# it. Without it `clang-sys` *links* libclang at build time instead of loading it, so the
+# build script needs the dylib on the loader path rather than at LIBCLANG_PATH — which is
+# not something a CI runner provides, and produced "Library not loaded: @rpath/
+# libclang.dylib" on macOS and a page of undefined `clang_*` symbols on Linux. With it,
+# LIBCLANG_PATH is honoured and the build works wherever a libclang exists.
+rocksdb = { version = "0.24", default-features = false, features = ["lz4", "bindgen-runtime"] }
+tempfile = "3"
+proptest = "1"
+
+# oxsdatatypes 0.2.4 with decimal multiplication and division that round to 18 fractional
+# digits instead of failing. Upstream refuses any product it cannot hold exactly, so
+# `1.3 * 31.583333333333333333` was an error and left its variable unbound. spareval and
+# every crate here resolve it through this patch: see vendor/oxsdatatypes/PROVENANCE.md.
+[patch.crates-io]
+oxsdatatypes = { path = "vendor/oxsdatatypes" }
+# spareval 0.2.9 with `+` accepting a duration on either side of a date, time or dateTime,
+# as XPath's operator mapping does. Upstream takes only the temporal value first, and
+# sparopt reorders the operands of every `+` by hash, so `?dateTime + "P2Y"^^xsd:yearMonthDuration`
+# came out unbound for some values: see vendor/spareval/PROVENANCE.md.
+spareval = { path = "vendor/spareval" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"

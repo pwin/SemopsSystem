@@ -1,0 +1,608 @@
+//! The W3C SHACL test suite.
+//!
+//! These manifests are shaped differently from the RDF and SPARQL ones: each test is a
+//! single Turtle file holding the data graph, the shapes graph *and* the expected
+//! validation report, and the manifest just chains them with `mf:include`. So this reader
+//! is separate rather than a special case bolted onto `super::manifest`.
+//!
+//! Comparison is up to blank-node isomorphism, which matters more here than elsewhere: a
+//! validation report is mostly blank nodes, and the labels are arbitrary.
+
+use anyhow::{anyhow, Result};
+use holos_shacl::{CompiledShapes, Options};
+use holos_store::{GraphFilter, Store};
+use oxrdf::dataset::CanonicalizationAlgorithm;
+use oxrdf::vocab::rdf;
+use oxrdf::{Dataset, Graph, GraphName, NamedNode, NamedOrBlankNodeRef, Quad, Term, TermRef};
+use oxrdfio::{RdfFormat, RdfParser};
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::{Path, PathBuf};
+
+const MF: &str = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#";
+const SHT: &str = "http://www.w3.org/ns/shacl-test#";
+
+fn mf(local: &str) -> NamedNode {
+    NamedNode::new_unchecked(format!("{MF}{local}"))
+}
+
+fn sht(local: &str) -> NamedNode {
+    NamedNode::new_unchecked(format!("{SHT}{local}"))
+}
+
+/// One SHACL test: a file, and the node inside it that describes the test.
+#[derive(Debug, Clone)]
+pub struct ShaclTest {
+    /// A stable name, for the ratchet.
+    pub id: String,
+    /// The Turtle file holding data, shapes and expected report.
+    pub path: PathBuf,
+}
+
+/// Collects every test a manifest chains together.
+pub fn load(manifest: &Path) -> Result<Vec<ShaclTest>> {
+    let mut out = Vec::new();
+    let mut seen = HashSet::new();
+    collect(manifest, &mut out, &mut seen)?;
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(out)
+}
+
+fn collect(manifest: &Path, out: &mut Vec<ShaclTest>, seen: &mut HashSet<PathBuf>) -> Result<()> {
+    let manifest = manifest.canonicalize()?;
+    if !seen.insert(manifest.clone()) {
+        return Ok(());
+    }
+    let base = super::manifest::path_to_file_url(&manifest);
+    let graph = parse_graph(&manifest, &base)?;
+
+    let Some(root) = graph
+        .subjects_for_predicate_object(rdf::TYPE, &Term::from(mf("Manifest")))
+        .next()
+    else {
+        return Ok(());
+    };
+
+    // `mf:include` is a plain repeated property here, not an RDF collection.
+    let mut included: Vec<String> = graph
+        .objects_for_subject_predicate(root, mf("include").as_ref())
+        .filter_map(|o| match o {
+            TermRef::NamedNode(n) => Some(n.as_str().to_owned()),
+            _ => None,
+        })
+        .collect();
+    included.sort();
+
+    for iri in included {
+        let Some(path) = super::manifest::file_url_to_path(&iri) else {
+            continue;
+        };
+        if path.file_name().is_some_and(|n| n == "manifest.ttl") {
+            collect(&path, out, seen)?;
+        } else if is_test_file(&path)? {
+            let id = test_id(&path);
+            out.push(ShaclTest { id, path });
+        }
+    }
+    Ok(())
+}
+
+fn is_test_file(path: &Path) -> Result<bool> {
+    if !path.is_file() {
+        return Ok(false);
+    }
+    let base = super::manifest::path_to_file_url(path);
+    let graph = parse_graph(path, &base)?;
+    let validate = Term::from(sht("Validate"));
+    let found = graph
+        .subjects_for_predicate_object(rdf::TYPE, &validate)
+        .next()
+        .is_some();
+    Ok(found)
+}
+
+/// A stable id: the last two path segments, which is what the suite names tests by.
+fn test_id(path: &Path) -> String {
+    let file = path
+        .file_stem()
+        .map_or_else(String::new, |s| s.to_string_lossy().into_owned());
+    let dir = path
+        .parent()
+        .and_then(Path::file_name)
+        .map_or_else(String::new, |s| s.to_string_lossy().into_owned());
+    format!("{dir}/{file}")
+}
+
+fn parse_graph(path: &Path, base: &str) -> Result<Graph> {
+    let parser = RdfParser::from_format(RdfFormat::Turtle)
+        .with_base_iri(base)
+        .map_err(|e| anyhow!("bad base {base}: {e}"))?;
+    let mut graph = Graph::new();
+    for quad in parser.for_reader(BufReader::new(File::open(path)?)) {
+        let quad = quad?;
+        graph.insert(&oxrdf::Triple {
+            subject: quad.subject,
+            predicate: quad.predicate,
+            object: quad.object,
+        });
+    }
+    Ok(graph)
+}
+
+/// Which validator a SHACL run uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Engine {
+    /// The native evaluator, reading the live store.
+    Native,
+    /// The adapted SHACL_Engine, fed through the bridge.
+    Adapted,
+}
+
+/// Runs one SHACL test with the native evaluator.
+#[must_use]
+pub fn run(test: &ShaclTest) -> super::Outcome {
+    run_with(test, Engine::Native)
+}
+
+/// Runs one SHACL test with a chosen validator.
+#[must_use]
+pub fn run_with(test: &ShaclTest, engine: Engine) -> super::Outcome {
+    match run_inner(test, engine) {
+        Ok(outcome) => outcome,
+        Err(e) => super::Outcome::Failed(format!("{e:#}")),
+    }
+}
+
+fn run_inner(test: &ShaclTest, engine: Engine) -> Result<super::Outcome> {
+    let base = super::manifest::path_to_file_url(&test.path);
+    let graph = parse_graph(&test.path, &base)?;
+
+    let Some(entry) = graph
+        .subjects_for_predicate_object(rdf::TYPE, &Term::from(sht("Validate")))
+        .next()
+    else {
+        return Ok(super::Outcome::skip("no sht:Validate entry"));
+    };
+
+    // `mf:result sht:Failure` says the shapes cannot be evaluated at all -- a pre-bound
+    // variable inside `MINUS`, say -- so the expected outcome is an error rather than a report.
+    // Read as a report it is empty, and nothing a validator returns could ever match it.
+    let expects_failure = graph
+        .object_for_subject_predicate(entry, mf("result").as_ref())
+        .is_some_and(|r| r == TermRef::NamedNode(sht("Failure").as_ref()));
+    let expected = expected_report(&graph, entry)?;
+
+    // Most tests put data and shapes in the same file, referenced as `<>`. Some point at
+    // separate files, and then the two graphs have to stay apart — which is exactly the
+    // per-graph selection §8 adds, exercised here for free.
+    let action = graph
+        .object_for_subject_predicate(entry, mf("action").as_ref())
+        .ok_or_else(|| anyhow!("test has no mf:action"))?;
+    let action_node = match action {
+        TermRef::BlankNode(b) => NamedOrBlankNodeRef::from(b),
+        TermRef::NamedNode(n) => NamedOrBlankNodeRef::from(n),
+        _ => return Err(anyhow!("mf:action is not a node")),
+    };
+    let data_iri = graph_ref(&graph, action_node, "dataGraph");
+    let shapes_iri = graph_ref(&graph, action_node, "shapesGraph");
+
+    let mut store = Store::new();
+    let separate = data_iri.is_some() && shapes_iri.is_some() && data_iri != shapes_iri;
+
+    load_into(&mut store, &resolve(&test.path, data_iri.as_deref()), None)?;
+    let shapes_graph_name = if separate {
+        let name = NamedNode::new_unchecked("urn:holos:conformance:shapes");
+        load_into(
+            &mut store,
+            &resolve(&test.path, shapes_iri.as_deref()),
+            Some(name.clone()),
+        )?;
+        GraphFilter::Named(
+            store
+                .lookup_term(name.as_ref().into())?
+                .ok_or_else(|| anyhow!("shapes graph name did not intern"))?,
+        )
+    } else {
+        GraphFilter::Default
+    };
+
+    let options = Options {
+        data_graph: GraphFilter::Default,
+        shapes_graph: shapes_graph_name,
+    };
+    if engine == Engine::Adapted {
+        return run_adapted(&store, options, &expected, expects_failure);
+    }
+
+    // The native evaluator's `Unsupported` is a skip either way: it says what this evaluator
+    // does not do, not that the shapes are ill-formed, so it cannot pass a failure test.
+    let shapes = match CompiledShapes::compile(&store, options) {
+        Ok(s) => s,
+        Err(holos_shacl::ShaclError::Unsupported(what)) => {
+            return Ok(super::Outcome::skip(format!("unsupported: {what}")))
+        }
+        Err(_) if expects_failure => return Ok(super::Outcome::Passed),
+        Err(e) => return Ok(super::Outcome::fail(format!("compiling shapes: {e}"))),
+    };
+    let report = match shapes.validate(&store) {
+        Ok(r) => r,
+        Err(holos_shacl::ShaclError::Unsupported(what)) => {
+            return Ok(super::Outcome::skip(format!("unsupported: {what}")))
+        }
+        Err(_) if expects_failure => return Ok(super::Outcome::Passed),
+        Err(e) => return Ok(super::Outcome::fail(format!("validating: {e}"))),
+    };
+    if expects_failure {
+        return Ok(super::Outcome::fail(
+            "expected a failure, but the shapes validated",
+        ));
+    }
+    // `sh:conformanceDisallows` is a property of the *report*, not of the shapes: it says
+    // which severities the validator was asked to treat as disqualifying. A test that sets
+    // it is asking for a run under that rule, so the harness has to read it from the
+    // expected report and apply it — there is nowhere else it could come from.
+    let report = match disallowed_severities(&expected, &store)? {
+        Some(severities) => report.with_conformance_disallows(severities),
+        None => report,
+    };
+    let actual = to_dataset(shapes.report_to_quads(&store, &report)?);
+    let actual = normalise(&actual, &expected);
+
+    Ok(match compare(&expected, &actual) {
+        Ok(()) => super::Outcome::Passed,
+        Err(diff) => super::Outcome::Failed(diff),
+    })
+}
+
+/// Runs a test through the adapted engine, bridged from the store.
+fn run_adapted(
+    store: &Store,
+    options: Options,
+    expected: &Dataset,
+    expects_failure: bool,
+) -> Result<super::Outcome> {
+    let mut run = match holos_shacl::engine::EngineRun::prepare(store, options) {
+        Ok(r) => r,
+        Err(_) if expects_failure => return Ok(super::Outcome::Passed),
+        Err(e) => return Ok(super::Outcome::fail(format!("preparing the engine: {e}"))),
+    };
+    let report = match run.validate() {
+        Ok(r) => r,
+        Err(_) if expects_failure => return Ok(super::Outcome::Passed),
+        Err(e) => return Ok(super::Outcome::fail(format!("validating: {e}"))),
+    };
+    if expects_failure {
+        return Ok(super::Outcome::fail(
+            "expected a failure, but the shapes validated",
+        ));
+    }
+    // Same rule as the native path: `sh:conformanceDisallows` is a property of the report,
+    // so a test that sets one is asking for a run judged under it.
+    let declared: Vec<_> = disallowed_iris(expected)
+        .iter()
+        .filter_map(|iri| run.term_for_iri(iri))
+        .collect();
+    let graph = if declared.is_empty() {
+        run.report_to_oxrdf(&report)
+    } else {
+        run.report_to_oxrdf_with(&report, &declared)
+    };
+    let mut actual = Dataset::new();
+    for triple in graph.iter() {
+        actual.insert(&Quad {
+            subject: triple.subject.into_owned(),
+            predicate: triple.predicate.into_owned(),
+            object: triple.object.into_owned(),
+            graph_name: GraphName::DefaultGraph,
+        });
+    }
+    let actual = normalise(&actual, expected);
+    Ok(match compare(expected, &actual) {
+        Ok(()) => super::Outcome::Passed,
+        Err(diff) => super::Outcome::Failed(diff),
+    })
+}
+
+/// Whether a predicate carries report structure rather than pointing into the data.
+///
+/// Everything a validation report *contains* — its results, and the property-path
+/// expressions inside them — versus everything it merely *references*: the focus node, the
+/// value that failed, the shape that reported it.
+fn is_structural(predicate: &str) -> bool {
+    const SH: &str = "http://www.w3.org/ns/shacl#";
+    const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    matches!(
+        predicate,
+        p if p == format!("{SH}result")
+            || p == format!("{SH}resultPath")
+            || p == format!("{SH}detail")
+            || p == format!("{SH}inversePath")
+            || p == format!("{SH}alternativePath")
+            || p == format!("{SH}zeroOrMorePath")
+            || p == format!("{SH}oneOrMorePath")
+            || p == format!("{SH}zeroOrOnePath")
+            || p == format!("{RDF}first")
+            || p == format!("{RDF}rest")
+    )
+}
+
+/// The IRI a `sht:dataGraph` or `sht:shapesGraph` names.
+fn graph_ref(graph: &Graph, action: NamedOrBlankNodeRef<'_>, local: &str) -> Option<String> {
+    match graph.object_for_subject_predicate(action, sht(local).as_ref())? {
+        TermRef::NamedNode(n) => Some(n.as_str().to_owned()),
+        _ => None,
+    }
+}
+
+/// Resolves a graph reference to a file: `<>` means the test file itself.
+fn resolve(test: &Path, iri: Option<&str>) -> PathBuf {
+    iri.and_then(super::manifest::file_url_to_path)
+        .filter(|p| p.is_file())
+        .unwrap_or_else(|| test.to_path_buf())
+}
+
+fn load_into(store: &mut Store, path: &Path, graph: Option<NamedNode>) -> Result<()> {
+    let base = super::manifest::path_to_file_url(path);
+    let parser = RdfParser::from_format(RdfFormat::Turtle)
+        .with_base_iri(&base)
+        .map_err(|e| anyhow!("bad base: {e}"))?;
+    for quad in parser.for_reader(BufReader::new(File::open(path)?)) {
+        let mut quad = quad?;
+        if let Some(name) = &graph {
+            quad.graph_name = name.clone().into();
+        }
+        store.insert(quad.as_ref())?;
+    }
+    Ok(())
+}
+
+/// The `sh:conformanceDisallows` IRIs an expected report names.
+fn disallowed_iris(expected: &Dataset) -> Vec<String> {
+    let predicate = NamedNode::new_unchecked("http://www.w3.org/ns/shacl#conformanceDisallows");
+    expected
+        .iter()
+        .filter(|q| q.predicate == predicate.as_ref())
+        .filter_map(|q| match q.object {
+            TermRef::NamedNode(n) => Some(n.as_str().to_owned()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The severities an expected report declares as disqualifying, if it declares any.
+fn disallowed_severities(
+    expected: &Dataset,
+    store: &Store,
+) -> Result<Option<Vec<holos_core::TermId>>> {
+    let predicate = NamedNode::new_unchecked("http://www.w3.org/ns/shacl#conformanceDisallows");
+    let mut out = Vec::new();
+    for quad in expected.iter() {
+        if quad.predicate != predicate.as_ref() {
+            continue;
+        }
+        // Looked up rather than interned: a severity the store has never seen cannot be the
+        // severity of any result, so it disqualifies nothing and can be dropped.
+        if let Some(id) = store.lookup_term(quad.object)? {
+            out.push(id);
+        }
+    }
+    Ok((!out.is_empty()).then_some(out))
+}
+
+/// Extracts the expected report — the subgraph reachable from `mf:result`.
+fn expected_report(graph: &Graph, entry: NamedOrBlankNodeRef<'_>) -> Result<Dataset> {
+    let Some(result) = graph.object_for_subject_predicate(entry, mf("result").as_ref()) else {
+        return Err(anyhow!("test has no mf:result"));
+    };
+    let mut out = Dataset::new();
+    let mut frontier = vec![result.into_owned()];
+    let mut seen: HashSet<String> = HashSet::new();
+    while let Some(node) = frontier.pop() {
+        // Only blank nodes expand. A report references IRIs — the focus node, the source
+        // shape, the constraint component — and following those would drag each shape's
+        // entire definition into the "expected report", which is not what the test asserts.
+        let TermRef::BlankNode(b) = node.as_ref() else {
+            continue;
+        };
+        let subject = NamedOrBlankNodeRef::from(b);
+        if !seen.insert(node.to_string()) {
+            continue;
+        }
+        for triple in graph.triples_for_subject(subject) {
+            // Only follow blank nodes through predicates that carry *report* structure.
+            // A blank node hanging off sh:focusNode or sh:value belongs to the data, and
+            // expanding it would fold the data graph into the expected report.
+            if is_structural(triple.predicate.as_str()) {
+                frontier.push(triple.object.into_owned());
+            }
+            out.insert(&Quad {
+                subject: triple.subject.into_owned(),
+                predicate: triple.predicate.into_owned(),
+                object: triple.object.into_owned(),
+                graph_name: GraphName::DefaultGraph,
+            });
+        }
+    }
+    Ok(out)
+}
+
+/// Reduces an actual report to what the suite compares.
+///
+/// The suite's own description (`data-shapes-test-suite/index.html`) lists the predicates an
+/// expected report uses and says every other triple "needs to be removed from the actual
+/// graph prior to comparison". `sh:resultMessage` is the exception it names: removed, unless
+/// the expected graph has a message with the same object, so a test written to check messages
+/// still can. SHACL 1.2's expected reports also use `sh:conformanceDisallows` and `sh:detail`,
+/// so those are kept -- `sh:detail` only where the expected report has one, as the 1.0 text
+/// says the actual report "must not include any nested results".
+///
+/// A walk from the report node through the structural predicates, the same reach
+/// [`expected_report`] has, so that dropping an edge drops what hung off it too.
+fn normalise(actual: &Dataset, expected: &Dataset) -> Dataset {
+    const SH: &str = "http://www.w3.org/ns/shacl#";
+    let sh = |local: &str| NamedNode::new_unchecked(format!("{SH}{local}"));
+    let compared: Vec<NamedNode> = [
+        "result",
+        "conforms",
+        "conformanceDisallows",
+        "focusNode",
+        "resultPath",
+        "resultSeverity",
+        "sourceConstraint",
+        "sourceConstraintComponent",
+        "sourceShape",
+        "value",
+        "inversePath",
+        "alternativePath",
+        "zeroOrMorePath",
+        "oneOrMorePath",
+        "zeroOrOnePath",
+    ]
+    .into_iter()
+    .map(sh)
+    .chain([
+        rdf::TYPE.into_owned(),
+        rdf::FIRST.into_owned(),
+        rdf::REST.into_owned(),
+    ])
+    .collect();
+    let message = sh("resultMessage");
+    let detail = sh("detail");
+    let messages: Vec<Term> = expected
+        .iter()
+        .filter(|q| q.predicate == message.as_ref())
+        .map(|q| q.object.into_owned())
+        .collect();
+    let has_detail = expected.iter().any(|q| q.predicate == detail.as_ref());
+    let keep = |q: &oxrdf::QuadRef<'_>| {
+        if q.predicate == message.as_ref() {
+            return messages.iter().any(|m| m.as_ref() == q.object);
+        }
+        if q.predicate == detail.as_ref() {
+            return has_detail;
+        }
+        compared.iter().any(|c| c.as_ref() == q.predicate)
+    };
+
+    let report = Term::from(sh("ValidationReport"));
+    let mut frontier: Vec<oxrdf::NamedOrBlankNode> = actual
+        .iter()
+        .filter(|q| q.predicate == rdf::TYPE && q.object == report.as_ref())
+        .map(|q| q.subject.into_owned())
+        .collect();
+    let mut seen: HashSet<oxrdf::NamedOrBlankNode> = frontier.iter().cloned().collect();
+    let mut out = Dataset::new();
+    while let Some(node) = frontier.pop() {
+        for quad in actual.quads_for_subject(node.as_ref()) {
+            if !keep(&quad) {
+                continue;
+            }
+            out.insert(quad);
+            if !is_structural(quad.predicate.as_str()) {
+                continue;
+            }
+            if let TermRef::BlankNode(b) = quad.object {
+                let next = oxrdf::NamedOrBlankNode::from(b.into_owned());
+                if seen.insert(next.clone()) {
+                    frontier.push(next);
+                }
+            }
+        }
+    }
+    out
+}
+
+fn to_dataset(quads: Vec<Quad>) -> Dataset {
+    let mut out = Dataset::new();
+    for quad in &quads {
+        out.insert(quad);
+    }
+    out
+}
+
+fn compare(expected: &Dataset, actual: &Dataset) -> std::result::Result<(), String> {
+    let mut a = expected.clone();
+    let mut b = actual.clone();
+    a.canonicalize(CanonicalizationAlgorithm::Unstable);
+    b.canonicalize(CanonicalizationAlgorithm::Unstable);
+    if a == b {
+        return Ok(());
+    }
+    let mut missing: Vec<String> = a
+        .iter()
+        .filter(|q| !b.contains(*q))
+        .map(|q| q.to_string())
+        .collect();
+    let mut extra: Vec<String> = b
+        .iter()
+        .filter(|q| !a.contains(*q))
+        .map(|q| q.to_string())
+        .collect();
+    // Sorted before truncating: which examples get shown must not depend on hash iteration
+    // order. The recorded `.failures` baselines carry this text, so a nondeterministic sample
+    // makes every re-baseline churn, and a ratchet whose diff is always noise is one nobody
+    // reads.
+    missing.sort_unstable();
+    extra.sort_unstable();
+    // Every line under HOLOS_CONFORMANCE_FULL_DIFF: the first lines of a canonical diff are
+    // often relabelled blank nodes, and the triple that actually differs is further down.
+    if std::env::var_os("HOLOS_CONFORMANCE_FULL_DIFF").is_none() {
+        missing.truncate(3);
+        extra.truncate(3);
+    }
+    Err(format!(
+        "{} expected vs {} actual triples; missing {missing:?}; unexpected {extra:?}",
+        a.len(),
+        b.len()
+    ))
+}
+
+/// Locates the SHACL suites, if they are checked out.
+#[must_use]
+pub fn suite_root() -> Option<PathBuf> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent()?.parent()?;
+    let dir = root.join("testsuites").join("data-shapes");
+    dir.is_dir().then_some(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The SHACL baselines quoted a sample of the differing triples chosen by hash iteration,
+    /// so `shacl-core-adapted.failures` and its siblings churned on every re-baseline even
+    /// when no test had changed state. Sorted before truncating; this pins that, because the
+    /// original check was a manual double re-baseline and a manual check does not survive the
+    /// next edit.
+    fn triple(n: u32) -> Quad {
+        Quad {
+            subject: NamedNode::new_unchecked(format!("http://example.com/s{n:02}")).into(),
+            predicate: NamedNode::new_unchecked("http://example.com/p"),
+            object: NamedNode::new_unchecked(format!("http://example.com/o{n:02}")).into(),
+            graph_name: GraphName::DefaultGraph,
+        }
+    }
+
+    #[test]
+    fn the_quoted_sample_is_sorted_and_independent_of_insertion_order() {
+        let expected = Dataset::new();
+        let mut forwards = Dataset::new();
+        let mut backwards = Dataset::new();
+        for n in 0..10 {
+            forwards.insert(&triple(n));
+        }
+        for n in (0..10).rev() {
+            backwards.insert(&triple(n));
+        }
+
+        let one = compare(&expected, &forwards).expect_err("the datasets differ");
+        let two = compare(&expected, &backwards).expect_err("the datasets differ");
+        assert_eq!(one, two, "insertion order must not reach the message");
+        assert!(
+            one.contains("s00") && one.contains("s01") && one.contains("s02"),
+            "the three lexicographically smallest should be quoted, got: {one}"
+        );
+        assert!(!one.contains("s09"), "and nothing later, got: {one}");
+    }
+}

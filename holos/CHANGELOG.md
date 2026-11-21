@@ -1,0 +1,3028 @@
+# Changelog
+
+Notable changes per release. Numbers quoted here are measured; the benchmarks that produce
+them are in `BENCHMARKS.md` and are runnable.
+
+## 0.27.0 — 2026-11-20
+
+A minor rather than a patch because the first item below changes an answer: a graph that
+validated before can fail now. That is the point of it, and it will look like a regression on
+the first run after upgrading, so it is worth knowing which it is beforehand. If a gate starts
+failing on `sh:datatype`, the data was never valid and the previous answer was wrong.
+
+### `sh:datatype` checks the datatypes both validators were letting through
+
+Each validator accepted any lexical form for some datatypes, so `sh:datatype` passed data it
+was asked to reject. `"not-a-year"^^xsd:gYear` satisfied `sh:datatype xsd:gYear`. Reported
+from work on tarka.
+
+The two sets differed, which is the part worth knowing. The adapted engine was missing gYear,
+gYearMonth, gMonth, gDay, gMonthDay, dayTimeDuration and yearMonthDuration; the native
+evaluator already had both duration subtypes and `xsd:dateTimeStamp` and was missing
+`xsd:date`, `xsd:time` and the five gregorian types. Neither gap predicted the other. The
+parsers were in `oxsdatatypes` throughout, so both lists were reached by omission rather than
+by any decision.
+
+Both duration subtypes need their own parser rather than a near relative: they restrict the
+value space, not only the lexical form, so `"P1Y"` parses perfectly as an `xsd:duration` and
+is still not an `xsd:dayTimeDuration`.
+
+One deviation from `oxsdatatypes` is deliberate and pinned by a test on each side. `--02-29`
+is a valid `xsd:gMonthDay` and the library rejects it, having measured February at 28 days
+with no year to go on. XSD 1.1 §3.3.12.1 caps February at 29 for this type precisely because
+the year is absent. Only that bound is ours; the rest of the form, timezone included, stays
+the library's, and `--02-30` and `--04-31` are still refused.
+
+Conformance is unchanged for both validators — shacl-core 98/98 and shacl12-core 138/138,
+native and adapted alike — because neither suite has a test for any of these datatypes. That
+is why the gap survived this long on both sides. The native evaluator had no tests for its
+`lexical_is_valid` at all and now has four.
+
+### holos-engine re-exports the Oxigraph crates it is built on
+
+`holos_engine::{oxiri, oxrdf, oxrdfio, oxsdatatypes, sparesults, spareval, spargebra, sparopt}`.
+The engine's API takes and returns their types (`Engine::evaluator()` is a
+`spareval::QueryEvaluator`, a query gives `spareval::QueryResults`), so a crate that calls
+HOLOS can name them through holos-engine instead of depending on them itself, and gets them as
+HOLOS builds them: one copy, with HOLOS's RDF 1.2, SPARQL 1.2 and `sep-0002` features.
+`[patch.crates-io]` applies only from the workspace being built, so a dependent workspace that
+wants the vendored `spareval` and `oxsdatatypes` repeats those two entries, pointing at
+`vendor/` here. tarka is the first such crate.
+
+## 0.26.4 — 2026-11-18
+
+### A duration adds to a date, time or dateTime for every value
+
+0.26.3 turned on `sep-0002`, and with it the sum of a duration and a dateTime was unbound for
+some values and not others, silently. Of thirty pairs, six dateTimes by five durations, the
+native build bound 7 and the WebAssembly build 24; in the browser every
+`+ "P2Y"^^xsd:yearMonthDuration` was unbound.
+
+Two upstream behaviours met. `sparopt`'s optimizer rebuilds every `+` through `order_pair`,
+which orders the two operands by hash, as if `+` commuted for every type. `spareval` 0.2.9 adds
+a duration to a date, time or dateTime only with the temporal value first. So whenever the
+duration hashed lower, `?d + ?duration` reached the evaluator as `?duration + ?d`, found no case
+and left the variable unbound. A hash of the same value differs between 64-bit and 32-bit
+builds, which is why the native and browser builds failed on different values.
+
+XPath's operator mapping defines `+` with the duration on either side. `vendor/spareval` is
+`spareval` 0.2.9 with that one change: `+` puts the temporal operand first before matching, so
+both orders, and so both outcomes of the hash, give the sum. Subtraction does not commute and
+is unchanged: `duration - dateTime` is still an error. `[patch.crates-io]` puts the copy under
+every crate here, the vendored SHACL engine included, as it does `oxsdatatypes`.
+
+`tests/date_arithmetic.rs` in `holos-engine` adds the thirty pairs in both orders through the
+whole engine, optimizer included, and compares each sum with `oxsdatatypes` computing it
+directly; it fails on 0.26.3. `SPARQL-SURFACE.md`'s `date + duration` probe tried one pair,
+which passed by luck of the hash; it now tries several in both orders, `P2Y` and `P1M` on a
+dateTime among them. The 0.26.3 entry below said a duration adds to a date or a dateTime, and
+now says that was true for some values only.
+
+## 0.26.3 — 2026-11-18
+
+### Dates, times and durations compare by value
+
+`<`, `<=`, `>` and `>=` between two `xsd:date` values were a type error, and so were the same
+comparisons on `xsd:time` and the duration types. An error inside a FILTER removes the row, so
+a query that compared dates returned nothing, and said nothing:
+
+```sparql
+SELECT ?m WHERE { ?m ex:on ?d FILTER(?d >= "2024-11-04"^^xsd:date) }   # no rows, ever
+```
+
+Inside `EXISTS` the same error made `EXISTS` false. The report that found it was a "what is
+open on this day?" query over seasons with `xsd:date` bounds, which answered "closed" for every
+place on every day. On the day it was written for, in November, that was the right answer, for
+the wrong reason. Equality worked, `ORDER BY` worked (ISO dates happen to sort as text), and
+`xsd:dateTime` compared, which is why it went unnoticed.
+
+The cause was a feature flag. `spareval` gives these datatypes values only with its `sep-0002`
+feature, and the workspace did not enable it, so the evaluator treated a date as an opaque
+typed literal. It is now on for `spargebra`, `sparopt` and `spareval`, and so for the command
+line, the server, Python, the WebAssembly packages and the vendored SHACL engine at once.
+With it come:
+
+- comparison and sorting by value for `xsd:date`, `xsd:time`, `xsd:duration`,
+  `xsd:yearMonthDuration` and `xsd:dayTimeDuration`, following XPath's operators;
+- arithmetic between them: `"2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date` is
+  `"P730D"^^xsd:dayTimeDuration`, two `xsd:dateTime`s subtract to a duration, and a duration
+  adds to a date or a dateTime, though in this release only for some values (see 0.26.4);
+- `ADJUST`, to move a date or time into a timezone.
+
+SEP-0002 is the community proposal for SPARQL 1.2 that defines exactly these operators.
+Oxigraph's further `calendar-ext` feature, which also orders `xsd:gYear` and the other
+Gregorian types, is not enabled: XPath defines equality for those types and no order, so
+`?y < "2000"^^xsd:gYear` is still an error.
+
+The top-k sort in `holos-engine` keeps its own copy of the evaluator's order, and now orders
+dates, times and durations by value too; its property test holds the two orders to each other.
+A SHACL-SPARQL constraint that compares dates now fires, where before an expired certificate
+passed validation silently. `sh:lessThan` and the other Core comparisons were never affected,
+because the SHACL engine makes those comparisons itself.
+
+`SPARQL-SURFACE.md` now probes date, time and duration comparison, subtraction and `ADJUST`.
+Its probes also count a query that evaluates but returns no rows as a failure, as the probe's
+own documentation always said: an expression that errors inside a FILTER is the silent kind of
+unsupported, and is what let this go unreported.
+
+## 0.26.2 — 2026-11-13
+
+### Decimal arithmetic rounds to 18 digits instead of failing
+
+An `xsd:decimal` is held to 18 fractional digits, and a product of two of them can need 36.
+`oxsdatatypes`, the Oxigraph crate the evaluator does its arithmetic with, returned an error for
+any product it could not hold exactly, and in SPARQL an error leaves its variable unbound:
+
+```sparql
+SELECT ?x WHERE { BIND(1.3 * 31.583333333333333333 AS ?x) }   # ?x unbound
+SELECT ?x WHERE { BIND(2   * 31.583333333333333333 AS ?x) }   # 63.166666666666666666
+```
+
+Division failed the same way once the dividend was too large to shift 18 places:
+`1000 / 31.583333333333333333` was an error. In a SHACL-SPARQL constraint the unbound variable
+showed up in the message, which printed `{?ratio}` as written.
+
+Both now compute the exact result and round it once to 18 digits, half to even: the first query
+above gives `41.058333333333333333`, the division `31.662269129287598945`. Only division by zero
+and a result beyond about ±1.7 × 10²⁰ are errors. XPath F&O §4.2 leaves an over-long decimal
+result "truncated or rounded in an implementation-defined manner", and keeps its overflow error
+for overflow.
+
+One visible change to answers that worked before: division used to truncate, so an inexact
+quotient can differ in its 18th digit. `2 / 3` was `0.666666666666666666` and is now
+`0.666666666666666667`, and `AVG`, a sum divided by a count, follows.
+
+The fix is in `vendor/oxsdatatypes`, a copy of `oxsdatatypes` 0.2.4 that the workspace puts in
+place of the registry crate with `[patch.crates-io]`. So it reaches the evaluator, the vendored
+SHACL engine, the command line, the server, Python and the WebAssembly packages at once.
+`PROVENANCE.md` there records the change. It was checked against Python's `decimal` module on
+200,000 random pairs of values, at every scale and both signs, with no differences.
+
+### Arithmetic and a filter's scope that the Oxigraph crates answered wrongly
+
+`spareval` pins `oxsdatatypes` to one exact version, so the patch above has to be the version a
+locked `spareval` asks for, and 0.2.4 is asked for by `spareval` 0.2.9. The lockfile moves the
+whole Oxigraph family up with it: `spargebra` 0.4.6 → 0.4.8, `spareval` 0.2.6 → 0.2.9,
+`sparopt` 0.3.6 → 0.3.9, `oxsdatatypes` 0.2.2 → 0.2.4, and `oxrdf`, `oxrdfio`, `oxttl`,
+`oxrdfxml`, `oxjsonld`, `sparesults` and `spargeo` by two patch releases each. `spargeo` 0.5.7
+uses the same `geojson` 0.24 as `holos-engine`, so `geojson` 1.0 and `tinyvec` leave the
+dependency graph, which is 206 third-party crates, down from 209. The new versions fix answers
+that 0.26.1 gave without an error:
+
+| Expression | 0.26.1 | 0.26.2 |
+|---|---:|---:|
+| `10 - 2 - 3` | 11 | 5 |
+| `24 / 4 / 2` | 12 | 3 |
+| `1 -2*3 -4` | -1 | -9 |
+| `ROUND(-2.5001)` | -2 | -3 |
+| `ROUND(-2.5e0)` | -3 | -2 |
+
+`spargebra` 0.4.6 grouped a chain of `-` or `/` from the right, and a signed literal straight
+after an operand took the operator before it, so `1 -2*3 -4` was read as `1 - (2*3 - 4)`.
+`oxsdatatypes` 0.2.2 cut a decimal to one fractional digit before rounding it, and rounded a
+double's half away from zero where `fn:round` takes it towards positive infinity.
+
+A filter in a group nested inside `OPTIONAL` was moved out into the `OPTIONAL`'s own
+condition, where it could see the variables bound outside:
+
+```sparql
+SELECT ?title ?price WHERE {
+  ?book dc:title ?title .
+  OPTIONAL { { ?book x:price ?price FILTER(?title = "TITLE 2") } }
+}
+```
+
+`?title` is not in scope in the inner group, so the filter is an error there and no book gets a
+price. 0.26.1 gave TITLE 2 its price. This is W3C `dawg-optional-filter-005-not-simplified`,
+which the harness had filed as an upstream skip because the reference evaluator gave the same
+wrong answer. It passes now, so SPARQL 1.0 is 276/277 with 6 skipped, where it was 275/276 with
+7. Every other suite is where it was. The README's SPARQL 1.1 line still said 512/512 from
+August; it has been 511/511 since before 0.24.0, as that release's entry says, and the README
+now shows 511/511.
+
+`tests/arithmetic.rs` and `tests/nested_filter_scope.rs` in `holos-engine` pin these answers.
+Each fails on 0.26.1. The second is needed because the ratchet only compares failures: if the
+scoping went wrong again in the reference evaluator too, that test would go back to being a skip
+and nothing would fail.
+
+## 0.26.1 — 2026-11-03
+
+### A `COUNT` over one triple pattern streams again
+
+From 0.21, a query whose `GROUP BY` or aggregate sat over a single triple pattern had that pattern
+evaluated by the bind join and handed to the evaluator as a `VALUES` table. That is what makes a
+grouped *join* fast, and for one pattern it is only overhead: the scan is the same index scan
+either way, and the evaluator's `COUNT` counts it as it streams, where the table first turns every
+row into terms. Measured from Python on 800k triples, counting the 50,000 that match
+`?s <p> "hit"`: 7-15 ms on 0.22.0 (before Python took the 0.21 rewrites), 87 ms on 0.26.0, 4.5 ms
+now. A single pattern, in a graph or not, now goes to the evaluator whole.
+
+A filter over one pattern is still taken by the bind join, because the bind join can use an
+equality filter's constant as an index binding and the evaluator cannot. On the same data,
+`?s <p> ?o FILTER(?o = "hit")` stays at about 105 ms, against 484-725 ms on 0.22.0; the evaluator
+alone would scan all 800k triples and filter them.
+
+## 0.26.0 — 2026-11-03
+
+### holosdb needs Python 3.11 or later
+
+The wheel declared CPython 3.9+, and CI tested 3.9 and 3.13. 3.9 reached end of life in
+October 2025 and 3.10 in October 2026, so the floor claimed support for interpreters that no
+longer get security fixes. It is now 3.11, the oldest that still does: the wheel is built
+`abi3-py311` and tagged `cp311-abi3`, and pip on 3.9 or 3.10 resolves an earlier holosdb
+rather than this one. CI tests 3.11 and 3.15, the latest stable release. Every downstream
+project here already required 3.11 or later.
+
+### Memory as the store, with snapshots to a file
+
+A store held in memory could be filled from files and not emptied back into one: the server's
+`POST /backup` answered 409, because an in-memory store has no RocksDB files to checkpoint, and
+the Python `Store` had no way to write its contents out at all. So memory was a store for tests
+and one-off runs, and a service that wanted durability had to run on RocksDB.
+
+- **`POST /backup` on an in-memory server writes a snapshot**, `holos-<seconds>.nq.gz` in
+  `--backup-dir`: every graph, as gzipped N-Quads, under the same role check as a checkpoint.
+  Restarting with `--data` on it restores the store. It holds the read lock while it writes,
+  so the file is one consistent state; a second snapshot in the same second is refused rather
+  than overwriting the first, and a full disk answers 507.
+- **`Store.dump(path)`** in Python writes the same thing, with the format from the name and
+  `.gz` compressing, and returns the quad count. `principal=` and `policy=` restrict it as
+  they do a query.
+- Every dump is written beside its final name and renamed into place, so a failure part-way
+  leaves an earlier file at that path untouched.
+
+The command line's `dump`, the WebAssembly `dump()`, Python and the server now share one
+implementation, `holos_engine::dump`, where there had been two copies. A snapshot from any of
+them loads into any of them. The WebAssembly copy's error for a named graph in a graph-only
+format carried a run of spaces from a lost line continuation; the shared message does not.
+
+### The native validator's refusal says what to use instead, on one line
+
+A shapes graph the native validator cannot evaluate -- `sh:sparql`, say -- is refused rather than
+half-checked. The refusal read *"... is not implemented by the incremental evaluator; validate*
+followed by a run of spaces and *through holos_shacl::engine::EngineRun instead"*: a lost line
+continuation, and a Rust type no Python or command-line caller can reach. It now ends *"validate
+with the adapted engine instead"*, which they can, and which is the default.
+
+### A policy denial in Python says "access denied by policy" again
+
+From 0.23.0, a sorted query that a `fail_closed()` policy refused raised
+`PolicyError("query evaluation failed: access denied by policy")`; 0.22.0 had said "access denied
+by policy", and an unsorted query still did. The sort collects rows inside the engine, so the
+denial came back wrapped as an evaluation error and kept that error's wording. Every typed
+exception -- `SyntaxError`, `QueryRefusedError`, `QueryTimeoutError`, `PolicyError` -- now carries
+the detail without the kind's prefix, since the class already names the kind; a bare `HolosError`
+keeps it. Found re-running the SemOps Manual's evidence on 0.25.0.
+
+## 0.25.0 — 2026-10-22
+
+### The SHACL engine takes upstream's five SHACL-SPARQL fixes
+
+`holos validate`, `holosdb.Store.validate` and the wasm `validate` default to the adapted SHACL
+engine, vendored from SHACL_Engine and diverged from it since. Upstream had fixed five things
+that this copy had not, all in SHACL-SPARQL, and nothing here measured that part of the
+engine. Three new conformance ratchets now run the `sparql` sections of the SHACL 1.0 and 1.2
+suites, and SHACL 1.2's `node-expr`, through the adapted engine, and the five fixes are ported
+one at a time against them:
+
+- a result from a SPARQL-based constraint *component* no longer carries `sh:sourceConstraint`,
+  which the specification gives only to `sh:sparql` constraints;
+- `{?var}` and `{$var}` in a SPARQL constraint's `sh:message` are replaced with the solution's
+  values, instead of reaching the report as written;
+- a query with no `sh:prefixes` takes its prefixes only from nodes typed `sh:ShapesGraph`, not
+  from every `sh:declare` in the shapes graph;
+- `sh:values` on a property shape supplies the value nodes, including through the `sh:select`
+  and `sh:sparqlExpr` node expressions; it was ignored, and the path's values validated
+  instead;
+- a subquery in a pre-bound query that uses `$this` without returning it is refused, per SHACL
+  5.3.2. A subquery that never mentions `$this` -- a graph-wide `COUNT` joined against the focus
+  node -- is still accepted, as upstream decided after the letter of the rule refused three
+  checks in the consolidated ontology suite.
+
+| adapted engine | before | after | upstream v0.3.4 |
+|---|---:|---:|---:|
+| SHACL 1.0 `sparql` | 17/22 | 21/22 | 21/22 |
+| SHACL 1.2 `sparql` | 17/26 | 23/26 | all it carries |
+| SHACL 1.0 / 1.2 Core | 98/98, 138/138 | unchanged | |
+
+The one SHACL 1.0 test left is `unsupported-sparql-004`, the price of the narrowed subquery
+rule. The three SHACL 1.2 tests left are `sparql/functions/`, SHACL 1.2's SPARQL functions,
+which neither engine implements; upstream's copy of the suite predates them.
+
+The harness now compares reports the way the suite says to: only the predicates an expected
+report uses, and `sh:resultMessage` only where the expected report carries the same message.
+`mf:result sht:Failure` means the run must fail. Core results are unchanged by it.
+
+## 0.24.0 — 2026-10-22
+
+### A zero-length path from a joined value no longer matches a term the graph lacks
+
+```sparql
+SELECT * WHERE { VALUES ?v { 1 } ?v <urn:p>? ?v }
+```
+
+over a graph that does not contain `1` is no rows: with variables at both ends SPARQL
+evaluates the path on its own, where its zero-length solutions are the graph's nodes, and only
+then joins them with the `VALUES`. The index join walks from the value `VALUES` bound, as
+though the query had written `1 <urn:p>? 1`, and with a constant end a zero-length path *does*
+match a term the graph lacks. So it answered one row. A constant written in the query keeps
+that meaning; a value the join bound earlier now has to be a node of the graph -- subject or
+object of a quad the session can see -- for a zero-length step to start from it, and a value
+that is not has no edges either, so it answers nothing.
+
+Every surface using the index join had it: the CLI, the server, the Python binding, and the
+wasm binding's `query()`. The wasm `queryFederated()`, which the browser editor uses, was right,
+because it skipped the index join entirely -- so in 0.23.0 the two wasm methods disagreed on
+this query, 1 row against 0. W3C `sparql11/property-path/values_and_path` is this case, and it
+passed only because the conformance harness's entry point skipped the index join too; see below.
+
+### One query pipeline, for every entry point
+
+`Engine::query_prepared`, `query_prepared_with_services` and `query_prepared_with_handler` now
+go through the same pipeline as `query_with` -- check, shortcut, admit, rewrite, plan, evaluate
+-- with a `SERVICE` handler carried on the options so that a federated query sent down the
+top-k path or a spill is still federated. They were partial copies, and copies fall behind:
+
+* `query_prepared_with_handler`, which the wasm binding's `queryFederated()` calls and the
+  browser editor sends **every** query through, applied the topology rewrite and the bound
+  join and then evaluated. No index join, no rewrites, ever -- including after 0.23.0 unified
+  `Engine::query`. Its comment reasoned that a handler is only supplied when the query has a
+  `SERVICE`; the editor supplies one for every query.
+* `query_prepared`, the conformance harness's entry point, was the bare evaluator, so the W3C
+  SPARQL suites tested none of the index join or the rewrites built on it. They test all of it
+  now: sparql11 stays at 511/511, with the zero-length fix above, which is what sending them
+  through the real pipeline found.
+
+A 34th wasm smoke check asserts `queryFederated()` answers as `query()` does, through the same
+pipeline.
+
+## 0.23.0 — 2026-10-21
+
+### Python, and everything else calling `Engine::query`, gets the 0.21 rewrites
+
+`Engine::query` was a second pipeline that repeated `query_with`'s steps by hand, and being a
+copy it fell behind. The rewrites added in 0.21 — a filter's constants used as bindings,
+`GROUP BY` from the bind join, `SELECT DISTINCT ?p` from the predicate counts — went into
+`query_with` and not into it, so the Python binding, the holon layer and the CLI's audited
+query path, which all call it, still ran the plans 0.21 had replaced. The release was
+measured through the CLI and the server, which use `query_with`, so nothing showed it.
+
+It now *is* `query_with` with no options, one call, and cannot drift from it again. On two
+million quads, counting one kind of subject with one code pinned by a `FILTER`, from
+Python: **613.7 ms → 49.1 ms**, and **5.5 ms** with `reorder=True` below.
+
+### The Python binding can bound, plan and explain a query
+
+What a program writing its own queries needs — an agent, a notebook, a service — and what
+the CLI and server already had:
+
+* `query(..., timeout=)` in seconds, raising `QueryTimeoutError`;
+* `query(..., limit=)`, returning at most that many rows or triples and stopping the
+  evaluation there;
+* `query(..., reorder=True)`, planning with statistics built once per write (or loaded from a
+  persistent store's snapshot), which also arms the admission check, so an over-budget
+  `DISTINCT`, `ORDER BY` or `GROUP BY` is refused at once with `QueryRefusedError`;
+* `explain()`, the plan as a dict with each operator's row count and time;
+* `predicate_counts()`, the store's own exact counts — all graphs, no policy, the owner's view;
+* `validate()` now returns each result — focus, path, value, severity, component, shape and
+  message — where it returned only a count, read from the report before the transient shapes
+  graph is rolled back.
+
+Failures are now distinct types: `QueryRefusedError` and `QueryTimeoutError` join
+`SyntaxError` and `PolicyError`, all `HolosError`. A timeout usually fires between two rows,
+after the query has started returning; it used to arrive there as a bare `HolosError`.
+
+There is no memory ceiling in the binding. Enforcing one needs a counting allocator, which
+is the workspace's one piece of `unsafe` and lives in `holos-server`'s binary; a library
+installing one in somebody else's Python process is a different decision, not made here.
+The timeout and the admission check cover the runaway cases a ceiling would.
+
+Twelve Python tests, eleven of which fail on 0.22.0 (the twelfth pins that a syntax error is
+still a `SyntaxError`). Mapping errors raised during iteration generically again fails the
+timeout test. The binding's README said `update()` raised `NotImplementedError`; it has been
+implemented for some time, and the README says so now.
+
+## 0.22.0 — 2026-10-21
+
+### `holos validate` exits 1 on a graph that does not conform
+
+It exited 0 whatever the answer, so a CI step built on it passed on the very violations it
+was there to stop. The exit status is now the `shacl` CLI's: **0** the data conforms, **1**
+it does not, **2** validation could not run — a missing file, an unknown `--engine`, or a
+shapes graph the chosen engine refuses, which is an absence of an answer rather than a
+negative one. Every other command keeps the 1 a failure always had. A script that ran
+`holos validate` only for its printed summary, and treated any non-zero status as a crash,
+needs to accept 1.
+
+### `holos validate` defaults to the adapted validator, as Python always did
+
+The CLI defaulted to `native` and `Store.validate` to `adapted`, so the same shapes were
+refused on the command line — exit 2 under the new codes, `sh:sparql` unsupported — and
+validated from Python. Both are `adapted` now, by the rule `holos_shacl::engine` already
+states: the engine for coverage, the native evaluator for the write path, and a one-shot
+validation is not the write path. Measured before choosing: both pass all 98 W3C SHACL Core
+tests and all 138 SHACL 1.2 Core tests, so on Core they agree; beyond it `adapted`
+implements SPARQL constraints, SHACL-AF rules and node expressions where `native` refuses
+them by name. `adapted` copies the graph into memory once, so the largest stores are
+better served by `--engine native`. The holon Boundary keeps `native`, because only it
+revalidates a delta.
+
+An `--engine` value it did not know used to fall through to `native`, so `--engine adaptd`
+ran the other validator without a word. It is refused now, naming the two choices.
+
+Seven tests run the real binary: 0 and 1 on every engine, the default being `adapted`, a
+refused shapes graph at 2 rather than 1, an unknown engine and a missing file at 2, the old
+`vendored` spelling, and another command still failing with 1. Putting the default back to
+`native`, or letting a non-conforming graph exit 0, each fails at least one. One Python
+test pins `Store.validate`'s default to the same engine. The manual's comparison of the two
+validators carried coverage figures from August (92/97 and 127/138); it now carries these.
+
+## 0.21.1 — 2026-10-14
+
+### Validation no longer writes its shapes into the store it validates
+
+`holos validate --shapes` loaded the shapes file into `urn:holos:shapes` in the store being
+checked, and Python's `Store.validate` into `urn:holos:python:shapes`, and neither ever removed
+them. A shapes file is mostly blank nodes, and blank nodes are renamed on every load, so each
+call added another copy of every blank-node shape: with one real violation the count went
+**1, 2, 3** on unchanged data — and 1 to 6 from Python, where both engines read the same
+graph. On a persistent store the copies were still there after a restart, in its named graphs,
+its dumps and its backups. Reported from the SemOps manual, whose script validated twice on one
+store and read the doubled count as an engine bug; both engines count correctly.
+
+Shapes now go through `Engine::with_transient_graph`: loaded inside a commit scope that is
+always rolled back, whether validation returns, fails or panics. On disk a scope writes nothing
+until it commits, so the graph, its quads, the dictionary entries its blank nodes would have
+taken and the store's write generation are as they were — a crash midway leaves nothing either,
+which loading and then deleting could not promise. The graph is named afresh each time, so a
+store an earlier version validated is not read twice.
+
+Those leftovers are the owner's to remove, so they are reported rather than dropped: the CLI
+prints a note and Python raises a `UserWarning`, each naming the graph, its size, and
+`DROP GRAPH <urn:holos:shapes>` (or `<urn:holos:python:shapes>`) to remove it.
+
+Seven tests: the count stays at 1 across three runs and the store's quads, named graphs and
+generation are unchanged; the same after a panic and after input that does not parse; an empty
+input; a store already using the name; leftovers reported and not read; and on disk, the same
+after a restart with the dictionary no larger. Committing the scope instead of rolling it back
+fails five of them.
+
+## 0.21.0 — 2026-10-08
+
+### A `FILTER` that names a constant is now used as one
+
+```sparql
+?place gn:featureClass gn:P ; gn:countryCode ?code ; gn:alternateName ?name .
+FILTER (?code = "GB")
+FILTER (lang(?name) = "en")
+FILTER (str(?name) = "Glasgow")
+```
+
+Neither planner could use those filters. Both order patterns by what is bound, and a variable
+a filter pins is not bound until some pattern has bound it, so this scanned every
+`gn:countryCode` (13.4 million) and every `gn:alternateName` (16.3 million) in a `GeoNames`
+store and kept one row: **306 s** through the evaluator, **131 s** through the bind join.
+Apache Jena 6.2.0 answers it in under 30 s.
+
+`holos_engine::equality` now gives the planner the constant as a one-row `VALUES` joined into
+the filtered pattern, which binds the variable before anything that mentions it runs. The
+filter itself stays. Measured on the same store, CLI, warm:
+
+| | old | new |
+|---|---:|---:|
+| `--reorder` | 86.3 s | **0.25 s** |
+| no statistics | — | 96.8 s |
+
+So it needs `--reorder`, which `OPERATIONS.md` already recommends. Without statistics the bind
+join ranks a pattern by how many of its positions are free, and once the constants are bound
+`gn:featureClass gn:P` and `gn:alternateName "Glasgow"@en` both have one, so it cannot tell five
+million rows from three.
+
+What is pinned, and why each case cannot change an answer:
+
+* **`?v = <iri>` and `?v = "plain string"`.** `=` holds for exactly that term: against a
+  language-tagged string, an IRI or another datatype it is false or an error. A number or a
+  date is *not* pinned, because `?v = 1` also holds for `"01"^^xsd:integer` and `1.0`.
+* **`sameTerm(?v, c)`**, for any constant.
+* **`?v IN (a, b, …)`**, when every element is one `=` would pin, as a `VALUES` row per distinct
+  element. On `GeoNames`, `?cc IN ("GI", "VA")` over populated places went from **99.4 s** to
+  **0.22 s**, the same eleven places. Deduplicated, because a term listed twice would otherwise
+  match every solution twice.
+* **`lang(?v) = "en" && str(?v) = "Glasgow"`**, the label idiom, as `"Glasgow"@en` and its two
+  RDF 1.2 directional forms. The tag is used as the query spelled it, because the comparison is
+  a string comparison and case matters. Neither half pins anything alone.
+
+A pin none of whose candidates the store holds matches nothing, and is given to the planner
+as one triple of an IRI the store lacks (`urn:holos:nothing`, checked absent) rather than as an
+empty `VALUES`. Both are empty when evaluated, but `sparopt` folds the empty `VALUES` upward
+until it meets a `Group`, and for a `Group` without keys that is the wrong answer: `COUNT(*)`
+with `FILTER(?c = ex:absent)` answered **no rows** instead of one saying 0. That is an upstream
+fold (`sparopt` 0.3.7, `GraphPattern::group`), and it also catches `{ FILTER(false) }` written
+by hand, which this does not change. Short strings escaped it only because they are inlined
+into an id, and so look present to the dictionary.
+
+The bind join now estimates a pattern with a constant the store lacks at zero rows, so it is
+taken first and ends the search. It used to count the constant as a free position, which sorted
+the pattern last, behind every scan it was about to make pointless.
+
+Only where a triple or path pattern binds the variable on every path through the filtered
+pattern. Joining with `VALUES` would keep a solution whose variable is unbound, which the
+filter rejects; and a variable bound by the store can only take terms the store holds, which is
+what lets a candidate the store lacks be dropped rather than sent. A variable bound in
+`OPTIONAL`, in one `UNION` branch, or by `VALUES`, `BIND` or `SERVICE` is left to the filter.
+
+Ten tests answer each query three ways — bind join with and without statistics, the evaluator,
+and `spareval` over the parsed data with no rewrite — on data built from near misses: `"GB"@en`,
+`"GB"^^ex:dt`, `ex:GB`, three spellings of 1, `"Glasgow"@en-gb`, `"glasgow"@en`. Pinning numbers,
+or counting an `OPTIONAL` variable as bound, each fails one of them.
+
+### `SELECT DISTINCT ?p WHERE { ?s ?p ?o }` from the store's own predicate list
+
+The first question anyone asks of an unfamiliar store read every triple in it to keep a few
+dozen values. Admission saw a `DISTINCT` over the whole store, estimated it at the whole store,
+and sent it down the spilling path; on `GeoNames` that took **114.1 s** from the CLI, and a
+server answering it was found holding 13.7 GB.
+
+The store already keeps an exact, persisted count of every predicate, maintained on every
+write. Those counts are not the answer — they cover every graph, where the query asks about the
+default one, and they ignore policy, so returning them would name predicates used only in a
+named graph or only in triples the session may not read. They are the *candidates*:
+`holos_engine::distinct` confirms each by asking the session's own view for one visible quad
+with that predicate in the default graph, which is one seek per predicate through the same
+policy and graph filter the evaluator scans with. The confirmed list replaces the pattern as a
+`VALUES` table, and the evaluator does the `DISTINCT`, any `ORDER BY ?p` and any `LIMIT`. Before
+admission, which no longer sees a whole-store `DISTINCT`. **0.22 s** on `GeoNames`, the same 56
+predicates.
+
+Only that shape: one pattern, subject and object free and distinct, projecting the predicate
+alone, ordered — if at all — by the predicate. A constant, a repeated variable, a filter, a
+second pattern or `GRAPH` is left as written. Five tests run each query under four policies
+against the evaluator, including a denied predicate and a policy that fails rather than
+filters; returning the whole list unconfirmed, or swallowing the policy's error, fails them.
+
+### `GROUP BY` takes its input from the bind join
+
+The bind join refuses aggregation, deliberately — SPARQL's aggregates have their own rules for
+errors, unbound values and numeric promotion, and a second `SUM` would be a second place to get
+them wrong — so a query with a `GROUP BY` went to the evaluator whole. On `GeoNames` the
+`GROUP BY` below, once admitted, took **49.5 s** for one group over one row.
+
+`holos_engine::group` now evaluates the pattern *under* the query's group through the bind join
+and puts its solutions in the pattern's place as a `VALUES` table. The grouping, the aggregates,
+`HAVING`, the projection and any ordering stay the evaluator's, unchanged; only where the input
+comes from has moved. A group's input is evaluated independently of everything above it, so
+its solutions computed alone are the same input. Measured on `GeoNames`, CLI, warm:
+
+| | before | after |
+|---|---:|---:|
+| `GROUP BY ?cc` with the Glasgow filters | 49.5 s | **0.24 s** |
+| `COUNT(*)` for a label the store lacks | 58.0 s | **0.25 s** |
+| `IN ("GI", "VA")` grouped, `ORDER BY … LIMIT` | — | 0.24 s |
+
+Only the query's own group, reached from the top through the solution modifiers — a subquery's
+group under `GRAPH ?g` is evaluated against a graph this does not see. Only where the bind join
+takes the input whole and within a row budget — its own, or less under a memory ceiling, at a
+kilobyte a row — and, with statistics, not at all for an input *estimated* over it. That bound
+is what keeps `COUNT(*)` over a large input streaming through the evaluator with a counter: a
+table built first would have stopped at the ceiling, which the server's memory-ceiling test
+caught before this was released. Not where a row holds a blank node, which a
+`VALUES` table cannot carry. An empty input under a keyless group is given as the same
+`urn:holos:nothing` pattern as above, for the same reason.
+
+Fifteen tests answer each aggregate query through it with and without statistics, through the
+evaluator, and by `spareval` over the parsed data: integers, decimals and doubles summed
+together, a string where a number is summed, `COUNT(DISTINCT …)` and `COUNT` over an
+`OPTIONAL`, `HAVING`, `ORDER BY … LIMIT`, an empty input with and without a key, blank nodes,
+and a `UNION` of a pattern with itself. Deduplicating the table, or giving a keyless group an
+empty one, each fails a test.
+
+### Admission control estimated every basic graph pattern as a cross product
+
+`--max-blocking-rows` refuses an `ORDER BY`, `DISTINCT` or keyed `GROUP BY` whose input is
+estimated over budget. The estimate handed every triple pattern to the statistics as
+unconnected to the others, and the statistics multiply unconnected patterns — so a star of three
+patterns was the product of three scans. On the `GeoNames` store,
+
+```sparql
+SELECT ?cc (COUNT(*) AS ?n) WHERE {
+  ?place gn:featureClass gn:P ; gn:countryCode ?cc ; gn:alternateName ?name .
+  FILTER(?cc = "GB") FILTER(lang(?name) = "en") FILTER(str(?name) = "Glasgow")
+} GROUP BY ?cc
+```
+
+was refused in a millisecond as "an estimated 18446744073709551615 rows" — `u64::MAX`, for one
+group over one row. The characteristic-set estimator the module's documentation credits with a
+q-error of 1.1 was never reached for more than one pattern.
+
+Now patterns sharing a subject variable are estimated as a star; stars and patterns connected by
+any shared variable are a join, estimated as their larger side, the rule `Join` already had; and
+only parts sharing no variable multiply. A constant the store lacks estimates zero rows, where it
+was treated as a wildcard. And a filter's pinned constants count as bound, using the same rule
+as the planner, so what is estimated is the query that will run — which is what admits the query
+above. It now answers, correctly, in 49.5 s: admitted, but still through the evaluator, because
+the bind join does not take aggregation. That is the next gap, not this one.
+
+Five tests with more than one pattern, where there had been none. Taking the larger part where
+unconnected parts should multiply, or ignoring the pins, each fails one.
+
+## 0.20.0 — 2026-10-02
+
+### The bound join: a `SERVICE` is now told what it is being joined against
+
+A federated query sent the endpoint the clause as written. For
+
+```sparql
+?town owl:sameAs ?dbp .
+SERVICE <https://dbpedia.org/sparql> { ?dbp dbo:populationTotal ?population }
+```
+
+that is `SELECT ?dbp ?population WHERE { ?dbp dbo:populationTotal ?population }` — every
+population DBpedia holds, capped at ten thousand rows, with the three towns the query was about
+not among the ten thousand chosen. Measured against the real endpoint: **nothing came back.**
+Correct query, correct engine, empty answer.
+
+`spareval` evaluates `SERVICE` as a nested loop and calls the handler once per solution arriving
+from the left, so the keys exist at the moment of the call — but `DefaultServiceHandler::handle`
+is given the endpoint, the pattern and the base IRI, and not the solution. A handler cannot see
+them. So this is a rewrite before evaluation (`holos_engine::boundjoin`): the query's local part
+is evaluated once with every `SERVICE` replaced by the empty pattern, and the keys it binds are
+joined into the clause as a `VALUES` block.
+
+Measured against DBpedia, with the course's own queries:
+
+| | before | after | Fuseki |
+|---|---|---|---|
+| `q105`, `SERVICE` in a join | 0 rows | **1 row** | 1 row |
+| `q106`, `SERVICE` in an `OPTIONAL` | 3 rows, no population | **3 rows, Sedbergh 2765** | same |
+| `q107`, `VALUES` written by hand | 4 rows | 4 rows | 4 rows |
+
+The way a bound join goes wrong is by sending too few keys, which drops rows silently rather
+than failing, so every rule errs towards sending more: a variable is pushed only when the probe
+bound it in *every* row, a blank node is never pushed, and above 1024 distinct tuples nothing is.
+A `SERVICE` whose keys come from another `SERVICE` is still sent unrestricted — the probe
+neutralises all of them at once — and the host-fetched loop still terminates without it.
+
+Seven tests, each checking both halves: that the clause arrived carrying the keys, and that the
+answer is identical to the same query evaluated without them. 33 smoke checks on the wasm build,
+from 31.
+
+### A triple term in a result row is now decomposed
+
+`term_to_js` reported an RDF 1.2 triple term as `termType: "Quad"` with the whole
+`<<( ... )>>` rendering in `value` and nothing else. The comment above it said that was
+deliberate because no consumer asked for the parts, and that decomposing it was "a change to
+make when something needs it".
+
+Two things needed it, and had needed it since 0.17.0 put terms in result rows. The
+turtle-editor-viewer's results pane and the SPARQL_Course checking harness both encode a
+result term for the SPARQL 1.2 results JSON format, both have a `Quad` branch that reads
+`.subject`, and both therefore threw `TypeError: Cannot read properties of undefined` on the
+course's `q64` — a query whose own header documents it as running in the browser editor. The
+measurement that found it was re-running the course against the engine the editor now uses;
+neither codebase had a test that put a triple term through that path.
+
+So a triple term now carries `subject`, `predicate`, `object` and `graph` as terms in their
+own right, recursively, with `value` the empty string — the rdf-js shape, which means it can
+also be handed straight to a library that expects a quad. **`value` no longer carries the
+N-Triples rendering**, so a consumer that was reading it gets `""`; the parts are where the
+content is, and `formatResultTerm` in the viewer builds the `<<( ... )>>` text from them.
+
+`SELECT *` orders its variables alphabetically rather than as the query mentions them, which
+is now documented and pinned by a check rather than left to be discovered. The cause is
+upstream — `spargebra` collects the in-scope variables in pattern order and then sorts them,
+and does not record that the projection was `*` — so it cannot be corrected here without
+guessing which projections were written out in full.
+
+31 smoke checks, from 29.
+
+### `explain` now has the statistics it was paying for
+
+`explain` drains the results before writing the plan, because the statistics are gathered as
+rows flow through the operators. The draining was there since 0.19.0. The statistics were not:
+`spareval` fills in each node's row count and duration only when the evaluator was built with
+`compute_statistics`, and HOLOS never asked, so both `holos query --explain` and the wasm
+binding's `explain` ran the whole query and then returned a tree of operator names with nothing
+measured on it.
+
+The smoke check for it asserted that the JSON came to more than 20 characters, which is true of
+a plan with no statistics at all. It now compares the root's count with what the same query
+returns and requires a count on every operator, which is the assertion that would have caught
+this.
+
+What it buys is the query's funnel. On the course's `build/plan.rq`: 444 labels in the data,
+355 of them longer than eight characters, 32 rows after the join to a shop, 9 after the
+Scottish towns are required. A step that barely narrows is work the engine did for nothing, and
+a step that widens is a join multiplying rows -- visible as a number rather than as a wrong
+total at the end.
+
+## 0.19.0 — 2026-10-01
+
+### Three gaps in the wasm binding, each found by a consumer needing it
+
+Not an API review. Each of these was discovered by writing the code that wanted it, which is
+also why they are grouped: three releases for three small additions would have cost more than
+the additions.
+
+**A literal carries its base direction.** `direction` is `"ltr"`, `"rtl"` or `""` — the same
+"always present, empty when absent" convention as `language`, because a field that is sometimes
+missing makes every reader check before it can compare. Until now an RDF 1.2
+`rdf:dirLangString` arrived in a result row as a plain language-tagged string, and nothing
+caught it: the only test touching direction checked a *parsed* quad, where it is the parser's
+business and survives.
+
+**A SELECT result names its projected variables.** `.variables` on the array, in order, so
+`result.length` and `for (const row of result)` keep working. The rows cannot carry this — an
+unbound variable is absent from a row, so one unbound in *every* row is invisible, and a result
+with no rows has no columns at all, while `head.vars` in the SPARQL results JSON format must
+list every projected variable regardless. The turtle-editor-viewer was parsing the projection
+out of the query text with a regex for exactly this reason.
+
+**`explain` returns the query plan as JSON.** HOLOS has had this since the CLI's `--explain`; it
+was simply not reachable from a browser, so the editor could run a query far faster than a
+server and still not say how. It *evaluates*: the results are drained and discarded before the
+plan is written, because the statistics are gathered as rows flow through the operators and a
+plan serialised earlier reports zeroes everywhere. It costs a full run and answers what that run
+did rather than what the planner intended.
+
+`crates/holos-wasm/tests/smoke.cjs` goes from 23 assertions to 29. The ones worth having are the
+two the rows cannot show — a variable unbound in every row, and an empty result that still has
+columns — because those are the cases that make `.variables` necessary rather than convenient.
+
+## 0.18.0 — 2026-10-01
+
+### `SERVICE` works in the WebAssembly build, without a network client in it
+
+`store.queryFederated(query, base)` answers a federated query by asking the host to do the
+fetching. It returns `{pending, result}`: `pending` lists the `{endpoint, query}` pairs the
+engine wanted and this store had no answer for, and the host loops — fetch each with an
+ordinary `fetch`, hand it back with `store.cacheService(endpoint, query, resultsJson)`, run
+again — until nothing is pending. That pass's `result` is the answer.
+
+**A pass with anything pending has wrong results, and says so by having them.** The unanswered
+`SERVICE` contributed no rows, so the join above it lost rows too. A host shows `result` only
+when `pending` is empty.
+
+#### Why this shape rather than an HTTP client
+
+`spareval::DefaultServiceHandler::handle` is synchronous and `fetch` is not, and a Promise
+cannot be awaited from synchronous wasm. The alternatives each cost something worse:
+synchronous `XMLHttpRequest` is deprecated, warns in every browser, blocks the tab and may be
+removed; a worker blocking on `Atomics.wait` needs COOP/COEP cross-origin-isolation headers
+wherever the app is hosted and breaks quietly if they are lost. Asking twice costs repeated
+evaluation and nothing else.
+
+It also lands the security question in the right place. `holos-engine`'s `service` module
+refuses remote `SERVICE` because on a *server* it is an SSRF primitive — a query from a
+stranger makes the server fetch an address of the stranger's choosing. That objection does not
+transfer to the wasm build, and not because a browser is safer: **this crate cannot make a
+request at all**. There is nothing to point anywhere. The fetch is the host's, in the user's own
+browser, with the user's own network position and CORS in between, and the allow-list is the
+host's to enforce.
+
+More than two rounds is normal rather than a fault: a `SERVICE` whose pattern carries bindings
+from an earlier join only takes its final shape once that join has rows, and the first pass
+gives it none — the same semi-naive iteration §9's rules engine uses. The cap belongs to the
+host, because only the host knows how long it will wait. The cache key is `(endpoint, query)`
+with the query byte-exact, so a reformatted query is a different question; matching a near-miss
+would serve one endpoint's answer to another's.
+
+### A seam for any `SERVICE` handler
+
+`Engine::query_prepared_with_handler` takes any `spareval::DefaultServiceHandler`, where
+`query_prepared_with_services` takes `LocalServiceHandler` by name. That is the seam
+`service.rs` already said it defined and did not yet expose, and it is what lets a handler that
+answers over HTTP, out of a cache, or from a host function live outside this crate — so the
+policy decision about what may be called belongs to whoever builds one.
+`service::pattern_variables` is public for the same reason: a handler is given a *pattern*, and
+turning that into something an endpoint can answer means wrapping it in a `SELECT` of what it
+binds.
+
+`crates/holos-wasm/tests/smoke.cjs` goes from 18 assertions to 23. The five new ones cover the
+cases that would be easy to get wrong rather than the happy path: that an unanswered `SERVICE`
+is *reported* rather than fetched or failed, that a pending pass's results are empty and
+therefore must be discarded, that a whitespace-different cache key is still a miss, and that
+`queryFederated` and `query` agree on result shape.
+
+## 0.17.0 — 2026-09-30
+
+### The wasm binding gets the surface its consumers need
+
+Three additions and one breaking change, each traced to a caller rather than added to round
+the API out. The VS Code extension ran oxigraph in three places after 0.16.0 moved its
+portable checks to holosdb; this is what those three needed.
+
+| | |
+|---|---|
+| `update(sparql, base)` | `{inserted, deleted, graphsCreated, graphsDropped}`. All-or-nothing: a refused write leaves the store exactly as it was. |
+| `dump(format)` | Everything the store holds, as a document. |
+| `queryRdf(query, format, base)` | A CONSTRUCT or DESCRIBE serialised, for when a caller wants a document rather than terms. |
+| `query(...)` | **SELECT now yields terms, not strings.** |
+
+**SELECT returning terms is the breaking change.** They were N-Triples strings, which made
+every consumer parse term syntax to reach a value, and no RDF library in JS accepts a bare
+term string as input. `{termType, value}`, plus `language` and `datatype` on a literal, is
+what rdf-js specifies and what oxigraph returns, so a term can go straight to n3 or be
+compared field by field. A blank node's `value` is the bare label without `_:` — and it is
+this engine's label, not the one in whatever document was loaded, because a parser may rename
+blank nodes and this one does.
+
+CONSTRUCT stays N-Triples strings deliberately: it is the one serialisation every JS RDF
+library parses without first agreeing on a term model, and a graph is usually wanted as a
+graph. `dump` is a document rather than a quad iterator for the same reason — crossing the
+boundary once with a document beats crossing it once per quad.
+
+Surveying the callers before building corrected two things previously claimed here: the
+extension's competency-question runner needed *nothing* (it reads `typeof result ===
+'boolean'` and `result.length`, so 0.16.0 already served it), and its repair engine needed
+`update` and store enumeration rather than the term shapes attributed to it.
+
+One documented claim the tests refuted: Turtle and N-Triples do **not** flatten named graphs.
+oxrdfio refuses the quad — "Only quads in the default graph can be serialized to a RDF graph
+format" — which is the better behaviour, since flattening would move data between graphs while
+reporting success. `dump` now names `nquads` and `trig` in that error instead of passing
+oxrdfio's wording through.
+
+`crates/holos-wasm/tests/smoke.cjs` goes from 10 assertions to 18.
+
+## 0.16.0 — 2026-09-30
+
+### The engine compiles to WebAssembly
+
+`crates/holos-wasm` exposes the Python bindings' surface to JavaScript — build a store, load
+RDF from a string, ask a SPARQL query — and `build.mjs` produces the two npm packages one
+crate has to become: `holos-wasm` for bundlers, `holos-wasm-node` for `require()`. A
+`CONSTRUCT` comes back as N-Triples strings, the same mapping `holosdb` uses, because it is
+the one serialisation every RDF library in JS can parse without first agreeing on a term
+model.
+
+**The compile-time surface was one error, and that is the trap rather than the good news.**
+`cargo check --target wasm32-unknown-unknown` failed only on getrandom. Everything else
+compiled — because `std::thread::spawn`, `Instant::now` and `SystemTime::now` all compile for
+that target and then panic when called. A green cross-compile proves almost nothing, so the
+four places needing `cfg` were found by running the module rather than by building it:
+
+| Where | Native | wasm32 |
+|---|---|---|
+| `load_parsed` | scoped parse thread, bounded channel | serial parse→intern loop, same answer and order |
+| `QueryOptions::guard` | watchdog thread sampling a clock | `None` — there is no thread and no clock |
+| `functions::seed` | wall clock ⊕ process id | `getrandom`, else a stack address |
+| audit event `at:` | `SystemTime::now()` | `UNIX_EPOCH`, which cannot be mistaken for a real time |
+
+Everything else that could not cross — `tempfile`, the sort threads, the read-path clocks —
+lives in `holos-store/src/rocks/`, already behind the opt-in `rocksdb` feature, so a default
+build is memory-only and simply does not contain it.
+
+**Four capabilities are withheld, each because the host lacks something rather than because
+the engine does:** no persistence, no file paths (so a load costs memory proportional to the
+document), no spilling `ORDER BY`, and no query timeout or memory ceiling. The last is the one
+worth revisiting — a cooperative deadline checked in the row loop would restore it. Until
+then the binding exposes no way to ask for one, so nobody can set a limit and believe it is
+being honoured.
+
+Two build-time halves come from outside the crate and are easy to lose. `getrandom` needs the
+`wasm_js` feature *and* the `getrandom_backend` cfg, which is what `.cargo/config.toml` is
+for — scoped to the wasm target so no native build is touched; getrandom's own
+`compile_error!` says the feature alone is insufficient. `oxsdatatypes` needs its `js`
+feature or `NOW()` panics rather than returning something wrong.
+
+`crates/holos-wasm/tests/smoke.cjs` is a node script rather than a `cargo test` for the
+reason above. Three of its ten assertions are the load-bearing ones: `STRUUID()` returning
+different values twice proves the entropy source is live rather than constant, `NOW()`
+returning a plausible `dateTime` proves the clock feature is on, and bare `STR(?blank)`
+dropping its row while the `IF(isBlank(…))` form keeps both proves the engine is conformant
+here — which is what keeps that guard load-bearing in the 29 shipped checks that rely on it.
+
+Measured: 4.2 MB per module. `cargo build --workspace` covers the crate on native too,
+because it is also an `rlib`, and `holos-engine`'s own 361 tests are unchanged at 0 failed.
+
+## 0.15.0 — 2026-09-30
+
+### Recursive rules, run to a fixpoint: Datalog written as SPARQL
+
+`holos rules --rules <FILE>`. A rule is a `CONSTRUCT` — head and body, which is what a Horn
+rule is — and a document is a shared prologue then one or more of them, each starting with
+`CONSTRUCT` at the beginning of a line, named by the `#` comment above it.
+
+Writing rules in SPARQL rather than in a language of their own is why `rules.rs` is small:
+`spargebra` parses them, `spareval` and `bindjoin` evaluate them, the dataset view applies
+access policy to every read a rule makes, and the statistics reorder each body. `DESIGN.md` §4
+says the front end is reused rather than rewritten, and a second rule language would have meant
+a second parser, a second evaluator and a second set of bugs. SWRL's DL-safe Horn subset maps
+onto the same shape, so it is a surface syntax over this rather than another engine.
+
+Rules run to a fixpoint, each round adding what is new, and a body reads the assertions *and*
+the derivations so a rule fires on what another derived. Derived facts go into
+`<https://holos.dev/ns#derived>`, for the reasons `entail` already uses a graph of its own.
+
+**The previous piece pays off here.** A transitive rule written as a property path is walked by
+the closure operator in a single round: the two-rule ancestor form above reaches its fixpoint in
+**5 rounds**, and `CONSTRUCT { ?x ex:ancestorOf ?z } WHERE { ?x ex:parentOf+ ?z }` in **2** —
+one to derive, one to find nothing new. Same ten facts.
+
+Four things are refused before anything runs, and none is a limitation of the evaluator — each
+would break a property the fixpoint depends on. **Negation** (`MINUS`, `EXISTS`) needs the rules
+stratified, and without that `p :- not q` with `q :- not p` has two equally good answers;
+refusing is the alternative to answering non-deterministically and saying nothing about it. **A
+blank node in the template** is a fresh node every round, so the rule derives for ever — value
+invention is exactly what Datalog leaves out in order to terminate. **`BNODE`, `UUID`,
+`STRUUID`, `RAND`, `NOW`** are the same by another route, plus a body whose answer changes
+between rounds has no fixpoint. **`SERVICE`** is not part of the fixpoint at all. Everything
+monotone is allowed: joins, `UNION`, `OPTIONAL`, `FILTER`, paths, aggregation.
+
+`--max-derived` and `--max-rounds` bound a mistake, and passing either is an error rather than a
+truncated answer: the facts derived so far are sound but the set is incomplete, and an
+incomplete materialisation looks exactly like a complete one to every later query.
+
+Iteration is **naïve** — a round re-derives what earlier rounds derived and discards the
+duplicates, which the store's `insert` reports for free by returning whether the quad was new.
+Semi-naïve iteration, restricting a round to bindings touching the previous round's delta, is
+the standard improvement and wants a measurement rather than a principle; the module says what
+it would take.
+
+One thing worth recording because it cost a debugging round: the obvious way to let a body see
+both assertions and derivations is `union_default_graph`, and it is wrong. That is the union of
+the *named* graphs and deliberately excludes the store's own default graph, so every body
+matched nothing and every rule derived nothing. `QueryOptions` warns about it in as many words.
+The right knob is `default_graphs`, set to the default graph and the derived graph together.
+
+### A closure property path is walked from the end that is bound
+
+`BENCHMARKS.md` §3 recorded a query returning **five rows in 25 seconds** — 36,000× slower
+than an inverse closure over the same holarchy that returned 68× more rows. The cause was in
+the report all along: when a closure's left side is a *variable*, a zero-length path makes
+every term in the store a candidate start, so the cost tracks the dataset rather than the few
+nodes actually walked. `<person> :memberOf/:partOf* ?u` is exactly that shape.
+
+New `holos_engine::reach` walks a closure from a seed set: a frontier, a visited set, and a
+round that expands only what the last round reached — semi-naïve, so each node is expanded
+once rather than every round re-deriving the lot. `bindjoin` gains a closure item ordered
+*after* everything that might bind an end, which is the whole trick: evaluate `:memberOf`
+first and the closure is anchored, so a walk over every term in the store becomes a walk of
+three edges. Either end will do, since which one is bound decides the direction.
+
+| | walk | evaluator |
+|---|---:|---:|
+| `memberOf/partOf*`, 500k quads | **0.0002 s** | 0.774 s |
+| `memberOf/partOf*`, 2M quads | **0.0003 s** | 1.358 s |
+| `unit340 partOf+`, anchored already | 0.0001 s | 0.0001 s |
+
+**3,870× at 500k quads, and the walk does not move as the store quadruples** — it costs what
+the component costs, not what the dataset costs. The anchored shapes are unchanged, which is
+the other half: no regression where there was nothing to fix.
+
+What it declines, intact, to `spareval`: a closure with neither end bound, and a closure over
+a compound path such as `(:p/:q)*` or `(:p|:q)+`, which would need a pattern evaluated per hop
+rather than an index read.
+
+Two semantics worth stating, because both are easy to get wrong and one of them was, until a
+test said so. `:p+` is **not** `:p*` without the start: over a cycle the start is reachable
+from itself, so `<f> :p+ ?x` over `f → g → f` answers both. And an arbitrary-length path is a
+question of connectivity (§9.3), so a node reachable two ways is one row — which makes the
+visited set the semantics rather than an optimisation that happens to terminate cycles. Thirty
+differential cases check the walk against the evaluator, and a separate test asserts the
+fragment *accepts* these shapes, because a differential test passes trivially against a walk
+that never runs.
+
+`reach` is deliberately its own module rather than part of the join: a closure is a fixpoint
+over one predicate and a recursive rule is a fixpoint over a rule body, and the frontier and
+visited set are the same machinery. The Datalog work to come reuses it rather than
+reimplementing it.
+
+### Tuning RocksDB's read path found nothing, and found out why
+
+Measured rather than assumed, and reported as the negative it is. `holos-bench` gains
+`scanread`, which sweeps the read-time options against a real store: one open handle, the
+same scan at each setting, each arm run forwards and backwards and averaged, a discarded
+warming pass first.
+
+Iterator readahead from adaptive to 16 MiB, asynchronous prefetch on and off, per-block
+checksums verified and skipped — **every arm landed within about 1.3%**, smaller than the
+0.5 s a single arm varies between its forward and reverse runs, and the best-looking setting
+moved between sweeps. Nothing there is worth a default change, so none was made.
+
+Sampling the process explained it: during the index scan CPU use is **exactly 1.00 core,
+every sample**. The scan never waits for the disk, so there is no stall for readahead to
+hide, and the time is not in checksums either. At 4.6 M rows/s it is 217 ns a row of RocksDB
+iterator work, which is normal for the engine and not something its options will change.
+
+The headroom is the other seven cores: one thread scans, eight are available, and a
+predicate's slice of an index is a contiguous key range that could be cut and scanned in
+parallel. That is engine work, not a setting. `BENCHMARKS.md` §3f has the numbers.
+
+Three knobs stay behind — `set_scan_readahead`, `set_scan_async_io`,
+`set_scan_verify_checksums` — all defaulted to current behaviour, so that the same sweep can
+be run on storage where a read costs more: a spinning disk or a network volume is the case
+this platform is not.
+
+## 0.14.0 — 2026-09-24
+
+### Spilling has a disk ceiling, not only a memory budget
+
+Caught while deciding whether this release was ready, and it is the kind of thing a release
+should not carry. `--spill-bytes` bounds what a spilling operator *holds*; nothing bounded
+what it *writes*, and an operator that spills writes in proportion to its input. That was a
+documented hazard while it was reachable only by a `DISTINCT` under `--reorder`. Making
+`ORDER BY` spill put it on by default for every unbounded sort — and the behaviour it
+replaced was a clean refusal, the memory ceiling stopping the query in seconds. A sort over
+a 654-million-quad store would have written on the order of a hundred gigabytes to the
+scratch directory, which is very often the system volume. Trading a refusal for a full disk
+is not an improvement.
+
+`--max-spill-disk <GiB>`, **default 16**, bounds it. Past that the query is refused with a
+`spill-ceiling` problem document carrying what it wrote, the ceiling, and the flag — the way
+the memory ceiling already did. `0` removes it. The ceiling is per query, so two spilling at
+once can write twice it, and it is enforced in the collectors themselves, so a library
+caller gets it without asking. The 48.4-million-row sort this was sized against writes about
+7 GB, well inside the default.
+
+### The top-k query was half heap allocation, and the heap was free
+
+Profiled rather than guessed at, after the last release left the question open. `holos-bench`
+gains `topkprofile`, which takes the query apart by ablation — the same join over the same
+48.4 million rows, four times, changing only what the sink does with each row, with no timing
+in the hot loop to perturb what it measures.
+
+Two findings, both against expectation. The **heap is free**: under a second over 48.4
+million rows, so the operator the query is named for was never worth tuning. And the **join
+cost as much again as the RocksDB scan beneath it** — 10.5 s on top of 10.7 s — which is
+where the time had been all along.
+
+It was two heap allocations per row:
+
+- a `Vec` of the variables each candidate quad bound, allocated inside the scan loop — four
+  pointers, 48.4 million times. Now four inline slots, with a `Vec` behind them that a quad
+  never reaches and only a wide `VALUES` row can.
+- a `Vec` for each projected row. `bindjoin::Sink` now takes `&[Option<TermId>]` rather than
+  an owned row, so the join fills one buffer and reuses it, and the top-k heap copies only
+  the `k` rows it keeps out of millions.
+
+| | before | after |
+|---|---:|---:|
+| the join, over 48.4M rows | 10.4–10.7 s | **5.4–6.2 s** |
+| the whole query, in the profiler | 29.0 s | **25.0 s** |
+| the whole query, through the server | 42 s | **29.6 s** |
+
+The server gains more than the profiler because it installs a counting allocator so the
+memory ceiling has something to read, and all 96.8 million allocations were paying it.
+`BENCHMARKS.md` §3e has the phase table and the method.
+
+### Thirty-eight W3C tests were failing because the harness told the parser the wrong base
+
+A conformance baseline is only worth what its attributions are worth, and thirty-eight
+entries in this one were filed under `upstream:` — a parser defect — when the defect was the
+harness's. It parsed every test file against `<assumed base>/<file name>`, which is right
+for a suite whose files sit beside their manifest and wrong for one that groups them into
+subdirectories. The RDF/XML suites do: `rdf-xml/manifest.ttl` lists
+`rdf-ns-prefix-confusion/test0004.rdf`, and parsing it against `<base>/test0004.rdf` resolves
+every relative IRI in the file one directory too high, so the subject came out as
+`…/rdf-xml/test0004.rdf#foo` where the fixture says
+`…/rdf-xml/rdf-ns-prefix-confusion/test0004.rdf#foo`. The parser was told the wrong base and
+did as it was told.
+
+A test file's IRI is now the base directory plus its path **relative to its manifest**.
+
+| Suite | Was | Now |
+|---|---|---|
+| RDF 1.1 | 1019 / 1040 | **1038 / 1040** |
+| RDF 1.2 | 1382 / 1405 | **1401 / 1405** |
+
+That is **4,013 of 4,021** across every suite, and all eight remaining failures are upstream
+for real: six are `oxrdfxml` writing an `rdf:XMLLiteral` with every in-scope namespace
+declared on it where RDF 1.1 asks for *exclusive* canonical XML, and two are `spargebra` —
+a SPARQL 1.0 test of case-insensitive keywords, and SPARQL 1.2's relaxed rule on reusing a
+`SELECT` variable in a later expression of the same `SELECT`. `DESIGN.md` §15's table had
+drifted badly out of date in the other direction, understating every row; it and the
+README now agree with what the suites report.
+
+**A skip is not a pass, so the skips are auditable.** A suite that quietly skips a third of
+its tests reports a compliance it has not demonstrated, and until now the reasons were
+visible nowhere. `HOLOS_CONFORMANCE_SKIPS=1` prints each suite's skips tallied by reason.
+SPARQL 1.1's 113 are 47 protocol tests run by the dedicated protocol suites, 34 needing an
+entailment regime this engine does not implement, 6 test types not implemented, and 26 where
+HOLOS and a direct `spareval` run agree with each other and differ from the fixture.
+
+### `ORDER BY` without a `LIMIT` finishes, and is faster than not finishing
+
+0.13.0 gave `SELECT … ORDER BY … LIMIT` a heap of the rows it returns. The sorts the heap
+declines — no `LIMIT`, or one too large to hold — still went to the evaluator, which
+collects every row and sorts the lot, so on a large store they were refused by
+`--max-blocking-rows` or ran until the memory ceiling stopped them. This is the external
+merge sort the design has named as the next piece since that release.
+
+- **A sorting collector beside the deduplicating one.** `holos_engine::spill::Sorted` holds
+  rows with their sort keys, writes a sorted run when it passes its budget, and merges the
+  runs into one ordered stream. What an `ORDER BY` costs is the budget, not the answer, and
+  the answer is never resident: the merge yields one row at a time and the serialiser writes
+  it out. It reuses the run files, the encoding and the readers that `DISTINCT` already had.
+- **Faster, not merely bounded.** Two million dates sorted in **8.5 s** spilling against a
+  budget of 8 MiB, against **20.0 s** for the evaluator holding all of them in memory
+  (`holos-bench`'s `topk`). Writing runs to disk and reading them back still wins, because
+  the evaluator's comparator decodes both sides of every comparison from the dictionary —
+  `2·n·log₂n` decodes — and the collector decodes each key once, as the row arrives.
+- **One order throughout.** The heap and the collector share `topk::cmp_keys`, so a query
+  answered by either comes back the same way. Both are **stable**: rows their conditions do
+  not separate keep the order they arrived in, within a run and across the merge. The
+  evaluator sorts with `sort_unstable_by` and does not, which is conformant — SPARQL fixes
+  no order over tied rows — but is not repeatable.
+- **`--spill-bytes`, was `--spill-distinct`.** The budget now bounds a sort as well as a
+  `DISTINCT`, so it is no longer named for one. The old name is still accepted.
+- **`--max-blocking-rows` follows.** A sort that will be answered in bounded memory is
+  measured by what is *under* it, so it is no longer refused for the size of its input.
+
+Worth knowing before relying on a sort: SPARQL defines no order between terms of unlike
+kinds — an integer and a string — and says an implementation may extend it. Both this engine
+and the evaluator extend it by comparing lexical forms, and that extension is **not
+transitive**: `2 < 10` by value, `"1abc" < 2` and `10 < "1abc"` by lexical form, so those
+three form a cycle and which comes first depends on the order they arrived in. Both paths
+were measured doing exactly that, and disagreeing with each other. A sort key of one
+datatype, which is what real data has, is a total order and is fully determined.
+
+## 0.13.0 — 2026-09-21
+
+### A running server says which build it is
+
+Asked of a server that had just been restarted: was it the binary with the fix, or the one
+from before? Nothing said. `/health` answered `ok`, `/stats` gave the counts, every
+response carried the HTTP library's own `Server: tiny-http (Rust)`, the banner had no
+version line, and neither binary took `--version`. Now, from one stamp:
+
+- **`Server: holos/0.13.0 (d4b4fdd)`** on every response — the place HTTP gives a server
+  to say what it is (RFC 9110 §10.2.4), replacing the library's name.
+- **`/stats`** carries `"version"`, `"commit"` and `"modified"` next to the counts, for a
+  monitor that already reads it.
+- **`holos-server --version`** and **`holos --version`**, and the same line in the
+  startup banner.
+- **The commit, and whether the tree was clean.** A binary built between releases says
+  the same version number as the release; the parenthesis says which commit it was built
+  at, and `modified` that the tree had uncommitted changes. The stamp is written by a
+  build script that re-runs whenever anything under `crates/` changes, so it cannot go
+  stale between edit and rebuild. A build without a repository says only its version.
+
+New crate `holos-build` holds both halves — the stamp and its display — so the two agree.
+Also in this release: `scripts/third-party.py` again reproduces `THIRD-PARTY.md` — the
+console's "loaded by the browser" section, hand-written at 0.11.0, is generated now, with
+the versions read from the pins in `ui.rs` — and the dependency counts are current.
+
+### `ORDER BY … LIMIT` from a heap of the rows it returns, and a timeout that says which limit
+
+Prompted by `SELECT ?o WHERE { ?s schema:deathDate ?o } ORDER BY DESC(?o) LIMIT 4` on the
+653.8-million-triple store, which had run for ninety minutes at one core when it was looked
+at, holding gigabytes, and could not be stopped. The evaluator answers `ORDER BY` by
+collecting every row, sorting the lot, and applying the `LIMIT` afterwards; its comparator
+decodes both sides of every comparison from the dictionary, so a sort of *n* rows costs
+`2·n·log₂n` point reads and literal parses. And once the rows were collected the query had
+stopped reading, which is where both the timeout and the memory ceiling are checked — so
+neither could reach it.
+
+- **A top-k operator.** `SELECT … ORDER BY … LIMIT`, with or without `OFFSET`, is now
+  answered from a heap of `OFFSET + LIMIT` rows: the body is evaluated as a stream, each
+  row's sort key is decoded once as it arrives, and a row that sorts after the heap's worst
+  is dropped on arrival. The cost is *n* decodes of the key, `n·log₂k` comparisons in
+  memory, and *k* rows held. Where the bind join accepts the body — a scan, a star, an
+  optional, a filter — its rows are streamed as ids and only the key is decoded per row;
+  the columns of the rows that survive are decoded at the end, so a wide projection costs
+  what a narrow one does. The body is a streaming evaluation, so the deadline and the
+  ceiling apply the whole way through. The shape is recognised exactly and everything else
+  — a `DISTINCT` between the sort and the slice, no `LIMIT`, a slice past a million rows, a
+  sort key with `EXISTS` or `RAND()` — goes to the evaluator unchanged. The order is
+  SPARQL's, held to the evaluator's own by a test that sorts a mixed bag of every kind of
+  term both ways. The query above, 48.4 million rows on the predicate, answers in **42 s**,
+  and `SELECT ?s ?o … ORDER BY ?o LIMIT 3` in 41 s. On an
+  in-memory store of two million dates the heap is **17.6×** faster than the evaluator's
+  sort (`holos-bench`'s `topk`).
+- **A decode cache on the view.** Every path that turns an id into a term — the
+  evaluator's rows, the bind join's, a filter's variable, a sort key — now goes through one
+  cache per query, bounded at a quarter of a million terms and started again when full. A
+  scan grouped by object decodes each date once rather than once per row: the heap's
+  evaluator-side path went from 264 s to 43 s on the query above from this alone, and an
+  `ORDER BY` the heap declines, whose comparator decodes both sides of every comparison,
+  is helped in the same proportion.
+- **Admission control follows.** `--max-blocking-rows` measures a sort in that shape by
+  what is under it rather than by its input, and the refusal of a sort it still declines
+  now says which `LIMIT` would help, since one does.
+- **A timeout is answered with its number.** A query stopped by `--timeout` was answered
+  with the evaluator's own words, *the SPARQL operation has been cancelled*, under the
+  `timeout` problem type. It now says *query cancelled: it ran past the 300 s time limit
+  (raise it with --timeout, or ask a narrower question)* — the same way every other failure
+  is told what happened and what would change it. The `type` is unchanged.
+- **`deploy/holos.env` sets `HOLOS_TIMEOUT=300`.** The server's own default is still no
+  limit; the deployment patterns are for a server other people reach, where five minutes is
+  the difference between a query that is wrong and a process that is over its ceiling for
+  everyone until it finishes.
+
+### The geospatial review: axis order, UTM, coordinates off the planet, and a string for a system
+
+Prompted by a query that put Amsterdam in the Indian Ocean. It built its points as
+`<…/EPSG/0/4326> POINT(4.9003 52.3791)` — longitude first — and EPSG:4326 puts **latitude**
+first, so the store read latitude 4.9, longitude 52.4, and buffered a spot off the Somali
+coast. That reading is GeoSPARQL's: a literal uses the axis order its reference system
+defines, and Apache Jena reads the same literal the same way. It is also the trap `crs.rs`
+has warned about since the systems were added, and the review found the store right about
+it and wrong, or short, about four things around it. Every number below was checked against
+PROJ 9.
+
+- **A coordinate off the planet was read as a place.** `<…/4326> POINT(120 4.9)` — a
+  latitude of 120° — was buffered, measured and drawn at latitude 120. A geographic
+  coordinate past ±90° of latitude or ±180° of longitude is now refused, in every function
+  and in the spatial index: unbound, not somewhere. The commonest way to write one is to
+  put the axes the wrong way round, and refusing it is the one case of that mistake a store
+  can catch. The other case — both numbers plausible either way, which is the Amsterdam
+  query — it cannot, and nothing can; the literal has to be written in the system's order,
+  or in CRS84 with longitude first, or built with `spatialF:transformSRS` from a system
+  whose order is not in doubt.
+- **UTM.** `spatialF:transformSRS(?p, "…/EPSG/0/25832")` came back unbound: ETRS89 / UTM
+  zone 32N, the Dutch and German working system, was not one the store could reach. Every
+  UTM zone is now: `326zz` and `327zz` on WGS 84, north and south, and `258zz` on ETRS89,
+  which is taken as WGS 84 — the two have drifted under a metre apart since 1989, which is
+  how PROJ treats them by default. The projection is the Transverse Mercator the National
+  Grid already had, generalised over its ellipsoid and origin; the Grid's own tests still
+  hold it to the Ordnance Survey worked example. Eight points across five zones agree with
+  PROJ to a millimetre within 3° of a zone's meridian, 2 mm at 4°, 5 mm at 6°.
+- **A system named by a plain string was refused.** The same query wrote the target as
+  `"http://…/27700"`, which in SPARQL is an `xsd:string`, and the function took only an IRI
+  or an `xsd:anyURI`. Jena takes the string; so does this now.
+- **The National Grid, checked again.** Amsterdam in EPSG:27700 agrees with PROJ's
+  Ordnance-Survey Helmert to 2 mm, 7° from the Grid's meridian. PROJ's own default answer
+  for a point outside Britain is 150 m from that — it falls back to a datum-free
+  "ballpark" operation there — which is worth knowing before comparing.
+
+What was already right and is now tested as such: `geof:buffer` in degrees and metres,
+`geof:envelope`, `geof:distance` in metres (Amsterdam Central to Rotterdam Port, 58,337 m),
+`geof:sfWithin`, a bare literal read as CRS84, and `geof:getSRID` reporting the declared
+system.
+
+## 0.12.0 — 2026-09-20
+
+### A failed query explains itself to a program, not only to a person
+
+A query or update that fails is now answered with an
+[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem document —
+`application/problem+json` with `type`, `title`, `status` and `detail`, and for a syntax
+error the `line` and `column` — under the status the SPARQL Protocol requires. The Protocol
+fixes the status and says the body should explain; the RFC is the HTTP-wide standard for
+the explanation's shape, and it is what a script can match on where before it could only
+display a line of text. The `type` is a URI under `https://holos.dev/problems/` whose last
+segment is the kind: `syntax`, `bad-request`, `unknown-function`, `service`, `rdf-parse`,
+`policy`, `read-only`, `refused`, `timeout`, `memory-ceiling`, `evaluation`, `internal`.
+[OPERATIONS.md](OPERATIONS.md#errors) says what each means and what to do. A client whose
+`Accept` names `text/plain` and nothing else still gets the line of text.
+
+Two things were wrong before and are fixed by the same change. A failure that arrived while
+the answer was being written — a timeout, or the memory ceiling reached mid-scan — escaped
+the handler and reached the client as an empty 500 with the explanation in the server log
+only; it is a problem document now. And a query refused from its estimate was classified as
+a bad request, which it is not — it is well-formed and the deployment declined it — so it
+has its own kind and the 500 the Protocol assigns.
+
+Checked over a real socket: a syntax error at 1:26 answered with its type, line and column;
+an unknown function named in `detail`; the plain-text form on request; a protocol mistake
+and the read-only refusal as problems of their own kinds.
+
+What the specification keeps silent stays silent: an expression that fails inside a query is
+a value, not a failure, and a `BIND` that could not answer leaves its variable unbound with
+no explanation. That would need a HOLOS extension, and is not claimed.
+
+### The map's tiles were refused: OpenStreetMap wants a referrer
+
+0.11.0 sent no referrer from the console at all, and OpenStreetMap's tile servers answered
+403 — their [tile policy](https://wiki.openstreetmap.org/wiki/Blocked_tiles) requires a
+`Referer`, and a page that withholds one is treated as hiding. Tile requests now carry the
+page's *origin* and nothing more — scheme, host and port, never a path or a query — set on
+the tile layer alone, so the page's own policy stays `no-referrer` for the CDN and for any
+link a user follows out of a result. The origin says which server asked, which the request's
+address said already. Measured with the served console script in a headless browser: twelve
+tiles requested, twelve loaded, every one carrying `referrerpolicy="strict-origin"`.
+`--ui-tiles none` still sends neither tiles nor referrer.
+
+The console object is now `window.holosConsole`, so a script or a test can reach it.
+
+### Jena's `spatialF:` transforms, so its queries run unchanged
+
+Apache Jena fills GeoSPARQL's missing transform with three functions in
+`<http://jena.apache.org/function/spatial#>`, and they are now names over the code
+`holos:transform` already had: `spatialF:transformSRS(geom, srs)` is `holos:transform`
+argument for argument and answers identically for every system and for the refusal;
+`spatialF:transformDatatype(geom, datatype)` rewrites a literal between WKT and GeoJSON
+while keeping its reference system — GeoJSON only for CRS84, since RFC 7946 fixed it there,
+and GML refused since this engine does not write it; `spatialF:transform(geom, datatype,
+srs)` does both, in Jena's argument order. Checked from SPARQL against the GeoSPARQL example:
+a CRS84 point to Web Mercator, to GeoJSON, and to EPSG:4326 with its axes swapped.
+
+The reach is what `crs.rs` has — CRS84, EPSG:4326, 27700 and 3857 — where Jena resolves any
+EPSG code through GeoTools; a code this engine cannot transform comes back unbound, not
+relabelled. Jena's other spatial functions are not claimed.
+
+## 0.11.0 — 2026-09-20
+
+### The console: MatGUI, and a policy that keeps it at home
+
+The console is now [MatGUI](https://github.com/Matdata-eu/MatGUI) 6.1.0, the maintained MIT
+fork of YASGUI, in place of the Zazuko fork. The swap was made on a measurement, not a
+feature list: both consoles were driven headless against this server's own answers, under
+the security policy below. MatGUI rendered the same tables, drew the ten WKT geometries of
+the GeoSPARQL example on its map, and drew a `CONSTRUCT` as a node-edge graph; the Zazuko
+fork has no graph view and the map it had was one written for this project, which read CRS84
+only. The gains: a **Graph** tab for `CONSTRUCT` and `DESCRIBE`; a **Geo** tab (MIT) that
+reads WKT, GeoJSON, GML and GeoHash, gets EPSG:4326's axis order right, reprojects the SRIDs
+it knows, clusters, exports, and turns a drawn rectangle into a `geof:sfWithin` filter; a
+table that scrolls rather than pages; a dark theme; a CodeMirror 6 editor. The costs, stated:
+a 3.4 MB bundle where the old one was 1.0 MB, and a major version twelve days old. What did
+not change: **neither fork parses an RDF 1.2 triple term in a result** — a `SELECT` binding
+of `"type": "triple"` and a `CONSTRUCT` of `<<( … )>>` both land on the error tab, in both,
+measured. The endpoints answer them correctly; the console's parsers are behind the syntax.
+
+The graph and table plugins are Apache-2.0. They are loaded by the browser from the CDN and
+copied nowhere, which is the footing the Apache-2.0 crates already stand on;
+[THIRD-PARTY.md](THIRD-PARTY.md) lists them.
+
+**The console can no longer send anything anywhere but this server**, and that is the
+browser's guarantee rather than the bundle's:
+
+- A **Content-Security-Policy** names this server, the script CDN and one tile host, and
+  nothing else. `connect-src 'self'`: the endpoint box will not query another endpoint,
+  and no plugin can reach out — the geo plugin's lookup of unknown SRIDs at `epsg.io` is
+  refused and the geometry skipped.
+- Every CDN file is **pinned by exact version and SHA-384 integrity hash**; a CDN serving
+  different bytes breaks the console visibly rather than running unreviewed code.
+- **No referrer** leaves the page, and the page carries **no inline script**: its
+  configuration and stylesheet are served from this origin at `/ui/console.js` and
+  `/ui/console.css`.
+- **`--ui-tiles`** (`HOLOS_UI_TILES`) names the basemap's tile template, or `none`. Tiles are
+  the one disclosure a policy cannot close — which ones a map fetches says where its user is
+  looking — and `none` draws geometries over a blank background. `--no-ui` remains the
+  airtight option.
+
+The served page was loaded in a headless browser under the header policy: every plugin
+rendered, no refusal, no integrity failure. `DESIGN.md` §10's console section now also
+lists the views the console owes the thesis — named graphs with their Graph Store verbs,
+"your view" (who the server took you for and what that opens), holons with their versions,
+tick timelines and per-statement provenance, and a boundary as a tree — each resting on
+`/query` and `/graph` so that it shows a principal exactly what the scan lets them see.
+
+## 0.10.0 — 2026-09-20
+
+The release that made a bulk load **4× faster**: the 653.8-million-triple file that took
+3 h 43 m at 0.9.1 takes **55 minutes**, producing a store with the same counts and the
+same answers. Seven changes, each measured on that file, in the order they were found —
+because each one's measurement is what found the next. This release also carries 0.9.1,
+below, which was cut on the 19th and never tagged: statistics kept with the store, and a
+withdrawn claim.
+
+| | time | quads/s | peak memory |
+|---|---|---|---|
+| 0.9.1 | 13,379 s | 48,869 | 3,413 MiB |
+| + the seen filter and a hot set | 5,241 s | 124,752 | 3,915 MiB |
+| + parsing on its own thread | 4,479 s | 145,990 | 4,012 MiB |
+| + hot set by spread, not hits | 4,417 s | 148,011 | — |
+| + a whole bloom filter on `str2id` | 3,870 s | 168,939 | 4,059 MiB |
+| + index runs sorted and written on a thread | 3,597 s | 181,793 | 4,208 MiB |
+| + dictionary windows written on a thread | 3,360 s | 194,574 | 3,855 MiB |
+| + the final merge three orders at a time, in bounded files | **3,277 s** | **199,545** | 3,434 MiB |
+
+### A bulk load stops asking the disk whether a term is new
+
+A 3-million-triple profile of the same data predicted 206,859 quads/s; the load ran at
+48,869. Every mid-load flush clears the term cache so memory stays flat, and after the first
+flush the cache no longer knows what it has forgotten — so **every new term**, all 199
+million, was looked up in `str2id` on disk before allocation, to prove it was new. Counted
+on a 3-million load forced through sixty flushes: 1,268,458 reads that found nothing against
+100,287 that found something, at 3.9 µs each where an empty store took 0.4. They were the
+whole of the flush penalty, and the misses were 92% of it.
+
+`seen` is a bloom filter in memory over every term the load has interned — 256 MiB, seven
+hashes, 10.8 bits per key on this store. A term it has never seen was never interned by this
+load; when the load began on an empty dictionary, that means it does not exist, and it is
+allocated without a read. A false positive costs one read that was going to happen anyway; a
+false negative cannot happen. **A load into a populated store does not use it** — a term
+interned before the load is not in the filter — and a test loads a store in two halves to
+prove the second half makes zero skips. The filter's own tests include one that failed on
+the first version and was right to: a request for ten bits per key was rounded down to a
+power of two and got five, and the false-positive rate came out at 11.8%, which is what
+five bits gives. It is sized exactly now.
+
+The hot set went in at the same time: cache entries hit often enough survive a flush. On
+that run it saved 12% of the hits; the filter saved all of the misses. 653.8 million quads:
+5,241 s against 13,379, a store that answers identically, and misses at 0.09% of terms.
+
+### Parsing runs on its own thread
+
+With the misses gone the load sat at 99% of one core with seven idle, alternating between
+parsing a quad and interning it. Parsing is a quarter of the work by `loadprofile` and shares
+nothing with the store, so it runs ahead on its own thread over a bounded channel — four
+batches of 8,192 quads — and the calling thread only interns. Ids are still issued in file
+order by one thread; nothing about the dictionary changes, and the backend-parity test holds
+through it. A scoped thread, so a byte slice or a borrowed file still works as input; the
+reader gains a `Send` bound, which every existing caller already met.
+
+Tests cover a document larger than the whole queue arriving complete and in order, a parse
+error partway through surfacing as an error rather than a short load, and an empty
+document. 4,479 s, the process at 140% CPU — the parser takes 40% of a second core and the
+loading thread is the bottleneck.
+
+### The hot set keeps entries by spread, not by hit count
+
+A subject's dozen quads are adjacent in the file, so it is hit a dozen times in a row and
+never again; a postal code shared by a thousand subjects is hit a handful of times across
+the whole window and again in every window after. Ranked by hits, 450,000 subjects a window
+beat the vocabulary and filled the cap with terms that would never recur. Ranked by the
+distance between first and last use in the window, they lose. Same hits at small scale,
+**7× fewer entries retained** for them, and at full scale the cap is finally binding on
+terms that deserve it.
+
+### A whole bloom filter on `str2id`, and how the fifth measurement found it
+
+With the misses gone and parsing off the critical path, the load's rate still fell from
+209k quads/s at ten minutes to 122k at sixty. `Store::bulk_resolves` — new counters the
+CLI now prints — said why: **43.7 million reads that found a term, 1,230 s at 28 µs each,
+28% of the load.** Those are the mid-frequency vocabulary, used a few times across the file
+in different windows, which no within-window signal can catch and which at 44 million
+distinct terms no hot set can hold.
+
+So each read had to get cheaper. Three things were tried, each measured on the same file:
+
+- **A partitioned bloom filter on `str2id`**, the fourth time a filter on this family had been
+  tried: 1,300 s at 29.6 µs. Nothing.
+- **Opening the sort runs and the source with `FILE_FLAG_SEQUENTIAL_SCAN`**, on the theory
+  that forty gigabytes of runs were evicting the dictionary from the page cache: slower, 27
+  and 34 µs at the flushes where they had been 21 and 25, and the process at 139% CPU
+  throughout — not waiting on anything.
+- **A block cache with index and filter partitions in it**: 9.0 → 15.9 µs and still climbing,
+  as data blocks evicted the partitions.
+
+What separated them was a histogram rather than a mean: the per-flush line now buckets each
+read at 10, 50 and 200 µs. The shape was not a fast majority with a slow tail, which a disk
+would give; it was the whole distribution walking right as the dictionary grew — 66% of reads
+under 10 µs at the first flush, 9% by the eighth — with RocksDB's own log showing the family
+at two or three L0 files throughout. What grows with a dictionary at constant L0 is its
+number of levels, and a get without a filter reads a data block at each to learn the key is
+not there. A *partitioned* filter reads a filter partition instead, which on a cache too small
+to hold it is the same syscall — which is why four measurements of one saw nothing.
+
+A whole filter is held by the table reader outside any cache. A get checks each level in
+memory and reads one data block: **9.5 → 15.3 µs and flat from the fourth flush**, then
+15.4 µs across all thirty-three at full scale. Whole is affordable here where the index
+families needed partitioning in 0.9.0: this family's files are sixty megabytes a flush and
+its filter over the entire dictionary is about 250 MB, bounded by the dictionary rather than
+by the load. 3,870 s; dictionary reads 677 s against the 650 the histogram predicted.
+
+What remains of the read cost is one block read per hit, which is the floor on this platform
+without holding data blocks in memory. Below that means batching hits into a `MultiGet`, or a
+dictionary that lives elsewhere than RocksDB. The loading thread is at 100% of a core with
+six idle, and the parse thread at 40% of another; the next factor is more threads.
+
+### Two more threads: the index runs, and the dictionary windows
+
+The loading thread was stopping to do two things that touch neither the dictionary nor the
+id sequence. Every four million quads it sorted the buffer nine ways and wrote nine runs;
+every 256 MB of dictionary rows it merged the window's runs and wrote a compressed, filtered
+SST per family. Both now happen on their own threads while the loading thread goes on
+interning. Ids are still issued in file order by one thread, and the backend-parity test
+still holds.
+
+**The index runs** go to a worker over a channel of capacity one: the loading thread hands
+the buffer over and fills the next, and a loading thread that outruns the sorter blocks
+rather than stacking buffers up. One buffer more in memory, at most. 3,870 → **3,597 s**,
+all of it off the streaming phase, 2,950 → 2,700 s, the process at 172% CPU where it had
+been 140%. The first measurement of this
+change came back at 3,878 s — no gain — and a minute-by-minute curve showed why: the run led
+by 6–9% except during the twenty minutes when builds and small-scale benchmarks were
+running on the same disk. Measured again with nothing else running.
+
+**The dictionary windows** are the more delicate one, because of what a flush is for. A
+term may only be forgotten once both of its rows are readable on disk, and a term looked up
+while its rows are still being written must be found in the cache, or it is allocated a
+second id. So the merge and the write go to a thread, and the ingest and the trim stay on
+the loading thread and happen when the files are in — polled at one atomic load per write,
+forced before the next flush. The first version trimmed everything at that point, including
+the terms interned since the flush, whose rows were in the *next* window and nowhere on
+disk; the repeated-flush test showed it as 32 disk misses where there had been 0, each one
+a term about to be allocated twice. A term is told apart by its id now — ids are issued
+densely per tag, so one at or past the counter as it stood at the flush is one the flush
+did not see — which is exact rather than timing-dependent. 3,597 → **3,360 s**, streaming
+2,700 → 2,462 s. Memory during streaming is flat across all three runs, 3.4–3.5 GB
+sampled: the window's rows are already on disk as a run when it is handed over, so the
+thread holds readers, not rows, and the cache holds one window plus a few seconds of the
+next. The peaks in the table are from the final merge, where committed memory cycles
+between 2.9 and 4.2 GB each minute and a once-a-minute sampler catches a different point
+of the cycle each run.
+
+Dictionary reads cost 707 s and then 729 s against 677 — the threads' writes contend a
+little with the loading thread's random reads — and 361,000 fewer of them hit the disk,
+because the later trim keeps terms a little longer. The final merge, which neither change
+touches, took 14 minutes in both runs against 12 in the reference; it is disk-bound, the
+reference ran overnight and these ran with the machine in use, and that is noted rather
+than explained. Both stores match the previous one on quad and term counts and on every
+subject checked.
+
+What is left on the loading thread is parsing's hand-off, interning, and the dictionary
+reads; the process runs at about 200% CPU on eight cores. Interning is one thread by
+design — it is what keeps ids in file order — so the next factor is not another thread
+here but the read cost itself, or the final merge, which runs its nine orders one after
+another and could run three at once.
+
+### The final merge, three orders at a time — and where its memory had been going
+
+The merge is a heap over an order's runs feeding a compressed file, and one thread doing
+nine of them in turn was 14 minutes of the load with the other cores idle. Now three
+threads claim orders from a counter, each takes its own copy of the in-memory tail (the
+merge sorts it in place; the tail is at most one buffer), and the loading thread ingests
+each finished file as it lands. The first version wrote one file per order as before, and
+measured 3,360 → 3,234 s with a peak of **6,132 MiB** against 3,855. Two things were
+learned from that run.
+
+The disk `E:` is an mSATA SSD behind a USB bridge. The merge was reading 156 runs per order
+in 24 KB blocks, and three merges at once meant 468 readers refilling through one USB link:
+the phase went from 14 minutes to 11, not to 5, because the link was the ceiling. Run
+readers now refill in 256 KB blocks — forty megabytes a merge — which is a number chosen on
+this disk and does no harm on a better one.
+
+The memory was the `SstFileWriter`: it holds a file's bloom filter and index in memory until
+the file is finished, and for an order over 654 million keys that is about a gigabyte.
+That had been the load's peak all along — the 2.9 → 4.2 GB cycle visible in every earlier
+run's merge phase was one file's filter growing and being written — and three at once made
+it three gigabytes. Each order is now written as files of 32 million rows. Consecutive files
+of one order do not overlap, so `RocksDB` still adopts every one at the bottom level, and
+memory follows the file rather than the load: **flat at 2.9–3.0 GB through the merge**, in
+all three threads, against a peak that used to arrive there. A test cuts the fixture into
+37-row files and counts them. 3,277 s all told, the merge phase 11 minutes, and the
+same counts and rows as every store before it.
+
+### The startup scripts: patterns, the rest of the flags, and the environment winning
+
+[deploy/README.md](deploy/README.md) is new: the configurations people actually run, each
+as a `holos.env.local` to copy with the commands that go with it — first run, the store on
+another disk, a big load and what to have ready for it, replacing data without a gap, a
+read-only endpoint behind a front door, locked down, development, service, backups, and
+the container. `deploy/holos.env` gains keys for the serving flags the scripts could not
+set before — `HOLOS_READ_ONLY`, `HOLOS_REORDER`, `HOLOS_TIMEOUT`, `HOLOS_MAX_QUERY_MEMORY`,
+`HOLOS_BACKUP_DIR` and `HOLOS_BACKUP_ROLE` — and `HOLOS_EXTRA_ARGS` for anything else the
+server accepts, verbatim. `run.sh`, `run.ps1` and `install-service.ps1` all translate them.
+
+The shell scripts also let the environment win over the files now, as the PowerShell ones
+always did. `HOLOS_STORE=/mnt/big deploy/load.sh dump.nq` was the documented usage and did
+not work: sourcing `holos.env` put `./var/store` back.
+
+### `MultiGet` on the dictionary: measured, not built
+
+What is left of the dictionary reads is 43 million terms that recur across windows at
+16 µs each, about 700 s. `RocksDB` answers a batch of keys in one `MultiGet`, walking each
+file once for the batch rather than once per key, so `Store::lookup_terms` now does that —
+one sorted batched get for every plain key, with well-known, inline, hashed and scoped terms
+answered in line — and `dictget` in `holos-bench` asks whether it pays: 200,000 distinct
+terms from the front of the file, alternating chunks between one get per term and a batch.
+Cold, from the disk: 108 → 98 µs a term. Warm, from the page cache, which is where the
+load's reads come from: **8.8 → 6.4 µs at a batch of 1,024**, 7.9 → 6.2 at 256, 8.8 → 7.5
+at 64.
+
+So batching is worth a fifth to a quarter of the read cost, at most 150 s, *if* it cost
+nothing to batch — and it would not. A term's key is its serialisation, so to ask for a
+batch ahead of interning it, every term of the batch is serialised on the loading thread
+before it is needed, and two of every three of those are then found in the cache and never
+needed a key at all. That is the same order of cost as the saving, spent restructuring the
+one piece of the load that keeps ids in file order. The lookup stays, as an API and a
+number; the load does not use it.
+
+## 0.9.1 — 2026-09-19, shipped in 0.10.0
+
+Two things learned by using 0.9.0 against the 653.8-million-triple store for a week: the
+flag every protection depends on was too expensive to set from the command line, and one
+claim in the 0.9.0 notes was wrong.
+
+### Statistics are kept with the store, so `--reorder` stops costing a scan per run
+
+`--reorder` is what supplies the cardinality estimate; admission control refuses on the
+estimate, the `DISTINCT` spill is reached only through the refusal, and join reordering is
+the estimate applied. So it is the flag the other protections hang off — and on the CLI it
+was a full scan on **every invocation**, about 300 s on the 653.8-million-triple store, which
+made it a flag nobody could afford to set from the command line. A server paid the same scan
+on every restart.
+
+Now the statistics are saved with the store and loaded back while they still apply. What
+decides "still apply" is a new **write generation** on the store: a counter that moves on
+every insert, delete and bulk load, is put back by a rolled-back scope, and is persisted in
+the same batch as the change it counts, so a reopened store carries on from where it was.
+A snapshot records the generation it was built at, and is used only while the store still
+reports that number. `quad_count` could not serve — delete one quad and insert another and
+it does not move — and neither could the dictionary's size, which is append-only and does
+not grow for a quad whose terms it already held.
+
+On the real store, `holos query --reorder`: **194 s** on the first run, which builds and
+keeps; **20 s** on the second, all of it the query. The server with `--reorder` now prints
+`statistics loaded from the store in 0.00s` on a restart instead of scanning for minutes.
+
+The format is a versioned byte string owned by `holos-stats`; anything that is not exactly a
+snapshot this version wrote — another version, truncated, trailing bytes — is discarded and
+rebuilt, never reported. A cache that is wrong is a cache that is missing. Tests cover both
+directions the cache can fail in: a snapshot the store should still use and one it must
+refuse, and removing the generation check fails the second by name.
+
+The generation is also the answer to a question the store could not previously answer at all
+— *has anything changed?* — and the spatial index is the obvious next thing to ask it.
+
+### A switch for the bind join, and a claim withdrawn
+
+`QueryOptions::without_bind_join` answers a query through the evaluator alone. It exists so
+the fast path can be measured against its absence on the same store and the same rows —
+the only comparison that says what it is worth — and `pushdown` grows `--no-bind-join` to
+expose it.
+
+Using it corrects the 0.9.0 notes, which said the range pushdown on a literal-typed
+predicate was *slower* than a plain scan, quoting 123 s against 20 s. That compared a
+filtered `SELECT` with an unfiltered `COUNT`; the hundred seconds between them is evaluating
+the filter on 48 million string rows, and both paths pay it. The same query, same predicate,
+warm cache: **116.5 s** without the bind join, **122.3 s** with. Neutral. A first reading of
+198 s with it on was a cold page cache, which is why both arms were run in both orders
+before anything was written down. The pushdown still buys nothing on `xsd:date` or
+`xsd:string` objects, and that finding stands; it just costs nothing either.
+
+## 0.9.0 — 2026-09-11
+
+The release that made a **load** unable to take the process down, after 0.8.0 did the same
+for queries. Found by loading 653,839,702 triples and watching.
+
+### A bulk load's memory did not depend on the load. Then it did.
+
+The streaming phase behaved exactly as designed: **2.4 GB peak across three and a half
+hours**, sawtoothing as the dictionary filled, ingested and cleared. Before 0.7.0 the term
+cache alone would have wanted about 62 GB, so this was the fix confirmed at forty-seven times
+the scale it was verified at synthetically.
+
+Then the final merge reached **18 GB** on a 32 GB machine — three times, once per triple
+order. It survived. It should not have had to.
+
+The memory was not HOLOS's. `index_opts` asked every index family for a bloom filter, and a
+*full* filter is built in one piece: RocksDB's `FullFilterBlockBuilder` keeps a 64-bit hash
+per key and turns the lot into bits at `finish`. A memtable flush does that for a few thousand
+keys and nobody notices. A bulk load writes **one file per order for the whole store**, so the
+vector is 8 bytes times every triple loaded — 5.2 GB at 653 million, and twice that at the
+instant it doubles, because it holds the old buffer while filling the new one.
+
+The fix is to cut the filter into partitions as the file is written, each one finished and
+released, so what is held is one partition rather than one file. It needs the two-level index,
+so both are set.
+
+**It applies to the families, not only to the bulk writer,** and that was a second decision
+taken after a second measurement. The first version partitioned the writer alone, on the
+grounds that the read cost was unknown and the write side was on fire. Two things then turned
+up. A whole filter is *pinned* by the table reader for as long as the file is open, which is
+what makes the 653.8-million-triple store cost about **4 GB before it answers anything**. And
+a `compact` rewrites every ingested file with the *family's* options — so partitioning only
+the writer meant routine maintenance handed back exactly what the load had been fixed to
+avoid.
+
+`holos-bench`'s `filterread` measured the read side at 30 million triples, flipping that one
+call and nothing else:
+
+| | whole | partitioned |
+|---|---|---|
+| peak resident | 743 MiB | **275 MiB** |
+| probe that misses | 2 us | 2 us |
+| probe that hits | 1602 us | 1583 us |
+| full scan | 5.7 s | 5.9 s |
+| load | 100.0 s | 91.6 s |
+
+No read penalty and 63% less held. The miss probe is the one that had to stay flat — it is the
+case a bloom filter exists for, so an unchanged 2 us says the filter is still skipping files
+rather than having quietly stopped working.
+
+Measured by loading the same synthetic triples at two sizes, chosen so that only the index
+grows — 4096 subjects and 64 predicates crossed with as many objects as the count needs, which
+holds the dictionary at a few thousand terms whatever the count:
+
+| triples | full filter | partitioned |
+|---|---|---|
+| 25,000,000 | 723 MiB | **271 MiB** |
+| 100,000,000 | 2,558 MiB | **395 MiB** |
+| growth for 4× the data | 3.54× — linear | **1.46×** |
+
+The streaming phase took 55.2 s against 55.9 s and 220.1 s against 221.8 s across the two
+builds — the bias check, since a change to the writer cannot affect the parse, and a
+difference there would have meant the comparison was measuring something else. Extrapolating
+the linear arm to 653.8 million predicts 16.3 GiB against the 18.0 GiB observed.
+
+The merge got slightly *faster* too, by about a tenth at 100 million. Not building an 800 MB
+vector turns out to be quicker than building one.
+
+### Why nothing caught it
+
+`crate::memory`'s ceiling reads a counting allocator, and a counting allocator counts Rust
+allocations. This vector belongs to RocksDB's C++ one, so the ceiling could not see it, could
+not have refused it, and would not have reported it. **A limit that cannot observe the thing
+it is limiting is not a limit** — recorded here because the same blind spot covers every byte
+RocksDB allocates, and the next one will not announce itself either.
+
+### A bulk load needs half again the source file in scratch
+
+Not a change, a measurement, because nothing had written it down and the number is large. The
+653.8 million triple load held **48.3 GB of sorted runs** beside a 30.4 GB source, peaking
+around 55 GB before the merge consumed them, to produce a **20.7 GB** store.
+
+Scratch goes in `holos-ingest` beside the database, deliberately, so the ingest can move files
+rather than copy them across a filesystem boundary. It is cleaned up on success and on
+failure. But it means a load wants room for the source, the scratch and the store at once, and
+`compact` checks its headroom before starting while a load does not. Sizing guidance is in
+OPERATIONS.md; the preflight is the next piece.
+
+### Verified end to end at 653.8 million triples
+
+The whole path an operator takes, on this build: `holos stats --store E:/store2 --data
+<30 GB Turtle> --bulk`, then `deploy/run.sh`, then queries over HTTP.
+
+| | before | 0.9.0 |
+|---|---|---|
+| load, final-merge peak | 18,007 MiB | **3,413 MiB** |
+| server, memory with the store open | ~4,000 MiB | **199 MiB** |
+| server, peak during `COUNT(*)` | — | 1,230 MiB |
+| `COUNT(*)` over HTTP | 653,839,702 | **653,839,702** in 3 m 56 s |
+| load rate | 50,210/s | 48,869/s |
+
+Same count, same predicate histogram, same rate; the merge spike is 5.3× smaller and the
+store costs twenty times less to have open, because the partitioned filters are no longer
+pinned by the table readers.
+
+### The server names its store on its first line of output
+
+That verification run began by reproducing a failure. A store loaded into one directory with
+the CLI, `deploy/run.sh` started on its default `HOLOS_STORE=./var/store`, and every query
+answered from an empty database with no error anywhere — the server had opened the empty
+directory and created a fresh store in it. Geospatial functions with literal arguments kept
+working because they never touch the store, which made it look like a partial failure rather
+than the total one it was. Ten lines of startup output and none said where the data was.
+
+Now the first line is `store E:/store2 — 653839702 quads`, or on the directory that was
+being served, `store ./var/store — empty. Nothing has been loaded here; if that is a surprise,
+check that this is the directory the load wrote to.` One `META_QUADS` read, so it is free.
+OPERATIONS.md's loading section now leads with the pitfall and the `holos.env.local` override
+that `run.sh` sources last.
+
+### The spatial index's first build is one read, not 150 million
+
+`refresh_spatial` runs unconditionally when the server starts, and its first build has to
+look at **every dictionary literal** to ask whether it is a geometry — that is the invariant
+the index rests on (everything below the watermark is indexed), and it cannot be skipped by
+checking whether any GeoSPARQL predicate has triples, because a geometry is decided by
+*datatype* and a `wktLiteral` interned under any predicate at all is one.
+
+It was doing that with a point lookup per literal. On the 653.8-million-triple store, with
+zero geometries in it, that was **3½ minutes** before "listening" appeared, on every restart.
+
+`Storage::for_each_in_range` walks `from..to` for a tag and hands each term to a callback.
+The trait's default is the old loop, correct for any backend; `RocksDB` overrides it with one
+bounded iterator over `id2str`, since the ids for a tag are dense and their big-endian bytes
+are a contiguous key range. Terms minted in an open scope, which have no `id2str` row yet,
+are walked afterwards from the scope, exactly as `decode` consults it first.
+
+The override must say precisely what the loop says, and a test asks both — every
+dictionary-backed tag, whole range and a window starting and ending mid-range, plus empty and
+inverted ranges. An off-by-one on the upper bound fails it by name.
+
+Startup on that store: **210 s → 46 s**. The remaining 46 s is decoding 150 million literals
+sequentially rather than fetching them; going lower means not decoding a literal whose stored
+bytes already say its datatype is not a geometry, which is a codec-level peek and a separate
+change.
+
+### Measured, not changed: what a large store is actually slow at
+
+A sweep of representative shapes against the 653.8-million-triple store, timed net of a 2.7 s
+store open. Nothing here is a fix; it is what the next piece of work should be aimed at.
+
+| shape | net | note |
+|---|---|---|
+| subject star, 11 rows | ~0.1 s | |
+| object bound, selective | ~0.5 s | |
+| two-hop join, `LIMIT 10` | ~0.1 s | |
+| count over a bound predicate, 48.4M rows | ~19.6 s | 2.47M quads/s |
+| `DISTINCT` over 3 distinct values | ~38 s | scans all 48.4M to find them |
+| range `FILTER`, 48.4M literal rows | **~120 s** | the pushdown neither helps nor hurts here |
+| `ORDER BY` + `LIMIT 10`, 48.4M rows | **>15 min** | 8.4 GB buffered, then stopped by hand |
+
+**The range pushdown fires and buys nothing on a literal-typed predicate.** `bounded scans
+= 3` — it is not failing to engage. But a numeric span must also include the whole
+`Tag::Literal` range, because `xsd:decimal` is not an inline type and a dictionary-backed
+literal could satisfy the comparison. For a predicate whose objects are literals, that reads
+all of them, and the same query with a cut matching **zero rows** costs the same: selectivity
+has no effect at all. `xsd:date` is not inline either, so ranges over dates get nothing from
+this. Inline is `Integer`, `Float`, `DateTime`, `Small` — and `xsd:date` being absent while
+`xsd:dateTime` is present is the kind of gap that looks like a typo in a dataset rather than
+a performance cliff.
+
+As published, this note said the pushdown was *slower* than a plain scan. It is not; see
+0.9.1 for the measurement that corrected it.
+
+**`--reorder` did not help the pushdown, and on the CLI it could not be afforded.** The
+statistics build is a full scan — about 300 s on this store — and at the time of this sweep
+the CLI redid it on *every invocation*, so admission control and the `DISTINCT` spill were
+both effectively unreachable from the command line. That is what the section above fixes.
+
+**`rangequery` had never run against `RocksDB`.** It built an in-memory store and always had,
+so the end-to-end range figures in BENCHMARKS.md are memory-only while the primitive in
+`rangescan` was measured on both. It now takes an optional store directory, and reports
+`bounded scans` beside each row so a zero — the pushdown not firing — cannot be mistaken for a
+disappointing speedup.
+
+**`--explain` runs the query.** `spareval`'s explanation is a profile, not a plan, so it
+evaluates and then reports. On a 272 s query that is 272 s. The help text said "Print the query
+plan as JSON instead of the results", which reads as plan-only; it now says what happens.
+
+### Building statistics no longer costs more than the query they protect
+
+`--reorder` kept, for every predicate, an `FxHashSet` of every distinct subject carrying it
+and another of every distinct object — and asked them for nothing but their `len` at the end.
+On the 653.8-million-triple store that is fourteen predicates over 48.4 million subjects, and
+it peaked at **12,984 MiB**. Counting the subjects rather than collecting them took it to
+**5,207 MiB**, measured on the same store.
+
+Sketching the objects on top of that took it to **5,206 MiB** — that is, nowhere, and the
+number is quoted rather than hidden because it corrects an estimate made here before it was
+checked. What remains at that point is the cost of holding a 20.65 GB store open and scanning
+it, not the object sets. The sketch is a *bound*, not a saving: the sets grew with distinct
+objects per predicate and nothing capped them; 16 KiB per predicate is capped. This dataset
+did not happen to exercise the case.
+
+The shape of that is worse than the number. `--reorder` is what supplies the estimate,
+the estimate is what admission control refuses on, and the spill is only reached from inside
+the refusal — so **the only way to protect a server against a memory-hungry query was to run
+one first**.
+
+Distinct subjects need no set at all, and the scan order is why: it is in `spo`, so a
+subject's quads arrive together and the subject is never seen again. By the time its
+characteristic set closes, the predicates it carries are already known — one increment each,
+exact, and free.
+
+Objects have no such luck: in `spo` order they arrive scattered, so there is nothing
+contiguous to count. They get the `HyperLogLog` sketch §7 always specified — **16 KiB per
+predicate whatever the cardinality**, against sets that grew without limit.
+
+The docstring here used to argue against a sketch, and it was right at the time: these counts
+were about to be used to measure how accurate estimation *can* be, and an approximation in the
+yardstick would have muddied the measurement it existed to support. That measurement has since
+been made. The estimator's q-error is 1.1 — about 10% — and the sketch was measured too, at a
+worst case of **2.3%** across cardinalities from 1 to five million, on numbers used only as
+ratio denominators that are guarded against zero anyway.
+
+The precision is the smaller of the two that were measured, deliberately. 2^16 registers would
+have held the worst case to 1.0%, but a sketch is per *predicate*, so its memory is unbounded
+in something the dataset controls: a store with Wikidata's eleven thousand properties spends
+176 MB at 2^14 and 704 MB at 2^16. Swapping a structure that grew without limit in the data
+for one that grows without limit in the schema, to buy precision four times finer than
+anything downstream can use, would have been the same mistake in a new place.
+
+Small counts are the case a raw `HyperLogLog` is worst at and real data is full of; a predicate
+with two objects is ordinary, and an estimate of three there is a 50% error on a small
+denominator. Linear counting below the threshold makes those exact rather than approximately
+exact, and there is a test that says so for 1, 2, 3, 10, 100 and 1000.
+
+Ids are mixed before they are hashed, and that is not ceremony. `TermId`s are handed out
+sequentially by the dictionary, so their top bits — the ones a sketch reads as a register
+index — barely vary across a whole load. Unmixed, every term would crowd into a handful of
+registers. There is a test that a sparse spread of ids counts the same as a dense one.
+
+The whole `holos-stats` suite passed with this counter **doubled**, which is how thoroughly
+untested it was: every subject in the fixture had exactly one object per predicate, so
+`triples`, `subjects` and `objects` were equal and any of the three would do. The new test
+separates them — four triples, two subjects, three objects — and does fail when the counter is
+wrong.
+
+### A spilling `DISTINCT` writes to the system temp directory
+
+Not a change, a warning, and it nearly cost a system volume to find. `--spill-distinct` bounds
+a query's memory, not its disk, and it spills in proportion to the *answer*: the query above
+reached 5.5 GB of runs in twenty-two minutes and was on course for about seventy, against
+29 GB free on `C:` while the store sat on a volume with 162 GB.
+
+The bulk loader faced the same choice and made the other one — its scratch goes beside the
+database, on the volume the operator sized. A query cannot do that, having no store directory
+to sit beside and sometimes no store on disk at all, so the placement stays with `TMPDIR`.
+**Point it at the volume with the room.** OPERATIONS.md now says so, and also that a *killed*
+process leaves its scratch behind, since the cleanup is on drop.
+
+### `--max-blocking-rows` reaches the CLI, where the spill was unreachable without it
+
+0.8.0 inverted the spill: it stopped being the default path and became what a query gets
+*instead of* being refused, which means it is only ever reached from inside the over-budget
+branch. The CLI set `--spill-distinct` and no budget, so after that inversion it had the flag,
+the plumbing, and no protection — the failure being that nothing failed. Both flags are now
+documented in `holos query --help`, which listed neither.
+
+## 0.8.0 — 2026-09-10
+
+> **Never published.** These changes were committed but not tagged, so no wheel or binary of
+> 0.8.0 exists and PyPI went 0.7.0 to 0.9.0. The notes stay because the commits do, and
+> because upgrading from 0.7.0 means reading both this section and the one above it.
+
+The release that made a query unable to take the server down — and made the query that did
+it twice finish instead.
+
+0.7.0 shipped a memory ceiling. It did not work. A deployment aborted again with the ceiling
+in force, and the numbers said why: an 8 GiB limit and a request for **16 GiB**. This is
+that, properly, in three layers.
+
+### The query
+
+```sparql
+SELECT (count(distinct *) as ?count) WHERE { ?sub ?pred ?obj . }
+```
+
+`spareval` answers it by holding every distinct solution in a hash set. The first crash asked
+for 25 GiB, and the size named the structure to the byte: 2³⁰ buckets of a 24-byte
+`InternalTuple` plus a control byte each. On a 667-million-triple store nothing was going to
+make that fit.
+
+Worth knowing: over the default graph the `DISTINCT` **buys nothing**. A store holds triples
+as a set, so `COUNT(*)` gives the same answer from a `u64` counter in constant memory. It
+differs only across a union of named graphs.
+
+### `DISTINCT` spills instead of being refused
+
+The one that lets the query *finish*. Rows are held in a hash set until it outgrows its
+budget; then they are encoded, sorted, written as a run, and the runs are merged — the
+technique `sort.rs` already uses for index orders and `dictsort.rs` for the dictionary.
+`COUNT(DISTINCT *)` gets the best case, since the rows are only counted and never needed, so
+the answer is **O(1) in memory however large the input**.
+
+**It is not the default, and measuring is why.** On three million rows it returned the right
+answer in **23.6 s against `spareval`'s 2.2 s**, using **1,259 MiB against 396 MiB** — with
+the disk never touched. The cost is structural rather than a bug: `spareval` deduplicates on
+internal term ids that are never decoded, while this path works above its public surface,
+where every solution has already been materialised into heap-allocated terms.
+
+So the fast path stays, and spilling is what a query gets *instead of being refused* — it
+engages exactly where `--max-blocking-rows` would have declined, and therefore needs
+`--reorder` too. Ten times slower is a large price for an answer and no price at all against
+the alternative.
+
+Rows compare as bytes, encoded from their N-Triples forms — injective over terms, which is
+what makes byte equality term equality. `"1"^^xsd:integer` and `"01"^^xsd:integer` are
+different RDF terms and `DISTINCT` keeps both; an encoding that compared *values* would
+under-count and never say so.
+
+A spilled `DISTINCT` comes back sorted and an unspilled one in hash order. Neither is arrival
+order, and SPARQL promises none.
+
+### Doomed queries are refused from their estimate
+
+`--max-blocking-rows`, default 10,000,000, needs `--reorder`. An `ORDER BY`, `DISTINCT` or
+keyed `GROUP BY` whose input is estimated over budget is declined in a millisecond rather
+than discovered slowly, using the characteristic-set estimates already built for join
+ordering — q-error 1.1, ample for telling a thousand rows from a billion.
+
+Tried *after* spilling, deliberately: a query that can be answered must not be refused for
+being large.
+
+Not every aggregate blocks, and the tests found that out by refusing `COUNT(*)` — which
+streams. A group buffers when it has a grouping key or a `DISTINCT` aggregate. And a `LIMIT`
+rescues a `DISTINCT` but not an `ORDER BY`, since the k smallest cannot be known without
+sorting all of them; the refusal says which case it is rather than giving advice that does
+not work.
+
+### The ceiling is read at the scan, not on a timer
+
+0.7.0 sampled every 10 ms and wanted three consecutive breaches. A `Vec` doubling from 8 GiB
+asks for 16 while still holding the old 8 — **24 GiB in hand** — so it goes from *at* the
+ceiling to fatally past it in one allocation, and no sampling interval fits inside that step.
+Worse, `used > limit` is false while a buffer sits exactly at the limit.
+
+It is now read in `decide`, which `DESIGN.md` §14 already makes the one route to the indexes.
+An operator buffering toward an abort is buffering *from the scan*, so it is refused on the
+first quad past the line. Armed after the store opens, so it measures growth past the resting
+set rather than counting the dataset against the budget.
+
+`--max-query-memory` now says the thing that was missing: **set it to at most a third of the
+memory you can spare**. A ceiling near the machine's limit does not prevent the abort, it
+chooses where it happens.
+
+### What is still true
+
+None of this catches a query that allocates without reading, and nothing short of a fallible
+allocator could — `handle_alloc_error` aborts rather than unwinding.
+
+And only `DISTINCT` spills. `ORDER BY` and keyed `GROUP BY` still buffer, so a large one is
+refused rather than answered. The same collector generalises to an external merge sort, which
+is the next piece.
+
+## 0.7.0 — 2026-09-09
+
+The release that made a load's memory stop growing, and the first one you can download a
+binary from.
+
+### A bulk load's memory no longer tracks the file
+
+0.6.0 held every dictionary row until the end of a load and ingested them as one sorted
+file. That made the term cache load-bearing: `resolve` reads the database, a buffered row is
+not there yet, so the only thing stopping a term being interned twice was the in-memory
+cache — which therefore had to hold **every term the load had seen**.
+
+It grows at **222 bytes per distinct term**, measured across a 6.7× range. A generated
+person dataset carries 1,268,458 distinct terms per 3M triples, so the 32 GB file it came
+from has around 281 million and the cache alone would want **62 GB**. On a 32 GB machine
+that load cannot finish — and it aborts the process rather than failing the request, exactly
+as the query path did before 0.6.0 put a ceiling on it.
+
+Flushing both dictionary families when the buffer reaches its budget makes the rows
+readable, which makes the cache an optimisation again rather than a correctness requirement,
+so it can be cleared. Memory then tracks the budget instead of the file:
+
+| distinct terms | 0.6.0 | 0.7.0 |
+|---:|---:|---:|
+| 900,000 | 714 MiB | 500 MiB |
+| 6,000,000 | 1,796 MiB | 392 MiB |
+
+The slope goes from **+222 bytes per additional distinct term to −22**. Six million distinct
+terms now peak *lower* than nine hundred thousand.
+
+The cost is several ingested files per load instead of one. At an artificially small 32 MiB
+budget that is 52,419 quads/s against 38,844 — a consistent 26% — but at the 256 MiB default
+the two rounds disagree about which build is faster, so it is inside the noise.
+`set_dict_spill_bytes` is the knob.
+
+Both families are flushed together and the cache cleared only afterwards, because a term is
+safe to forget only once *both* of its rows are readable. The test for the failure this
+could cause — a repeated term handed a second id after the cache is cleared, splitting one
+node into two so a join that should match silently does not — asserts on `dictionary_len`,
+so double-interning is visible rather than inferred.
+
+### Binaries, at last
+
+The Releases page stopped at 0.1.1 while PyPI went to 0.6.0: every version since was tagged
+and published as wheels, and none produced anything a person could download and run.
+`pip install holosdb` serves Python callers and does nothing for someone who wants the
+server or the CLI, for whom the alternative was a Rust toolchain and a RocksDB compile.
+
+A tag now builds `holos` and `holos-server` for five targets — Linux x86-64 and aarch64,
+macOS arm64 and x86-64, Windows x64 — checks that both binaries start before packaging
+them, and publishes a release with a `SHA256SUMS` file. The release notes are the changelog
+section for that version, so the two cannot drift.
+
+It is a separate workflow from the wheels on purpose: that one is gated on a PyPI trusted
+publisher, this one needs permission to write to the repository, and a single workflow
+holding both is a wider blast radius than either job needs.
+
+### Repository
+
+Consolidated to one branch. `feature/initial_release` held only four ceremonial merge
+commits and nothing unique; release tags keep those commits reachable.
+
+## 0.6.0 — 2026-09-09
+
+The release that stopped one query killing the server, and made a bulk load's
+dictionary as cheap to write as its indexes.
+
+Both came out of running HOLOS against real data rather than the synthetic set: a 32 GB
+Turtle file of generated people, and a 32 GB machine that a single `COUNT(DISTINCT *)`
+took down.
+
+### A query can no longer abort the process
+
+`SELECT (COUNT(DISTINCT *) AS ?n) WHERE { ?s ?p ?o }` reads like a counting query.
+`spareval` answers it by holding every distinct solution in a hash set, so on a large store
+it asks for tens of gigabytes, and the allocation that finally fails calls
+`handle_alloc_error` — which **aborts the process**, taking the listener, every other
+client's in-flight query and any write in progress with it. There is no catching it.
+
+The failing request was for 25 GiB, and the size named the structure to the byte: 2^30
+buckets of a 24-byte `InternalTuple` plus a control byte each. Only `DISTINCT` and
+`COUNT(DISTINCT *)` hold a set of those — plain `COUNT(*)` is a bare `u64` counter and
+would have streamed in constant memory.
+
+`holos-server` now installs a counting allocator, and the deadline watchdog samples it and
+cancels through the same token a timeout uses. **`--max-query-memory`, default 8 GiB.**
+Cancellation is checked once per quad, so a query filling a hash set is stopped between
+rows while the set is still small enough to free.
+
+Every library crate keeps `#![forbid(unsafe_code)]`; the twenty lines that need `unsafe`
+live in the binary.
+
+Two limits are documented rather than hidden. The counter is **process-wide**, so it cannot
+attribute a byte to a query — a breach must persist across three samples before it cancels,
+and the ceiling is a backstop against one runaway query rather than a per-query quota. And
+a cancelled aggregate does not yield one row: `spareval` forwards one error per remaining
+input row.
+
+### A bulk load's dictionary is ingested, not batched
+
+The nine index families have been handed to `IngestExternalFile` as sorted files since
+0.3.0. The two dictionary families never were, so every interned term paid for a memtable
+write, a flush, and the compactions that followed.
+
+On data with high term cardinality that is most of the load. The generated person dataset
+has **900,000 distinct terms per 3M triples**, against 200,000 per 753k in the synthetic
+benchmark, and the shares invert: dictionary 76%, parse 15%, index writes 9%. The
+dictionary tracks *distinct terms*, not triples — two files of equal size and quad count
+differing only in cardinality took 2.1 s and 12.2 s, a **6×** spread.
+
+`dictsort.rs` is `sort.rs` for variable-width rows: length-prefixed runs, a byte budget, a
+k-way merge, one SST per family. It **combines** rather than deduplicates, because past 512
+bytes a `str2id` key is a hash and two colliding terms share a row whose value is the list
+of both their ids. Dropping one would lose a term permanently. Merging by key also fixes a
+hazard the batch path had, where a candidate read could not see rows the same load had
+buffered.
+
+Measured on 3M quads with 900k distinct terms: **16.33 s to 12.37 s**. The ratio is inside
+this machine's noise floor and is not the evidence — the non-overlapping ranges are. Every
+run of the new build landed in 11.68–12.61 s, every run of the old in 12.62–16.33 s.
+
+### Four optimisations that were tried and measured as worthless
+
+Recorded in `loadprofile` because each looked obviously right beforehand: a bloom filter on
+`str2id` at high cardinality (**consistently slower** — a load *writes* that family, so
+filter blocks are rebuilt on every flush); deriving the `str2id` key only after the caches
+miss (0.99×); the flush in `end_bulk_load` (0.47 s, not the cost); and pausing dictionary
+auto-compaction during a load (1.09×, and it trades write amplification for read).
+
+`loadprofile` itself earned two fixes. It hardcoded N-Triples, so pointing it at a Turtle
+file measured a parse that produced nothing. And it timed `end_bulk_load` inside the
+interning phase — a conflation that sent an earlier round of optimisation after caches and
+allocations that were never the problem.
+
+## 0.5.0 — 2026-09-04
+
+The release that let two datasets in different coordinate reference systems be
+queried against each other.
+
+0.4.0 was about making a filter reach the index. This one is about geometry, and about a
+gap the specification leaves rather than one this project had: GeoSPARQL stores the
+reference system inside the literal and then provides no way to change it. Everything else
+here follows from closing that.
+
+### GeoSPARQL reads more than one coordinate reference system
+
+GeoSPARQL puts the reference system inside the literal and then defines no way to change it,
+on the assumption that a dataset is internally consistent — which stops being true the
+moment two are joined. `spargeo` refuses anything that is not CRS84, so until now so did
+this engine, and Ordnance Survey open data was not awkward to query but impossible.
+
+Four systems are now read — CRS84, EPSG:4326, EPSG:27700 and EPSG:3857 — and converted to
+CRS84 on the way in. That one decision is what makes a grid reference and a GPS fix
+comparable: two operands reach a function already in the same space, so
+`geof:distance(?grid, ?gps, uom:metre)` is an ordinary distance. The 43 functions borrowed
+from `spargeo` gain it through a wrapper on their arguments rather than 43 patches, and the
+spatial index gains it because it decodes literals through the same path a query does.
+
+Two functions are new: `holos:transform`, which converts an answer back out — in this
+project's namespace, because a transform function in `geof:` would claim an OGC sanction it
+does not have — and a replacement `geof:getSRID`, since `spargeo`'s reports CRS84
+unconditionally, which was true when CRS84 was all it could parse.
+
+**An unrecognised system is refused rather than assumed to be CRS84**, which is the whole
+safety argument. Falling back would read an easting of 318086 metres as 318086 degrees of
+longitude: no error, no empty result, just a geometry that joins in every comparison and
+appears in no answer it belongs in.
+
+**The accuracy is stated because it is not exact.** The British National Grid projection is
+the Ordnance Survey series and reproduces their worked example to a millimetre; the datum
+shift is their 7-parameter Helmert, which needs no data files and is **2.0 m mean, 5.8 m
+worst** against OSTN15 measured over 1330 points across Great Britain. Every forward
+transformation is checked against PROJ to a millimetre.
+
+`geof:distance`, `geof:buffer` and `geof:envelope` were already complete and already worked
+in metres; what was missing was the ability to point them at data that had not been
+published in degrees.
+
+## 0.4.0 — 2026-09-03
+
+The release that made a filter reach the index, and finished P1.
+
+0.3.0 made every write path atomic. This one is about reads: a `FILTER` that bounds a
+pattern's object now bounds that pattern's scan, which is the promise `DESIGN.md` §5 has
+carried since the first commit and had never kept. Along the way the load path stopped
+holding a whole load in memory, three queries the specifications call invalid stopped being
+answered, and the maintenance commands stopped being able to fill a disk.
+
+### Range filters reach the index
+
+`DESIGN.md` §5 has said since the beginning that order-preserving encodings exist so
+`FILTER(?d > "2020-01-01")` can bound an index scan rather than be tested against everything
+the scan returns. It does now. A filter that bounds a pattern's object bounds that pattern's
+scan, measured end to end against the same build with the pushdown disabled:
+
+| selectivity | off | on | speed-up |
+|---:|---:|---:|---:|
+| 1% | 397 ms | 5.7 ms | **69×** |
+| 10% | 410 ms | 61 ms | 6.7× |
+| 50% | 495 ms | 314 ms | 1.6× |
+| 90% | 627 ms | 540 ms | 1.2× |
+
+The whole feature turns on one asymmetry: **the span decides what is read, the filter still
+decides what matches**. A span may admit too much, which costs time; if it admits too little
+the row is never seen, and a row lost that way looks like data that was never stored.
+
+Which makes "what could satisfy this comparison" the only question, and §5's own table was
+wrong about the answer. It claimed `xsd:decimal` and `xsd:double` were inlined at tag `0x5`;
+the encoder takes `xsd:float` only, and only when its canonical form round-trips. Decimals,
+doubles, integers past 60 bits and awkwardly-spelled floats are all dictionary literals whose
+ids say nothing about their values — and all still numbers. So every span includes the whole
+dictionary region, and a numeric one includes the other numeric tag too. The table is
+corrected.
+
+Three things this needed, each with its own guarantee:
+
+- **A bounded scan in the store**, on both backends — RocksDB iterate bounds one component
+  past the prefix, `BTreeSet::range` in memory. Checked against scan-and-filter for every
+  span, graph shape and binding combination.
+- **A bounded path through the view**, which is `DESIGN.md` §14's chokepoint. A second way to
+  reach the index is a second chance to reach it without asking policy, so `decide` and
+  `denied_graph` are shared rather than reimplemented, and `range_policy.rs` asserts equality
+  of *visibility* — what is seen, and when a request is refused. That test found the suite
+  had no `Fail`-semantics policy, which is the only mode where the denied-graph short circuit
+  is observable at all.
+- **The pushdown itself**, in the bind join, verified against `spareval` the way the rest of
+  that operator is.
+
+### Queries the specifications call invalid are refused
+
+Three of them were being evaluated: a triple term as another triple term's subject, a literal
+as one, and `COUNT(COUNT(*))`. Inside `VALUES` the parser catches these; inside `BIND` it does
+not, because there the term becomes an ordinary function call whose arguments are
+unconstrained.
+
+`holos_engine::validate` refuses them after parsing — the same judgement `holos-shacl` makes
+when it declines a shapes graph it cannot check, and for the same reason: a query with no
+defined answer still produces something that looks like data. All three had been recorded as
+`upstream:` failures and were not. SPARQL 1.2 is **268/269**.
+
+### A bulk load's memory no longer grows with the load
+
+Sorted ingestion held everything in memory to sort it and, past a cap, fell back to writing
+keys one at a time. The cap is now a spill threshold: fill a buffer, sort it, write a run per
+index order, merge the runs at the end. Memory stays flat around half a gigabyte whatever is
+loaded, and spilling costs about **12%** at thirty runs — where exceeding the budget used to
+drop the load onto a path five times slower.
+
+`P1` is complete.
+
+### Maintenance commands refuse what will not fit
+
+The store grows and nothing shrinks it unasked. `holos compact` writes a second store beside
+the first and could discover at 90% that the disk was full; `holos backup` hard-links, so it
+fits immediately and then pins the files compaction can no longer reclaim.
+
+Both now check. `compact` refuses with both numbers and a `--force` for when the estimate is
+too conservative, `backup` warns because the same-filesystem case genuinely fits, `POST
+/backup` answers **507** so a scheduler can tell insufficient storage from a fault, and
+`holos stats` reports size, free space and whether a compaction would fit — so the question
+can be asked before a maintenance window rather than during one.
+
+### Every benchmark table re-measured
+
+The tables in `BENCHMARKS.md` predated both the bind join and sorted ingestion; the old query
+rows had a 3-way star at 385 ms where it is now 0.22 ms. All four are replaced from one run,
+and `DESIGN.md`'s scaling table is re-measured at both ends of a 14× span. Bytes-per-quad does
+not move across it — 34.8 at 753k quads, 35.2 at 10.5M — which is the figure that says nothing
+in the storage layer degrades super-linearly.
+
+## 0.3.0 — 2026-09-03
+
+The release that made every write path atomic, and finished SHACL 1.2 Core.
+
+A store that validates on commit is only worth having if a commit is a commit. Before this,
+an update or a holon tick was a *sequence* of individually-atomic quad writes, and a crash
+between two of them left half of one behind. Four separate places could leave a failed write
+partly applied, and one of them could destroy a graph it was asked to replace. That is the
+theme; the SHACL, entailment and join work below is the rest of it.
+
+### A commit is one batch
+
+`Storage::begin` / `commit` / `rollback` accumulate a whole update or tick into a single
+RocksDB `WriteBatch`, written once. A process that dies mid-commit now leaves the store as it
+was, rather than with the operations that happened to have been written already.
+
+Buffering is what makes it atomic and is also the hazard: a buffered write is invisible to a
+`get` and to an iterator, and SPARQL requires each update operation to see the effects of the
+ones before it. So the scope carries a read overlay for quads, named graphs and the
+dictionary — including the reverse id-to-term map, which the bulk path has no use for because
+a load does not read. `tests/commit_scope.rs` runs one script inside a scope and outside it
+and requires every read to agree at every step.
+
+It replaces two hand-rolled undo logs — `update.rs`'s `Journal` and the tick's compensating
+writes — which rolled back by writing the inverse of each change, so a rollback could itself
+fail and leave a state nobody could describe. Abandoning a batch that was never written
+cannot. Three bugs turned up under it, all of the shape "a write that did not go through the
+place that knows about buffering": `put` and `delete` wrote straight to the database, `lookup`
+resolved terms against it alone so `contains` could not see a quad the scope had just written,
+and the in-memory store created a quad's graph through the index directly so its journal never
+learned about it.
+
+A scope past a few hundred thousand quads is refused rather than silently split, because a
+split batch keeps the interface and drops the guarantee.
+
+### Four places a failed write left half of itself behind
+
+- **`PUT /gsp` could destroy the graph it was replacing.** A replace is clear-then-merge and
+  the body is not parsed until the merge, so a malformed body emptied the graph, failed, and
+  returned the client a 400 saying the request had not happened. A policy refusal partway
+  through did the same, later. The sequence lived as a comment in the HTTP handler, which is
+  why it was never tested; it is now `gsp::write`, where the atomicity belongs to the
+  operation and the failure can be tested.
+- **`branch` left half a branch.** The scene and boundary are copied without a policy check
+  and only then does `register` ask for `ADMIN`, so a principal who may write but may not
+  register got all the way through the copying before failing — leaving a scene under a name
+  nothing pointed at.
+- **`register` and `set_version`** could leave a holon definition missing its admission quad,
+  or a holon with no version at all between the remove and the insert.
+- **`POST` and `DELETE` on the Graph Store Protocol** wrote quad by quad, and `drop_graph`
+  could leave the existing-but-empty graph its own documentation exists to prevent.
+
+### Boundary rules stopped believing in refused commits
+
+`Rules` keeps its bridged copy of the scene current *by delta*, which is what makes firing
+rules per commit affordable. It was told about a tick's delta before anyone knew whether the
+delta would be kept, and nothing told it when the tick was refused. The bridge went on holding
+triples the scene had never accepted, and every later tick inferred from them — with the
+damage surfacing one commit later, on a different subject, as an inference with no visible
+cause.
+
+The fix belongs one level down, with the thing that owns the graph: `EngineRun::checkpoint`,
+then `accept` or `revert`. A caller that never checkpoints records nothing and pays nothing.
+
+Writing it exposed an older bug in `EngineRun::apply`. A delta is an ordered sequence; the
+graph underneath takes two unordered sets and removes everything in one before adding
+everything in the other. Partitioning a sequence into those sets loses the order, so a row
+both added *and* removed within one delta came out **present**, whichever way round the caller
+meant it. `apply` now reduces to a net effect per row, last change winning.
+
+### Bulk loads are ingested as sorted files
+
+`SstFileWriter` + `IngestExternalFile`, which `DESIGN.md` §6.1 has wanted since the start. A
+load holds the encoded quads, sorts them once per index order, writes one file per order and
+hands them to RocksDB, which can adopt a non-overlapping file at the bottom level instead of
+pushing every key through the memtable, the log, and then the levels again.
+
+**1.7× on a whole load** — 10.7 s to 6.4 s for 753k quads, interleaved, eight pairs. The
+`loadprofile` benchmark was written *first*, and it is why the number is 1.7× rather than the
+order of magnitude the roadmap implied: the index writes were 55% of a load and are now almost
+none, so what is left is parsing and the dictionary. It also settled a change made on a
+misreading — a bloom filter on `str2id` — which measured as worth nothing and was reverted
+rather than kept on the theory.
+
+Not the external merge sort: past `MAX_SST_QUADS` a load falls back to the buffered-batch
+path, so the win comes with a memory budget.
+
+### A guide to holon models
+
+[HOLONS.md](HOLONS.md) and `examples/holon/`, driven by `cargo run -p holos-holon --example
+tour` — a maintenance work-order model with four commits chosen so each shows a different
+answer a boundary can give: one accepted, one refused, one where a rule fires, and one where
+the rule is what causes the refusal. The tour is a program rather than a transcript because a
+transcript goes stale in silence and a program that stops compiling fails the build.
+
+### Removed
+
+- **`holos-tabular`.** The TARQL-style CSV → RDF loader was never wired into the CLI, the
+  server or the Python binding, and shipping a crate nothing consumes is worse than not
+  shipping it. Its route is gone from `MINTING-TRIPLES.md`. The code is in the history if it
+  is wanted back, and the licence reasoning that produced it is still in `THIRD-PARTY.md`
+  because the constraint has not changed.
+
+### SHACL 1.2 Core is complete
+
+138/138, from the 103/138 that shipped in 0.2.0. The remaining thirty-five were mostly not
+new constraints but constraints whose *parameter* SHACL 1.2 widened without changing the
+syntax — `sh:class` and `sh:datatype` take lists, `sh:equals`, `sh:disjoint`, `sh:lessThan`
+and `sh:lessThanOrEquals` take paths — each failing silently in whichever direction hurt that
+constraint most.
+
+The last two are report-level rather than constraint-level:
+
+- `sh:nodeByExpression` names a shape through a node expression. Core defines no node
+  expression more interesting than a constant IRI, so what it adds over `sh:node` is the
+  report: the expression is recorded as `sh:sourceConstraint`. A non-constant expression is
+  left uncompiled rather than approximated.
+- `sh:conformanceDisallows` says which severities disqualify. It is a property of the report,
+  not of the shapes — it is the rule the data was judged by, which is the difference between
+  "this is fine" and "this is fine *by these lights*". `Report::with_conformance_disallows`
+  recomputes conformance against an explicit set and records it.
+
+### Boundary rules fire in a tick
+
+Step 2 of the holon tick was switched off, and the code said why: SHACL-AF fixpoint evaluation
+exists in the adapted engine but needed a fresh bridge per commit. That was the gap §8 named,
+and closing §8 is what removed it — so this is the payoff from that work rather than a new
+capability bolted on.
+
+`holos_holon::Rules` holds one bridged graph across ticks and keeps it current by delta;
+`EngineRun::infer` runs the rules to a fixpoint and returns *what they added*, leaving where
+those triples belong to the caller. `tick_with_rules` puts them in the scene.
+
+The order is the point. Rules run **before** validation, so what they infer is judged by the
+boundary: a rule writing something the shapes forbid **rejects the commit** rather than
+persisting quietly. The inferences are ordinary additions in the event, and a refused tick
+takes them out with everything else — a reader asking what changed should not have to know
+which triples a rule wrote. And a rule is not a way around §14: it runs inside the session, so
+what it writes meets the same policy as what the caller writes.
+
+### A refusal that was too wide
+
+Wiring this up ran straight into the fail-closed check added earlier, which refused any shapes
+graph containing `sh:rule` — making rules and the incremental write path mutually exclusive.
+
+The refusal was wrong. SHACL-AF states that executing rules is a *separate operation* from
+validation, so a validator ignoring `sh:rule` is doing what the specification says validation
+does, not silently dropping a check. The reasoning behind the original refusal — that a rule
+changes what the data is, so ignoring it validates a graph nobody has yet — is about a
+pipeline, not about validation. What belongs on that list is what would change an *answer*: a
+constraint that would be dropped, or a target that would select different focus nodes.
+
+Corrected, and the test that asserted the old behaviour now records why it was wrong.
+
+### `MINUS`, blank nodes and property paths — and two constructs that stay out
+
+`MINUS` shares a structure with `OPTIONAL`, because they ask the same question — did the right
+side match this left row — and differ only in what they do with the answer. It removes a
+solution when a compatible one exists on the right *and the two share a variable*; with
+disjoint domains it removes nothing, which is the rule people are surprised by. A right side
+sharing nothing certainly bound on the left is refused rather than reasoned about: the shared
+variable might be one an `OPTIONAL` left unbound, and then whether the row goes depends on the
+data.
+
+**Blank nodes now bind like the variables they are**, which turned out to be the larger half
+of "property paths". The parser desugars `?s :p/:q ?o` into a BGP joined on an anonymous blank
+node, so sequence paths were being refused for containing a blank node rather than for being
+paths — and `^:p` was already a swapped pattern. Renaming brings both in, along with the
+`[ ]` syntax. The name the rename produces is deliberately not valid SPARQL, because `_:x` and
+`?x` are different things and a rename that mapped them together would join them.
+
+Alternative paths (`:p|:q`) become union branches. The closure paths — `*`, `+`, `?` — and
+negated sets are refused: they need a fixpoint traversal this operator does not have.
+
+**`ORDER BY` and aggregation stay out, and the reason is worth stating.** Both are
+implementable; neither is implementable *safely*. SPARQL leaves the relative order of
+incomparable terms to the implementation, so matching the evaluator's sequence means matching
+its tie-breaking — duplicating code rather than reusing it, and creating two implementations
+that must agree exactly. Aggregation is the same argument over a larger surface: `COUNT
+DISTINCT`, `AVG` over mixed numerics, `GROUP_CONCAT` separators, and SPARQL's error semantics
+throughout. The fallback costs time; a second implementation that drifts costs answers.
+
+The fragment is now `SELECT` over BGP, `JOIN`, `UNION`, `VALUES`, `FILTER`, `OPTIONAL`,
+`GRAPH`, `MINUS`, hiding-nothing subqueries, blank nodes, and sequence, inverse and
+alternative paths — with `DISTINCT`, `LIMIT`, `OFFSET` and projection.
+
+### `GRAPH` and subqueries join it too
+
+Scanning was hard-wired to the default graph, so every `GRAPH` query fell back. The scope is
+now carried **per pattern** rather than per plan, which is what lets a selective pattern in
+the default graph drive a scan of a named one — and lets `GRAPH ?g { ?s :p ?o . ?s :q ?r }`
+scan one graph for the second pattern instead of all of them, once the first has bound `?g`.
+
+Getting this wrong is the worst failure available to a store: answering against the wrong
+graph looks exactly like answering, and under §14 a named graph is a unit of access policy, so
+a misdirected scan would be a disclosure rather than a mistake. Eight differential tests, and
+four of five mutations caught by a named test — the fifth narrows a scan that the binding
+check would reject anyway, so it costs time rather than correctness, and the comment says so.
+
+Subqueries are spliced in when their projection **hides nothing**. A variable a subquery binds
+and does not project is invisible outside it, and flattening would expose it to join against
+an outer variable that happens to share the name:
+
+```sparql
+SELECT ?s ?o WHERE { { SELECT ?s WHERE { ?s ex:p ?o } } ?s ex:q ?o }
+```
+
+Flattened, the two `?o`s become one and the query demands a subject's `ex:p` and `ex:q` values
+coincide — so it answers nothing where the right answer has rows. That query is refused, and
+the refusal is pinned by a test that checks the *answer*, not just the refusal. A subquery
+carrying its own `LIMIT`, `DISTINCT` or `ORDER BY` arrives wrapped in a `Slice` and is refused
+too: those change how many solutions there are, which no join does.
+
+Widening the subquery case means renaming hidden variables before splicing, at which point a
+collision cannot arise. That is a real fix rather than a wider guess, and it is not done here.
+
+### `OPTIONAL` joins the bind join's fragment
+
+The fragment was `SELECT` over BGP, `JOIN`, `UNION`, `VALUES` and `FILTER`. `OPTIONAL` is the
+commonest construct outside it, so real queries fell back to the evaluator and paid the
+measured 3× that bad join ordering costs.
+
+| quads | evaluator | bind join |
+|---:|---:|---:|
+| 41,000 | 0.411 ms | **0.058 ms** |
+| 410,000 | 2.698 ms | **0.071 ms** |
+
+`OPTIONAL` is the construct that does not compose, so most of the work is in what the operator
+*refuses*. A left join neither commutes nor associates with a join: hoisting one past a
+required pattern turns `(A ⟕ B) ⋈ C` into `(A ⋈ C) ⟕ B`, and those agree only when nothing
+outside the optional reads a variable only it binds. That is the well-designedness condition,
+and a query failing it is declined rather than answered differently.
+
+The refusal is deliberately wider than that condition. Flattening loses the difference between
+`A OPTIONAL{B} OPTIONAL{C}`, where `C` really does see what `B` bound, and
+`{A OPTIONAL{B}} . {C OPTIONAL{D}}`, where `D` does not — both arrive as one list of items.
+Rather than reconstruct the nesting, any optional whose fresh variables something else reads
+goes to the evaluator.
+
+Twelve differential tests, each comparing the operator against the evaluator over the same
+store, because a wrong left join returns rows — just not the right ones. Five of six mutations
+are caught by a named test; the sixth is prevented twice over, by the ordering guard and by the
+cost estimate, and the comments say so rather than implying either is load-bearing alone.
+
+One bug the tests found: `evaluate` seeded its pending-filter set with *every* filter, so an
+optional's own condition was applied at the outer level. `OPTIONAL { ?s :city ?c FILTER(?age <
+35) }` then dropped the row for a person over 35 instead of leaving them with no city.
+
+### The last two mislabelled results
+
+`service5` was the only test in any suite the differential rig blamed on HOLOS rather than
+upstream. It is `SERVICE ?service` — a variable endpoint — and both HOLOS and the reference
+evaluator raise the same error on it: *"the variable encoding the service name is unbound"*.
+The rig collected one side, propagated its error, and reported a divergence between two runs
+that had done the identical thing.
+
+Failing the same way is the most important form of agreement a differential rig can observe,
+and it was the one case it could not see. Both sides are collected before either is
+inspected now, and identical errors count as agreement. **SPARQL 1.1 reaches 512/512** with
+no failures, and the shared limitation is filed where it belongs.
+
+Forty-seven protocol tests were skipped as *"not implemented yet"*. They are implemented, and
+passing: the SPARQL Protocol suite is 34/34 and Graph Store Protocol 13/13, and the counts
+match the skips exactly, because `manifest-all.ttl` includes the sub-manifests those suites
+run directly. The skip now says where they ran rather than claiming they did not. Only
+`ServiceDescriptionTest` and `CSVResultFormatTest` — three each — are genuinely unimplemented.
+
+With that, every remaining line in every suite is accounted for and says something true:
+44 RDF/XML parser failures and 33 evaluator differences upstream in `oxrdf` and `spargebra`,
+five parser bugs likewise, 34 OWL and RIF entailment tests out of scope, two `rdf:XMLLiteral`
+canonicalisations declined by name, and six protocol features not built.
+
+### `rdf:JSON` canonicalisation
+
+RDF 1.2 gives `rdf:JSON` a value space of JSON *values* rather than of the text spelling them,
+so `{ "a":0, "b":1 }` and `{ "b":1, "a":0 }` are one literal and `[ -0, 0 ]` and `[ 0, -0 ]`
+are two. `holos_conformance::json` parses and re-emits in a form where equal values are equal
+strings, and the seven `rdf:JSON` tests move from skipped to passing.
+
+Hand-rolled rather than a dependency, for one reason that outweighs the hundred lines: the
+number rule is not the usual one. JSON numbers denote IEEE 754 doubles, and this has to keep
+`-0` apart from `0` while making `1E400` and `1E401` identical — both are `+Infinity` — and
+`9007199254740992.5` identical to `9007199254740991.5`, which round to one double. A
+serialiser that prints numbers back as decimal gets all four wrong. Keying on the *bits* gets
+all four right, and it is the same trick already used for `xsd:double`.
+
+**RDF 1.2 reaches 1382/1405.** The single remaining skip in each RDF suite is
+`rdf:XMLLiteral`, whose canonical form is XML C14N — a much larger job than this one, and
+declined by name rather than approximated.
+
+### The SPARQL suites' `upstream:` labels, audited
+
+Forty-five skips read *"HOLOS agrees with the reference dataset, so the evaluator differs"*.
+Three groups of them were the harness's own gaps, and one of those hid a real defect.
+
+**`mf:resultCardinality mf:LaxCardinality`** was read zero times. `REDUCED` may return any
+cardinality between one per distinct solution and the whole multiset; a fixture can only show
+one permitted answer, and comparing multiplicities against it failed a conformant engine. Two
+tests, and the manifest said so in as many words.
+
+**`FROM` and `FROM NAMED` were never loaded.** In the dataset suite the action carries a
+query and nothing else — the clauses name files beside it. Without loading them the query ran
+against an empty dataset, and the differential rig then filed the result as upstream because
+the reference evaluator, given the same nothing, agreed. The engine's own `FROM` handling
+turned out to be correct in all four cases once it had data.
+
+**Update results were compared by blank-node label**, which the skip text admitted rather than
+fixed. `compare_datasets` already does isomorphism; the update path now uses it.
+
+| | Before | After |
+|---|---:|---:|
+| SPARQL 1.0 | 262/263, 20 skipped | **275/276**, 7 skipped |
+| SPARQL 1.2 | 262/266, 3 skipped | **265/269**, 0 skipped |
+
+What the audit did *not* find: the remaining sparql11 group is upstream. Almost all
+of it is numeric lexical form — `"1.0"^^xsd:decimal` against `"1"^^xsd:decimal`, `"3.0E4"`
+against `"30000"` — and the suite compares RDF terms, so those really are evaluator
+differences rather than comparison bugs.
+
+### Blank nodes were shared between documents
+
+Loading the dataset suite's files exposed this. `bulk_load` kept the blank node labels the
+parser produced, so `_:a` in two documents became **one** node:
+
+```
+distinct subjects across the two documents: 1
+```
+
+RDF scopes a blank node label to the file it is written in. Merging them asserts an identity
+neither document stated, out of nothing but a coincidence of spelling — and `_:a`, `_:b0` and
+`_:genid1` are what every serialiser reaches for first, so the coincidence is the common case.
+`holos load a.ttl && holos load b.ttl` was enough to hit it.
+
+Renamed on the way in now, for both loaders. The W3C suite tests it directly: `dataset-09b`
+joins a default graph against a named one over two files of blank-node subjects, and the
+answer is no rows *because* those subjects are different nodes. It had been passing
+vacuously, against data the harness never loaded.
+
+### Datatype entailment, and a reasoner bug it exposed
+
+The RDF suites' remaining skips were all datatype entailment. Two halves, both now decided:
+
+- **Value spaces.** For a datatype the test says the recogniser knows, two literals denoting
+  one value are interchangeable. Both graphs are canonicalised before the instance check, so
+  the search stays a comparison of terms. The integer family and `xsd:decimal` share a value
+  space and canonicalise into it together; `xsd:float` and `xsd:double` are keyed by their
+  IEEE *bits*, which gets three things right that `==` gets wrong — `+0` and `-0` stay
+  distinct, two lexical forms that round to one binary value become identical, and `NaN` is
+  identical to itself.
+- **Consistency**, which is what `mf:result false` asserts. An ill-formed literal of a
+  recognised datatype makes a graph unsatisfiable, and so does a range clash between two
+  disjoint value spaces. Both need the datatype to be *recognised* — that is the only
+  difference between `datatypes-non-well-formed-literal-1` and `-2`, which share a premise
+  and disagree.
+
+| | Before | After |
+|---|---:|---:|
+| RDF 1.1 | 995/1016, 25 skipped | **1019/1040**, 1 skipped |
+| RDF 1.2 | 1349/1372, 34 skipped | **1375/1398**, 8 skipped |
+
+Every failure in both suites is still an RDF/XML parser test. The nine remaining skips are
+`rdf:JSON` and `rdf:XMLLiteral`, whose canonical forms need parsers this does not have —
+declined by name, because leaving them lexical would answer the negative tests right by
+accident and the positive ones wrong.
+
+Two things had to be *stopped* rather than added. `" 3 "^^xsd:int` is ill-formed, not a
+spelling of 3, and trimming it made a well-formed literal equal to a malformed one. And the
+canonicaliser has to reach inside triple terms, because `opaque-literal` and
+`malformed-literal` both state their whole claim in one.
+
+### `holos entail` could make a store unreadable
+
+Running the range clash through the reasoner turned up a shipped bug. rdfs3 says
+`ex:age rdfs:range xsd:integer` with `ex:alice ex:age 30` entails that 30 is an integer —
+and RDF cannot write that down, because a subject is an IRI or a blank node. The reasoner
+wrote it anyway; `insert_encoded` does not validate, so the quad went in and came back out as
+a decode error. The most ordinary schema statement there is made a store unreadable.
+
+The guard is `TermId::can_be_subject`, which is a named predicate for a reason: *"is it a
+literal"* is the wrong question and gets the wrong answer. Five tags carry literals —
+`Literal` for the dictionary-backed ones and `Integer`, `Float`, `DateTime` and `Small` for
+the inline codecs — so the obvious check against `Tag::Literal` passes every inline literal
+straight through, which is exactly what the first version of this fix did.
+
+### The adapted engine's graph takes a delta
+
+`DESIGN.md` §8 said closing this was bounded work, and the measurement said it was worth
+doing: re-bridging the store cost **149 ms at 250,000 quads**, on every commit, growing with
+the store rather than with the change.
+
+`Graph::apply` merges into the three sorted permutations in place — a binary search and a
+memmove per row per index, or a rebuild past a threshold, because a two-triple tick and a
+bulk load do not want the same strategy. `EngineRun::apply` translates a store delta into it,
+interning terms the bridge has not seen.
+
+| quads | prepare (re-bridge) | `apply` (delta) |
+|---:|---:|---:|
+| 5,018 | 2.44 ms | **0.0007 ms** |
+| 50,018 | 30.9 ms | **0.0009 ms** |
+| 250,018 | 149.3 ms | **0.0009 ms** |
+
+The constant is the result, not the ratio: `apply` does not move between 5,000 quads and
+250,000.
+
+Correctness is checked by equality with the thing it replaces — after any delta the updated
+run must report exactly what a freshly bridged one reports, up to blank-node isomorphism,
+including across a run of twenty-five interleaved additions and removals. A validator that is
+fast and slightly stale is worse than a slow one, because its answer is trusted.
+
+A change that alters a *shape definition* is refused rather than absorbed, since shapes are
+compiled once at `prepare`. The test for that is narrower than "did the shapes graph change",
+which is useless when shapes and data share a graph and every data write is therefore a write
+to the shapes graph: a triple whose predicate is not SHACL vocabulary, not `rdf:first`,
+`rdf:rest`, and not an `rdf:type` naming a SHACL class or `rdfs:Class`, cannot have defined a
+shape.
+
+### …and knows what a delta made stale
+
+The other half. `Shapes` in the engine now carries a dependency index — which shapes read
+which predicate, which target which class, which contain which — and `EngineRun::revalidate`
+plans from it. The algorithm is the native evaluator's, mirrored rather than reinvented,
+because a planner that misses a dependency admits a violation.
+
+| quads | prepare + full validate | engine revalidate | native revalidate |
+|---:|---:|---:|---:|
+| 5,018 | 3.55 ms | **0.0072 ms** | 0.0072 ms |
+| 50,018 | 27.0 ms | **0.0210 ms** | 0.0522 ms |
+| 250,018 | 150 ms | **0.0845 ms** | 1.01 ms |
+
+A `sh:sparql` constraint's dependencies live inside query text, so `sparql::predicates` walks
+the parsed algebra for them — the parse already happened at compile time. A query that uses a
+variable as a predicate genuinely reads everything, and such a shape is recorded as
+unconditional and forces a full run rather than being guessed at.
+
+The engine's revalidation is now faster than the native evaluator's at scale, which reverses
+what the two were built for: the engine computes focus nodes from three flat sorted arrays
+where the native one scans the store. The write path no longer trades coverage for speed.
+
+### A soundness gap in the *shipped* incremental validator
+
+Writing the engine's version surfaced a bug in the native evaluator that has been there all
+along. A compound path faults the node whose path runs *through* the change:
+
+```
+sh:path ( ex:knows ex:name )     # ex:alice knows ex:bob
+ex:bob ex:name 7 .               # writes to Bob, faults Alice
+```
+
+`ex:alice` appears in no changed quad. Both planners attributed a change to the endpoints of
+the changed quad and widened a shape to all its focus nodes only when *nothing* survived that
+filter — and here something did, the violation at Bob's own name, so the widening never fired
+and the violation at Alice was never looked for. A full validation reported two violations;
+revalidating the same change reported one. The Boundary would have admitted it.
+
+Fixed in both: a shape whose path is anything other than a single predicate is widened
+whenever it is implicated, not only when it is left with nothing to do.
+
+The existing safety test could not have caught this. It requires every violation a full run
+finds *at a focus node the change touched* to be found incrementally — and the whole point of
+this case is a focus node the change does not touch. Both validators now have a test with no
+touched-node filter to hide behind, and both fail without the fix.
+
+### Coverage gaps a mutation audit found
+
+Passing tests are not evidence that a rule is checked. Breaking each rule deliberately and
+seeing whether anything notices is, and it found three rules with no witness at all —
+`close_transitively` on the class hierarchy could be **deleted outright** and all 587 tests
+still passed, because the rules that consume the closed hierarchy reach the same conclusions
+through the fixpoint. What silently disappeared was `A rdfs:subClassOf C`, which only a query
+about the schema would miss.
+
+Every RDFS rule now has a test that fails when that rule is removed: rdfs2, 3, 5, 6, 7, 9,
+10, 11, 12 and the `rdf:reifies` range axiom, ten mutations, ten named tests. A comment on
+the rdfs9 test claiming it exercised rdfs11 is corrected — it does not, and the audit is how
+that was established.
+
+The entailment checker decides ninety-odd conformance tests and had none of its own; removing
+its binding-consistency check cost only four of them. It has twelve now, covering
+generalisation, one blank node not denoting two things, distinct blank nodes being allowed to
+denote one, backtracking, blank nodes nested in triple terms, and the boundary between the
+regimes. Its fact iteration is sorted, so the search visits candidates in the same order every
+run — the answer never depended on that, but a test for backtracking does, and the first
+version of that test passed on a hash seed rather than on the property.
+
+The deterministic-diagnostics fix had been verified by hand and by nothing else. Three tests
+pin it, one per comparison. The third turned out never to have been broken — it dumps into a
+`BTreeSet`, which is ordered — so its comment claiming the sort provided the determinism is
+corrected, and its test pins the observable property instead: it fails if the container is
+ever swapped for an unordered one, which is how it would really break.
+
+### The RDF entailment suites are run as entailment
+
+All 134 failures in the RDF 1.1 and 1.2 suites were labelled `upstream:`. 92 of them were
+not: the `rdf-mt` and `rdf-semantics` directories are `mf:PositiveEntailmentTest` and
+`mf:NegativeEntailmentTest`, where `mf:action` is a *premise* and `mf:result` is a
+*conclusion*. The generic runner parsed the premise, round-tripped it through the store, and
+compared it against the conclusion as though that were the expected parse — a comparison
+that was never going to hold, whose failure was then attributed to a parser for answering a
+question nobody asked it.
+
+`holos_conformance::entailment` decides them properly. `G ⊨ E` holds when some instance of
+`E` is a subgraph of the closure of `G`, so the check is a subgraph homomorphism with blank
+nodes as the variables, run over the closure. Generalisation falls out of the same search:
+`ex:a ex:b "10"` entails `ex:a ex:b _:x` because a blank node in the conclusion is already
+free to match any term. The RDFS closure is computed by `holos_engine::entailment` rather
+than by a second reasoner written to pass the suite.
+
+| | Before | After |
+|---|---:|---:|
+| RDF 1.1 | 987/1041, 54 failed | **995/1016**, 21 failed |
+| RDF 1.2 | 1326/1406, 80 failed | **1349/1372**, 23 failed |
+
+**Every remaining failure in both suites is an RDF/XML parser test** — genuinely upstream,
+and now the only thing wearing that label. What is skipped is named: datatype entailment,
+which decides both `"010"^^xsd:integer` = `"10"^^xsd:integer` and whether an ill-formed
+literal makes a graph inconsistent, is not implemented and is not half-implemented.
+
+Four gaps surfaced along the way:
+
+- The instance check compared triple terms whole, so `<<( :a :b :c )>>` did not match
+  `<<( _:x :b :c )>>`. RDF 1.2 lets a blank node stand for a term *inside* a triple term, so
+  the match has to recurse — which also keeps one blank node consistent across the two
+  places it can appear. Eight tests.
+- **rdfs12** was missing: every `rdf:_n` is a sub-property of `rdfs:member`, which is how
+  `<a> rdf:_1 <b>` comes to entail `<a> rdfs:member <b>`. RDFS states this as one axiom per
+  `n`, infinitely many; only those for an `rdf:_n` the graph mentions are produced, since the
+  rest entail nothing about anything in it.
+- `rdf:reifies` has range `rdfs:Proposition`, an RDF 1.2 axiom rdfs3 then acts on.
+- A triple term denotes a proposition — but that cannot be *written*, because RDF admits a
+  triple term only in object position and the triple saying it has one as its subject. The
+  entailment is `s p _:b . _:b rdf:type rdfs:Proposition`, so it is a construction on the
+  graph under test rather than a rule in the reasoner: materialising it would put blank nodes
+  nobody asserted into a store.
+
+### The write path fails closed
+
+`DESIGN.md` §9 makes the native evaluator the validator that gates a commit, and §8 records
+that it covers SHACL Core while the adapted engine covers more. The dangerous reading of that
+was "it checks less". The true one was "it checks less and says nothing":
+
+```
+NATIVE  conforms=true   results=0      # the validator that gates a commit
+ENGINE  conforms=false  results=1      # a full run, same store, same shapes
+```
+
+A shapes graph carrying `sh:sparql` compiled without complaint, the constraint was dropped,
+and the Boundary would have admitted data a full validation rejects. A gate that fails open
+is worse than no gate, because it is trusted.
+
+The compiler now refuses a shape carrying a SHACL construct it cannot evaluate, naming the
+construct and pointing at `engine::EngineRun`, which implements it. The check is an
+**allowlist** of the properties this evaluator understands, not a blocklist of ones to
+reject — a blocklist goes stale the moment SHACL grows a construct, and the failure of a
+stale blocklist is exactly the silence this fixes. Presentation properties (`sh:name`,
+`sh:description`, `sh:order`, `sh:group`, `sh:defaultValue`) are on the list because ignoring
+them ignores nothing.
+
+The trade this leaves — `EngineRun` for coverage, the native evaluator for incremental
+revalidation — is unchanged, but it is now visible rather than silent. Closing it properly
+means giving the engine's graph a merge-in-place, which §8 already describes.
+
+### RDFS entailment runs against the W3C suite, and it found two missing rules
+
+`SPARQL 1.1: 476/477` was resting on **148 skipped tests**, 70 of them skipped as "needs an
+entailment regime: L4 is not built" — written before `holos_engine::entailment` existed. Of
+those 70, 36 name RDFS among their regimes; the rest need OWL or RIF.
+
+The harness now materialises the RDFS closure for a test that asks for one, into the
+*default* graph rather than beside it: under an entailment regime a basic graph pattern is
+matched against the entailed graph, so the closure has to be the graph the query reads. A
+test naming only OWL or RIF is still skipped, but now says which regime it wanted.
+
+**SPARQL 1.1 goes 476/477 to 512/513** — 36 tests that had never been run, none of which
+regressed anything.
+
+Five of the 36 failed at first, and all five were the same gap: `rdfs6` and `rdfs10`, the
+reflexivity of `rdfs:subPropertyOf` and `rdfs:subClassOf`. The module had left them out
+alongside `rdfs4` on the grounds that they "entail `x rdf:type rdfs:Resource` for every term
+in the graph". That is true of rdfs4 and false of the other two: those are bounded by the
+number of properties and classes, which is the size of the *schema*. Both are implemented
+now, and the note says what each rule actually costs rather than covering three with one
+sentence. The reflexive statements are emitted as facts and kept out of the inference maps,
+because a self-loop in the hierarchy makes rdfs7 and rdfs9 rewrite every triple to itself.
+
+The differential rig also had to be told to stand down. It attributes a failure to upstream
+when HOLOS and a reference evaluator agree over the same data — but under an entailment
+regime they do *not* see the same data, so they agree exactly when the closure added nothing.
+All five of these gaps were being filed under someone else's name.
+
+### All four SHACL suites are complete
+
+| Suite | Was | Now |
+|---|---:|---:|
+| SHACL 1.2 Core, native | 103/138 | **138/138** |
+| SHACL 1.2 Core, adapted engine | 127/138 | **138/138** |
+| SHACL 1.0 Core, native | 92/97 (+1 skipped) | **98/98** |
+| SHACL 1.0 Core, adapted engine | 90/98 | **98/98** |
+
+### `sh:resultPath` describes the path that was walked
+
+The last two failures were the `path-strange` pair, where one node is both an `rdf:first` /
+`rdf:rest` sequence and an `sh:inversePath`. SHACL's grammar admits one reading per node, so
+such a shapes graph is ill-formed and a processor has to choose — and then say which it
+chose. Two changes:
+
+- A blank node bearing `rdf:first` is read as a sequence, checked before the keyed forms.
+  Being a list is a property of the node's *structure* rather than a keyword written on it,
+  so it is the stronger signal, and it is the reading the suite settled on.
+- `sh:resultPath` is now **rendered from the compiled path** rather than copied out of the
+  shapes graph. Copying carries whatever else the node happened to say, so a report could
+  describe a path that was never walked. For every well-formed path the two are identical —
+  which is why no other path test moved.
+
+### The adapted engine reaches 138/138 too
+
+HOLOS runs two validators — the native evaluator on the write path, because it revalidates
+incrementally, and the adapted SHACL_Engine for constraint coverage — and the suite is run
+against both. The adapted engine went 127/138 and 90/98 to **138/138 and 96/98**:
+
+- `sh:pattern` reported the pattern string as `sh:sourceConstraint`. That property names the
+  node which *stated* a constraint, and a Core constraint is stated by its shape, which
+  `sh:sourceShape` already names. Five tests, one cause.
+- Compound paths were copied into reports node-by-node rather than occurrence-by-occurrence,
+  so `sh:path ( _:pinv _:pinv )` — legal, and meaning "inverse p, then inverse p" — arrived
+  as one node where the expression has two. The same defect as the native one below, found
+  independently in the other validator.
+- `{| ... |}` annotations on a constraint were not read at all, so `sh:message` and
+  `sh:severity` written that way were ignored.
+- `sh:reificationRequired` was unimplemented, leaving a statement with no reifier vacuously
+  conforming.
+- `sh:nodeByExpression` did not report the expression it evaluated.
+
+### Four SHACL 1.0 defects the 1.2 suite exposed
+
+These had been passing the project's own ratchet. A stricter suite over the same code found
+them:
+
+- dates were compared as strings, so `"…T12:00:00-05:00"` and `"…T12:00:00"` were ordered when
+  XSD says an untimezoned value is *indeterminate* against a timezoned one;
+- `sh:lessThan` counted per value rather than per pair;
+- every bounded integer type — `xsd:byte`, `xsd:short`, `xsd:unsignedInt` and six others —
+  validated as unbounded, so `sh:datatype xsd:byte` accepted any integer;
+- compound paths were copied into reports as graphs rather than trees, so a report described
+  a different path than the one that failed.
+
+### `sh:targetWhere` reaches the revalidation frontier
+
+`sh:targetWhere` selects focus nodes by evaluating a shape, so a write can pull a node into a
+shape's scope without touching anything that shape's own constraints read. The dependency
+walk covered constraints only, so the outer shape was never revalidated. Incremental
+revalidation is what lets the Boundary gate a commit (`DESIGN.md` §8), and a gap in it is a
+violation admitted, not merely a violation reported late.
+
+### Conformance diagnostics are deterministic
+
+The recorded `.failures` baselines quote a sample of the differing quads, chosen and ordered
+by hash iteration. Every re-baseline churned, so the ratchet's diff was noise and hid real
+movement. Sorted before sampling: two consecutive re-baselines are now byte-identical.
+
+## 0.2.0
+
+The release that made the query engine fast on the shapes it was slowest at, and made the
+spatial index worth having.
+
+### An index nested-loop join
+
+`spareval` joins by building a hash table from the left input and scanning the right in full,
+so knowing `?s` is bound to two hundred values does not help it. `holos_engine::bindjoin` is
+an operator that can use a binding.
+
+| | Before | After |
+|---|---:|---:|
+| Three-pattern star, 20 rows from 753,199 quads | 43.9 ms | **0.535 ms** |
+| The same with a selective `FILTER` | 20.7 ms | **0.286 ms** |
+| GeoSPARQL window over 50,000 geometries | 381 ms | **158 µs** |
+
+The fragment is deliberately small — `SELECT` in the default graph over basic graph patterns,
+`JOIN`, `UNION`, `VALUES` and `FILTER`, with `DISTINCT`, `LIMIT`, `OFFSET` and a projection.
+Anything else is refused and falls back to the evaluator.
+
+Filters are evaluated by `spareval`'s own expression evaluator through this engine's function
+registry, not by a second implementation, so `FILTER` semantics are the evaluator's.
+
+### The spatial index actually pays
+
+The R-tree added in 0.1 narrowed fifty thousand geometries to four and changed nothing,
+because the join scanned all fifty thousand regardless. With an operator able to use the
+narrowing, the same benchmark shows **2,408×** at fifty thousand geometries.
+
+It is also now maintained rather than rebuilt. A write used to cost a full rebuild — 178–271
+ms at 200,000 geometries. It now costs **0.1–0.3 ms, independent of store size**, because the
+index catches up by reading the term dictionary from a watermark rather than scanning the
+store.
+
+### Fixes
+
+- **`geof:distance` only worked between two points.** Every Polygon and LineString returned
+  an *unbound* variable rather than a distance — five of the ten geometries in the OGC
+  GeoSPARQL example. Replaced with a shortest-distance implementation for any two geometries.
+  Point-to-point results are unchanged to the last digit.
+- **The spatial index was not built at start-up** unless `--reorder` was given, which is not
+  the default. A normally-started server had no index until its first write, and every
+  GeoSPARQL query until then did a full scan.
+- **`FROM` and `FROM NAMED` were ignored** by the query fast path, which answered over the
+  store's default graph instead. Found by adding the SPARQL 1.0 test suite, whose `dataset`
+  directory was the only coverage `FROM` had.
+- **`QueryOptions::substitutions` was dropped** by the fast path, so a parameter-bound query
+  was answered as though nothing had been bound.
+- **A cross product could exhaust memory.** `SELECT * WHERE { ?a ?b ?c . ?d ?e ?f }` over
+  20,000 triples materialised 13.7 GB with its own timeout unfired. Evaluation now runs under
+  a row budget and the deadline's token.
+
+### Maintenance
+
+- **`holos compact --store <DIR> --to <DIR>`** rewrites a store, reclaiming dictionary entries
+  left behind by deleted quads. The dictionary is append-only, so nothing else reclaims them —
+  including a backup restore, which is a checkpoint and preserves them exactly.
+- **`POST /maintenance/purge`** reclaims spatial index entries for geometries no longer
+  referenced, guarded by `--purge-role`. No timer: schedule it as you already schedule
+  backups.
+
+### RDFS entailment
+
+`holos_engine::entailment` materialises the RDFS closure into a graph of its own, so the
+entailed triples are real ones every reader sees — the query path, the topology rewrite,
+SHACL, the statistics — without any of them knowing about entailment. Six rules (rdfs2, 3, 5,
+7, 9, 11); the axiomatic and reflexive ones are left out because they entail
+`x rdf:type rdfs:Resource` for every term and no query is improved by it.
+
+This is what makes the OGC GeoSPARQL example work at the feature level. It attaches
+geometries with `my:hasExactGeometry rdfs:subPropertyOf geo:hasGeometry`, and the topology
+rewrite looks for `geo:hasGeometry` — so before entailment a feature-level query returned the
+geometries rather than the features.
+
+### SHACL
+
+SHACL 1.2 Core rises from 94/138 to 103/138: `sh:minListLength`, `sh:maxListLength`,
+`sh:uniqueMembers`, `sh:memberShape` and `sh:singleLine`, plus `sh:detail` so a result about
+a structure can explain itself.
+
+### Conformance
+
+The SPARQL 1.0 suite is now a ratchet of its own at 262/263. Graph Store Protocol 13/13 and
+SPARQL Protocol 34/34 remain perfect; SPARQL 1.1 476/477, SPARQL 1.2 262/266.
+
+## 0.1.1
+
+Corrects the Documentation URL on the PyPI project page, which pointed at a `main` branch this
+repository has never had and returned 404. PyPI metadata is immutable, so a release was the
+only way to change it.
+
+## 0.1.0
+
+First public release: RDF 1.2 store with a term dictionary and nine RocksDB column families,
+SPARQL 1.1/1.2 query and update, SHACL validation, the holon layer, GeoSPARQL, and access
+policy enforced at the index scan.

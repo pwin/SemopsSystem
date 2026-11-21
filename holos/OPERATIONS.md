@@ -1,0 +1,860 @@
+# Running HOLOS as a service
+
+Everything here is in [deploy/](deploy/). Scripts come in matched pairs — `.sh` for
+Linux/macOS, `.ps1` for Windows — reading the same [deploy/holos.env](deploy/holos.env).
+
+For *using* the store — queries, geospatial, SHACL, holons — see the manual. This document
+is about keeping it running.
+
+---
+
+## Quick start
+
+```sh
+deploy/setup.sh                     # check prerequisites, build, test
+deploy/load.sh examples/hr.trig     # load data into the persistent store
+deploy/run.sh                       # serve it
+deploy/smoke.sh                     # verify, from another terminal
+```
+
+```powershell
+deploy\setup.ps1
+deploy\load.ps1 examples\hr.trig
+deploy\run.ps1
+deploy\smoke.ps1
+```
+
+Then open `http://127.0.0.1:7878/` for the console.
+
+The console is [MatGUI](https://github.com/Matdata-eu/MatGUI), the maintained MIT fork of
+YASGUI. Beside the table it has a **Geo** tab, which appears when a result carries WKT,
+GeoJSON, GML or GeoHash literals or `?lat`/`?lon` columns, draws them on a basemap, and can
+turn a rectangle you draw into a `geof:sfWithin` filter; and a **Graph** tab for `CONSTRUCT`
+and `DESCRIBE` results. One thing it cannot show: a result binding an RDF 1.2 triple term
+lands on the error tab, in every YASGUI fork — the endpoint answers correctly, the console's
+parser does not read the syntax yet.
+
+**The console cannot send anything anywhere but this server.** Its Content-Security-Policy
+names this server, the script CDN (`unpkg.com`, every file pinned by version and integrity
+hash) and the basemap's tile host, and nothing else — so the endpoint box will not query
+another endpoint, and no plugin can reach out. What does leave: which map tiles it asks
+for, which says where the user is looking, and with each tile the console's *origin* —
+scheme, host and port, never a path or a query — because OpenStreetMap's tile policy
+requires a `Referer` and answers 403 without one. `HOLOS_UI_TILES=none` draws over a blank
+background and sends neither, and `HOLOS_UI=off` removes the console, after which the
+process needs no network at all. `crates/holos-server/src/ui.rs` is the whole of it.
+
+### Prerequisites
+
+| | Why |
+|---|---|
+| Rust 1.87+ | The workspace's `rust-version` |
+| clang / libclang | RocksDB generates its bindings with it. **The most common cause of a failed first build**, and the error it produces is unhelpful, so `setup.sh` checks for it up front |
+| A C++ toolchain | RocksDB compiles C++ (`build-essential`, Xcode CLT, or MSVC "Desktop development with C++") |
+
+Without persistence you need none of the above beyond Rust:
+`cargo build --release --no-default-features`.
+
+---
+
+## The three ways to run it
+
+### 1. Directly, for development
+
+`deploy/run.sh` reads `deploy/holos.env` and translates it into flags. The server itself
+takes **flags only** — no environment variables — so that `holos-server --help` remains the
+complete surface. The script is the configuration layer, not a second one.
+
+### 2. As a managed service
+
+**Linux** — [deploy/holos.service](deploy/holos.service) is a hardened systemd unit:
+`ProtectSystem=strict`, `NoNewPrivileges`, a `SystemCallFilter`, and exactly one
+`ReadWritePaths`. It also sets `LimitNOFILE=65536`, because RocksDB opens a file per SST and
+the default 1024 is far too low for a large dataset.
+
+```sh
+sudo useradd --system --home /var/lib/holos --shell /usr/sbin/nologin holos
+sudo mkdir -p /opt/holos && sudo cp -r target/release/holos* deploy OPERATIONS.md /opt/holos/
+sudo chown -R holos:holos /var/lib/holos
+sudo cp deploy/holos.service /etc/systemd/system/ && sudo systemctl enable --now holos
+```
+
+**Windows** — `deploy\install-service.ps1` registers the service with `sc.exe`. Note the
+limitation it prints: a bare Windows service discards stderr, which is where `holos-server`
+writes its diagnostics. For real log capture, run it under NSSM or a scheduled task with
+redirection.
+
+### 3. In a container
+
+[deploy/Dockerfile](deploy/Dockerfile) is a two-stage build — the build stage needs clang
+and a C++ toolchain, the runtime stage carries neither.
+[deploy/docker-compose.yml](deploy/docker-compose.yml) is a complete deployment: the store
+with **no published ports**, reachable only by the Caddy front door on a shared network.
+That is what makes `--trust-forwarded-identity` safe to turn on there.
+
+---
+
+## Configuration
+
+> The configurations people actually run — first run, the store on another disk, a big
+> load, replacing data without a gap, a read-only endpoint behind a front door, locked
+> down, development, service, backups — are in [deploy/README.md](deploy/README.md), each
+> as a `holos.env.local` to copy.
+
+Every setting lives in [deploy/holos.env](deploy/holos.env), which documents each one
+inline. The summary:
+
+| Setting | Default | Notes |
+|---|---|---|
+| `HOLOS_LISTEN` | `127.0.0.1:7878` | Keep on loopback whenever there is a front door |
+| `HOLOS_THREADS` | `8` | One request holds one thread for its whole life, so this is the ceiling on concurrent queries — not a pool over an async runtime |
+| `HOLOS_STORE` | `./var/store` | RocksDB directory. Empty means in-memory, discarded on exit |
+| `HOLOS_DATA` | *(empty)* | Files loaded at **every** start. Idempotent but re-parsed each time — prefer `load.sh` once |
+| `HOLOS_UI` | `on` | `off` serves the endpoints without the console, and then the process needs no network access of any kind |
+| `HOLOS_TRUST_FORWARDED` | `off` | See below. This is the security-critical one |
+| `HOLOS_DENY_ALL` | `off` | Deny-by-default instead of permit-all |
+| `HOLOS_FAIL_CLOSED` | `off` | Error on refusal instead of filtering silently |
+| `HOLOS_ALLOW_GRAPHS` | | Space-separated IRIs |
+| `HOLOS_DENY_PREDICATES` | | Space-separated IRIs |
+| `HOLOS_LABEL_GRAPHS` | | Space-separated `IRI=LEVEL` pairs |
+| `HOLOS_DEV_ROLES`, `HOLOS_DEV_CLEARANCE` | | Grant to *every* request. Development only; the scripts warn when set |
+
+`holos.env.local` overrides `holos.env`, and the environment overrides both — so a service
+manager or container can change one setting without editing anything on disk.
+
+### Filter or fail?
+
+Refusal has two semantics, and the choice matters more than it looks:
+
+- **Filter** (default) — the query runs and returns the answer *the principal is entitled
+  to*. Formally: the answer to Q equals the answer over the sub-dataset the principal may
+  see. Nothing reveals that anything was withheld.
+- **Fail** (`--fail-closed`) — the query errors instead.
+
+Filtering is right when a partial answer is a correct answer for that principal. Failing is
+right when a partial answer would be **misread as a complete one** — a compliance report or
+a reconciliation total, where silently missing rows is worse than an error.
+
+---
+
+## Identity: the front door contract
+
+*[ACCESS-CONTROL.md](ACCESS-CONTROL.md) is the full guide to the policy model; this
+section covers only what a deployment has to get right.*
+
+**`holos-server` authenticates nobody, deliberately.** Token verification, Kerberos, mTLS
+and SAML belong at the edge; the server sits behind that edge and reads *already-verified*
+claims from three headers:
+
+```
+X-Holos-Principal: alice
+X-Holos-Roles: hr,finance
+X-Holos-Clearance: 3
+```
+
+It refuses to read them at all unless started with `--trust-forwarded-identity`, and prints
+which way it is running at start-up.
+
+> **The rule:** the front door must **strip whatever the client sent** under those names
+> before setting its own. Without that, `--trust-forwarded-identity` means any caller can
+> add `X-Holos-Roles: admin` to a curl command and be believed.
+
+[deploy/Caddyfile](deploy/Caddyfile) does this with three `request_header -X-Holos-*` lines
+before any handler runs. [deploy/nginx.conf](deploy/nginx.conf) does it differently and the
+difference is a trap: **nginx passes unknown client headers straight through**, so each of
+the three must be set explicitly — setting one is what overrides what the client sent.
+Omitting any single one of them opens the hole.
+
+`run.sh` and `run.ps1` warn if `--trust-forwarded-identity` is combined with a non-loopback
+bind address, which is the shape that mistake takes.
+
+### What this looks like working
+
+Against `examples/hr.trig` with `--deny-predicate http://example.com/salary` and
+`--label-graph http://example.com/reviews=3`:
+
+```sh
+# names come back; the salary column is empty — the scan never saw those triples
+$ curl -s -H 'Accept: text/csv' --data-urlencode \
+    'query=SELECT ?name ?salary WHERE { GRAPH ?g { ?s ex:name ?name OPTIONAL { ?s ex:salary ?salary } } }' \
+    localhost:7878/query
+name,salary
+Alice,
+Bob,
+
+# the classified graph, anonymous: nothing
+$ curl -s ... 'query=SELECT ?note WHERE { GRAPH ex:reviews { ?s ex:reviewNote ?note } }'
+s,note
+
+# the same query with clearance 3 forwarded
+$ curl -s -H 'X-Holos-Clearance: 3' ... 
+s,note
+http://example.com/alice,Ready for promotion.
+```
+
+Policy is enforced **at the scan**, not by rewriting the query, so this holds for every
+query shape — including geospatial ones. Denying `geo:asWKT` makes a spatial join find
+nothing; there is no geospatial exemption.
+
+---
+
+## Loading data
+
+> **Load with the CLI, serve with the server — and check they name the same directory.**
+> `deploy/run.sh` serves `HOLOS_STORE` from `deploy/holos.env`, which defaults to
+> `./var/store`. A load into any other path — `--store E:/store2`, say — leaves that default
+> pointing at an empty directory, and the server will open it, create a fresh database in it,
+> and answer every query from nothing, with no error anywhere. Put the real path in
+> `deploy/holos.env.local`, which `run.sh` sources last and git ignores. The server's first
+> line of startup output now says which store it opened and how many quads it holds; **read
+> it**, and treat `— empty` on a store you have just loaded as the alarm it is.
+
+
+
+```sh
+deploy/load.sh data/*.ttl        # stop the service first
+```
+
+`--bulk` buffers writes, skips the write-ahead log, and since 0.3.0 hands the index
+orders to RocksDB as pre-sorted files rather than writing them key by key: **5.4–8.5× faster**
+(see [BENCHMARKS.md](BENCHMARKS.md)). Measured 156k vs 18k quads/s at 7.5M quads, at the cost
+of a part-way-interrupted load having to be discarded
+rather than resumed. That is the right trade for a load you can simply re-run.
+
+**Only one process may hold the store directory.** RocksDB takes an exclusive lock on
+`LOCK`, so a second process gets:
+
+```
+IO error: Failed to create lock file: .../LOCK: The process cannot access the file
+because it is being used by another process.
+```
+
+That is expected, not a bug. Stop the service before loading.
+
+Formats are taken from the extension: `.ttl .nt .trig .nq .rdf .owl .jsonld .n3` — **each
+also with `.gz`**, which is how large RDF is normally distributed:
+
+```sh
+deploy/load.sh dumps/wikidata.nq.gz dumps/dbpedia.nt.gz
+```
+
+Decompression is **streamed**, so a 60 GB dump costs no more memory than a small one, and
+**multi-member** archives are read in full. That last point matters: large dumps are often
+produced by concatenating compressed chunks, which is valid gzip, and a single-member
+decoder stops at the end of the first chunk while reporting success — losing most of the
+file silently.
+
+> **Windows note:** run these under PowerShell. Git Bash rewrites arguments that look like
+> Unix paths, which can silently mangle `--store` into something like
+> `C:/Program Files/Git/...`.
+
+---
+
+### Blank nodes are scoped to the file they came from
+
+Each load is a document, and RDF scopes a blank node label to the document it appears in. So
+`_:a` in two files denotes two different things, and loading both gives you two nodes:
+
+```sh
+holos stats --store ./var/store --bulk --data a.ttl
+holos stats --store ./var/store --bulk --data b.ttl   # b.ttl's `_:a` is not a.ttl's
+```
+
+This matters more than it sounds, because `_:a`, `_:b0` and `_:genid1` are what every
+serialiser reaches for first — merging on the label would join unrelated records whenever two
+exports happened to agree on a name.
+
+The consequence to plan for: **loading the same file twice does not deduplicate** its
+blank-node triples. The second load asserts a second existential, which is what RDF says it
+does. Anything with an IRI subject deduplicates normally.
+
+---
+
+## Backup and restore
+
+**The service keeps running.** RocksDB checkpoints flush the log and hard-link the SST files
+into a new directory, so the snapshot is consistent, near-instant, and initially costs almost
+no disk — taken while the store is open and being written to.
+
+```sh
+deploy/backup.sh /backups          # or: holos backup --store ./var/store --to /backups/tonight
+```
+
+Two consequences of hard links, both of which matter:
+
+- **A checkpoint on the same filesystem shares the store's files.** That is what makes it
+  cheap, and it means **it is not an off-machine backup** — losing the disk loses both. Copy
+  or replicate the result elsewhere if that is what you need. To a different filesystem
+  RocksDB copies instead: correct, no longer instant, genuinely independent.
+- **A checkpoint pins the files it links**, so compaction cannot delete them. Disk use climbs
+  as the snapshot and the live store diverge. `deploy/backup.sh` keeps the last
+  `HOLOS_BACKUP_KEEP` (default 7) and removes the rest — retention is part of the job, not an
+  afterthought.
+
+Restore by pointing `--store` at a checkpoint, or by copying it back with the service stopped.
+
+Two refusals worth knowing, both preventing a backup that looks fine and is not:
+
+- **During a bulk load.** Those writes are buffered in the process rather than in RocksDB, so
+  a checkpoint taken then would be internally consistent and missing data.
+- **An in-memory store, from `holos backup`.** It has no files to checkpoint, and says so
+  rather than writing nothing and reporting success. The server's `POST /backup` writes a
+  snapshot of one instead: see [Memory as the store](#memory-as-the-store-with-snapshots).
+
+### Over HTTP
+
+`POST /backup` does the same thing, and is **off unless both flags are set**:
+
+```sh
+holos-server --store ./var/store              --backup-dir /backups --backup-role ops --trust-forwarded-identity
+
+curl -X POST -H 'X-Holos-Roles: ops' http://127.0.0.1:7878/backup
+# {"path":"/backups/holos-1787763950","quads":1048576}
+```
+
+| Condition | Answer |
+|---|---|
+| Either flag unset | **404** — the endpoint is absent, not merely defended |
+| Identity not trusted | **403** — every request is anonymous, so nobody holds the role |
+| Role missing or wrong | **403** |
+| Role held | **201** with the path and quad count |
+| Role held, in-memory store | **201** with the snapshot's path, `holos-<seconds>.nq.gz`, and quad count |
+| Bulk load in progress | **409** with the reason |
+| In-memory store, a snapshot already taken this second | **409**: it would overwrite the first |
+| In-memory store, the disk fills while writing | **507**, and the partial file removed |
+
+**The caller never names the destination.** `POST /backup?to=/anywhere` would be an
+arbitrary-write primitive — whatever the server process can write, a caller could ask it to
+fill with a copy of the database. The server owns `--backup-dir` and mints a timestamped
+child inside it.
+
+### Memory as the store, with snapshots
+
+A store does not have to be on disk. Without `--store` the server holds everything in memory,
+which is the fastest arrangement there is and the simplest to run: no RocksDB directory, no
+compaction, nothing to size. What it gives up is durability, and a snapshot on a schedule is
+how to buy as much of that back as the service needs.
+
+```sh
+holos-server --data /backups/latest.nq.gz --backup-dir /backups --backup-role ops --trust-forwarded-identity
+
+curl -X POST -H 'X-Holos-Roles: ops' http://127.0.0.1:7878/backup
+# {"path":"/backups/holos-1787763950.nq.gz","quads":1048576}
+```
+
+The snapshot is **every graph as gzipped N-Quads**, the format `--data` reads at start-up, so
+restoring is restarting with `--data` on the newest file. It is the same dump as `holos dump`,
+Python's `Store.dump()` and the WebAssembly `dump()`, so a snapshot from any of them restores
+into any of them.
+
+- **What you can lose is everything since the last snapshot.** A crash or a restart without
+  one discards it. Schedule the snapshot as often as that window must be short, and use
+  `--store` where it must be zero.
+- **Writers wait while a snapshot is written.** It holds the read lock for the whole dump, so
+  the file is one state of the store rather than a mixture of before and after some update.
+  That takes as long as serialising the store does, which is far longer than a checkpoint.
+- **The file appears complete or not at all.** It is written beside its final name and renamed
+  when finished, so a reader, or the next restore, never sees half of one.
+- **Restoring costs a load.** A restart parses the whole snapshot before it answers, and the
+  store needs the memory to hold it: see [Loading data](#loading-data).
+- **Retention is yours.** Snapshots are named by the second and none is ever deleted, as with
+  checkpoints. Point `latest.nq.gz` at the newest, keep the last few, copy them off the machine.
+
+From Python the same pattern is a pair of calls on an ordinary `Store()`:
+
+```python
+store.dump("backup.nq.gz")        # every graph; written beside the name, then renamed
+Store().load("backup.nq.gz")      # a fresh store holding the same quads in the same graphs
+```
+
+A backup copies the whole store, ignoring the policy that governs every query. It is the one
+operation where the ordinary access controls do not apply, which is why it has its own role —
+and why `--role` on the server, which grants a role to *everyone*, must not be used to
+provide it.
+
+
+`holos dump` is **not** a backup — it emits what the *principal* is allowed to see, through
+the same policy-filtered view as any query. That is usually a smaller thing, and that is the
+point of it. It defaults to N-Quads, the only line-based format that carries the graph name:
+
+```sh
+holos dump --store ./var/store                       # N-Quads
+holos dump --store ./var/store --format trig         # or nt, ttl, rdf, jsonld
+```
+
+Dumping a quad store as N-Triples silently flattens named graphs into one, so the format
+choice is a correctness question rather than a preference.
+
+---
+
+## Writing over HTTP
+
+`POST /update` takes SPARQL 1.1 Update, form-encoded or as `application/sparql-update`:
+
+```sh
+curl -X POST -H 'Content-Type: application/sparql-update'   --data 'INSERT DATA { <http://example.com/a> <http://example.com/p> "x" }'   http://127.0.0.1:7878/update
+# {"inserted":1,"deleted":0,"graphsCreated":0,"graphsDropped":0}
+```
+
+Three things worth knowing:
+
+- **It takes the write lock.** `/update` is the only endpoint that does, so a writer
+  excludes readers for the update's duration. That is what makes the update's failure
+  atomicity behave as isolation in this deployment.
+- **It is all-or-nothing, including across a crash.** The whole request runs inside one
+  commit scope: the writes accumulate into a single RocksDB batch and are written once. If
+  any operation fails, the store is left exactly as it was — including the operations that
+  had already succeeded — and if the process dies mid-request, so is the store on disk,
+  because nothing had been written yet. The scope refuses past a few hundred thousand quads
+  in one request; load data that size with `--data`, which is built for the volume.
+- **Policy applies to the write path.** Every quad written is checked for `WRITE`, and the
+  `WHERE` clause is filtered by read policy on the same path as a `SELECT` — so a principal
+  cannot delete what it cannot see. `SILENT` suppresses an operation's own error but never
+  a policy refusal, which would otherwise turn it into a way to probe what one may not touch.
+
+`--read-only` makes `/update` answer 403 without affecting the store, which is the right
+setting for a public endpoint sharing a store with a separate loader.
+
+`LOAD <http://…>` is **refused**. Fetching an arbitrary URL named inside a request is a
+server-side request forgery primitive — it would make the server issue requests to hosts
+only the server can reach. `file:` URLs load; remote ones return an error saying so.
+
+### Naming the dataset from the request
+
+`using-graph-uri` and `using-named-graph-uri` say which graphs an update's `WHERE` matches
+against, without putting `USING` in the text:
+
+```sh
+curl -X POST -H 'Content-Type: application/sparql-update' \
+     --data 'DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }' \
+     'http://127.0.0.1:7878/update?using-graph-uri=http%3A%2F%2Fexample.com%2Fg1'
+```
+
+Both are repeatable. An update that **already** names its own dataset with `USING` or `WITH`
+and *also* carries these parameters is a **400**: the protocol makes carrying both a client
+error rather than a precedence question, and resolving it either way would run the update
+over a dataset its author did not choose.
+
+The query endpoint's equivalents are `default-graph-uri` and `named-graph-uri`, also
+repeatable.
+
+### What the endpoints refuse
+
+The protocol requires these, and each was a real gap until the W3C protocol suite was run
+against the server:
+
+| Request | Answer |
+|---|---|
+| Two `query=` or two `update=` parameters | **400** — ambiguous, not a list |
+| A POST body with no `Content-Type` | **400** — a form body and a query body are indistinguishable without one |
+| `charset=UTF-16` on either media type | **400** — the protocol fixes both at UTF-8 |
+
+Relative IRIs in a query or update resolve against a **service base URI** built from the
+`Host` header and the endpoint path, so `CONSTRUCT { <s> <p> 1 } WHERE {}` parses and its
+IRIs come back absolute and addressable by the client that sent them.
+
+## Graph Store Protocol
+
+REST verbs on whole graphs, for the jobs SPARQL Update makes awkward. **On by default at
+`/graph`**, using indirect identification — the graph named by a query parameter. Two flags
+change that:
+
+```sh
+holos-server --store ./db --gsp-path /gsp --gsp-base https://data.example.org
+```
+
+| Verb | Effect | Exists | Absent |
+|---|---|---|---|
+| `GET` / `HEAD` | Fetch the graph as a document | 200 | **404** |
+| `PUT` | Replace it wholesale | 204 | **201** |
+| `POST` | Merge into it | 204 | **201** |
+| `DELETE` | Remove it, not just its contents | 204 | **404** |
+
+```sh
+# indirect identification: the graph is a parameter
+curl -X PUT -H 'Content-Type: text/turtle' --data-binary @people.ttl \
+     'http://127.0.0.1:7878/graph?graph=http%3A%2F%2Fexample.org%2Fpeople'
+
+curl -H 'Accept: text/turtle' 'http://127.0.0.1:7878/graph?graph=http%3A%2F%2Fexample.org%2Fpeople'
+
+# the default graph
+curl -H 'Accept: application/n-triples' 'http://127.0.0.1:7878/graph?default'
+
+# let the server name a new graph; the name comes back in Location
+curl -i -X POST -H 'Content-Type: text/turtle' --data-binary @batch.ttl \
+     http://127.0.0.1:7878/graph
+```
+
+Four things worth knowing:
+
+- **`--gsp-base` is what enables *direct* identification**, where the request URI *is* the
+  graph name (`PUT /graph/people`). It is off without one because a server behind a reverse
+  proxy sees `/graph/people` while the world sees `https://data.example.org/graph/people`, and
+  guessing would mint graph names that do not match the ones clients later ask for. Set it
+  to the base the *outside* sees. It is also required for `POST` to the endpoint itself,
+  since the server has to name the graph it creates.
+- **`DELETE` removes the graph, not just its quads.** Otherwise a second `DELETE` could not
+  answer 404, and a client could not tell "I removed it" from "it was not there".
+- **A graph the principal may not read is 404 to them**, not 200-and-empty. Reporting it as
+  present-but-empty would confirm it exists, which is the thing the policy was withholding.
+  The same policy governs writes: a REST verb is not a way around it.
+- **File uploads work.** A `multipart/form-data` body carries one RDF document per part,
+  each with its own prefixes, and **all** of them are merged. One part this store cannot
+  parse makes the whole upload a 415 rather than a partial success reported as a 204.
+
+`PUT` is the operation people otherwise write as `DROP GRAPH … ; INSERT DATA { GRAPH … }`,
+which is two operations that can half-succeed where this is one that cannot.
+
+## Maintenance
+
+Three jobs that are not automatic, and are not automatic on purpose. Each is cheap to run and
+none of them is urgent; a server that decides for itself to do whole-store work is a server
+that does something surprising at three in the morning.
+
+### Reclaiming space: `holos compact`
+
+`backup` preserves the store *exactly*, dictionary included. That is the right behaviour for a
+backup and the wrong one for reclaiming space, because the dictionary is append-only: deleting
+quads leaves their terms behind, and nothing in the normal course of running removes them.
+
+```sh
+holos compact --store ./var/store --to ./var/store.new
+```
+
+It writes a **new** store holding only the live data, and refuses if the destination exists —
+a failure then leaves the original untouched. Two things to plan for:
+
+- It needs room for both stores at once.
+- It does not copy writes that arrive while it runs. Stop writers, or accept that the window
+  is lost, then swap the directories.
+
+It reads the store directly rather than through a policy, so it copies everything regardless
+of who runs it. Treat the output as you would the original.
+
+### Entailment: `holos entail`
+
+Materialises the RDFS closure, so every reader sees the entailed triples without knowing about
+entailment — the query path, the topology rewrite, SHACL, the statistics.
+
+```sh
+holos entail --store ./var/store                    # into <https://holos.dev/ns#entailed>
+holos entail --store ./var/store --entail-graph <IRI> --entail-budget 1000000
+```
+
+It writes into a **graph of its own**, `<https://holos.dev/ns#entailed>` unless you name
+another, which is what lets you undo it:
+
+```sparql
+DROP GRAPH <https://holos.dev/ns#entailed>
+``` The cost is that queries only see the entailed triples
+under the union default graph, or by naming the graph. That trade is the reason for the
+default, not an accident of it.
+
+The budget is a bound on a mistake rather than a tuning knob. A schema entailing ten million
+triples is worth reading before it is materialised, so the closure is abandoned and **nothing
+is written** rather than the machine running out of memory.
+
+Two entailments are true and cannot be written down, so they are not:
+`ex:age rdfs:range xsd:integer` with `ex:alice ex:age 30` entails that 30 is an integer, and a
+triple term denotes a proposition. RDF has no subject position for a literal or a triple term.
+
+### Recursive rules: `holos rules`
+
+Datalog, written as SPARQL. A rule is a `CONSTRUCT` — head and body, which is what a Horn rule
+is — and a rule document is a shared prologue followed by one or more of them, each starting
+with `CONSTRUCT` at the beginning of a line. A `#` comment above a rule names it, which is what
+appears in diagnostics.
+
+```sparql
+PREFIX ex: <http://example.com/>
+
+# every parent is an ancestor
+CONSTRUCT { ?x ex:ancestorOf ?y }
+WHERE     { ?x ex:parentOf ?y }
+
+# and an ancestor's ancestor is one too
+CONSTRUCT { ?x ex:ancestorOf ?z }
+WHERE     { ?x ex:parentOf ?y . ?y ex:ancestorOf ?z }
+```
+
+```sh
+holos rules --store ./var/store --rules ancestors.rq
+holos rules --store ./var/store --rules r.rq --derived-graph <IRI> --max-derived 1000000 \
+            --max-rounds 64
+```
+
+Rules run to a **fixpoint**: each round evaluates every rule and adds what is new, and when a
+round adds nothing the answer is complete. A rule body reads the assertions *and* the
+derivations, so a rule fires on what another rule derived — that is what makes it recursive.
+Derived facts go into `<https://holos.dev/ns#derived>` unless you name another graph, for the
+same reasons `entail` uses one: `DROP GRAPH` undoes it exactly, and a reader can tell an
+inference from something somebody asserted.
+
+**Prefer a property path to a recursive rule where one fits.** `{ ?x ex:parentOf+ ?z }` is
+walked by the closure operator in one round; the two-rule form above reaches the same answer
+in five. Same ten facts, far less work.
+
+**What a rule may not do**, each refused before anything runs:
+
+| Refused | Why |
+|---|---|
+| `MINUS`, `EXISTS`, `NOT EXISTS` | Negation needs the rules *stratified*. Without that, `p :- not q` and `q :- not p` have two equally good answers and iteration picks whichever it reaches first |
+| A blank node in the template | It is a fresh node every round, so the rule derives something new for ever |
+| `BNODE`, `UUID`, `STRUUID`, `RAND`, `NOW` | The same, plus a body whose answer changes between rounds has no fixpoint to reach |
+| `SERVICE` | A remote endpoint is not part of the fixpoint and cannot be re-read consistently |
+
+Everything monotone is allowed: joins, `UNION`, `OPTIONAL`, `FILTER`, property paths and
+aggregation.
+
+`--max-derived` (default 10,000,000) and `--max-rounds` (default 64) are bounds on a mistake
+rather than tuning knobs. Passing either is an **error**, and deliberately so: the facts
+derived up to that point are sound, but the set is incomplete, and an incomplete
+materialisation is indistinguishable from a complete one to every later query. A rule set
+still deriving after sixty-four rounds is usually one whose head repeats its body.
+
+### Spatial index upkeep: `POST /maintenance/purge`
+
+The spatial index tracks the **dictionary**, which never forgets. That is what lets it catch
+up with a write in a fraction of a millisecond instead of rebuilding — and it means deleted
+geometries leave entries behind. Nothing is wrong while they are there: the index is a
+superset filter, so a geometry with no quads fails to join and contributes no row. It is
+memory, not correctness. **Restarting does not clear them**, because the index is rebuilt from
+the dictionary and comes back holding every geometry ever interned.
+
+Off unless `--purge-role` is set, and then the caller must hold that role:
+
+```sh
+holos-server --store ./var/store --purge-role ops --trust-forwarded-identity
+curl -X POST -H 'X-Auth-Request-Groups: ops' http://127.0.0.1:7878/maintenance/purge
+```
+
+Without `--trust-forwarded-identity` every request is anonymous and holds no roles, so the
+endpoint is unreachable. A switched-off endpoint answers **404** rather than 403, so probing
+cannot map the configuration.
+
+There is no timer inside the server. Point cron, a systemd timer or a Kubernetes CronJob at
+it, the same way `deploy/backup.sh` calls `/backup`.
+
+---
+
+## Disk headroom
+
+The store grows and nothing shrinks it on its own. Two maintenance operations need room
+beyond what the store already occupies, and both now refuse rather than filling the disk and
+failing part-way.
+
+**`holos stats --store DIR` is the thing to look at.** It reports what the store occupies,
+what is free on that filesystem, and whether a compaction would fit:
+
+```
+quads            1000000
+dictionary terms 489479
+named graphs     0
+on disk          48.2 MiB
+free here        112.0 GiB
+room to compact  yes (needs up to 48.2 MiB)
+```
+
+### What each operation costs
+
+| Operation | Needs | Why |
+|---|---|---|
+| **`holos compact`** | The store's size again, immediately | It writes a **second** store beside the first and leaves the original untouched, which is what makes it safe to abandon |
+| **`holos backup`** / `POST /backup` onto the same filesystem | Nothing at first, the store's size eventually | It hard-links, so the copy is free — but the links **pin files compaction can no longer delete**, so the space is owed as soon as anything churns |
+| **`holos backup`** onto another filesystem | The store's size, immediately | Hard links do not cross a mount, so RocksDB copies |
+| **A bulk load into an empty store is much faster than one into a populated store** | An empty store lets the load keep an in-memory filter over every term it interns, so a new term is allocated without a disk read; a populated store cannot know what predates the load, so every term is looked up. Measured on 653.8M triples: **199,545 quads/s** into an empty store against 48,869 at 0.9.1 — 4.1×, of which the filter is the largest part | Load into a fresh directory and, if you are combining files, load them all in one invocation (`--data` repeats). Appending a second large file to an existing store pays the slow path for every term in it |
+| **A bulk load** | **Half again the source file**, until the merge consumes it | Sorted ingestion writes its runs under the store directory and merges them only at the end, so the source, the scratch and the store all occupy disk at once. Measured: a 30.4 GB Turtle file held **48.3 GB** of runs and produced a 20.7 GB store. Unlike `compact`, a load does **not** check first |
+
+**A spilling `DISTINCT` writes to the system temporary directory, and it can write a lot.**
+`--max-spill-disk` (default **16 GiB**) is what bounds the disk, and it is a per-query
+ceiling rather than a total: two queries spilling at once can write twice it. Setting it to
+0 removes the ceiling, which on a large store means a sort can write until the volume is
+full. `--spill-bytes` bounds a query's *memory*, not its disk: it spills in proportion to the
+answer, so a `DISTINCT` over a large store writes tens of gigabytes. On a 653.8-million-triple
+store one reached 5.5 GB in twenty-two minutes and was on course for about seventy, against
+29 GB free on that machine's system volume. Unlike a load, the engine cannot place this beside
+the store — a query is not attached to one store's directory, and an in-memory store has none
+— so **point `TMPDIR` (or `TMP`/`TEMP` on Windows) at the volume with the room**, the same one
+the store is on, before enabling the spill on a large dataset.
+
+Two more things about that scratch. It is removed when the query ends, including on error, but
+a process that is *killed* leaves it behind — check the temporary directory after an
+out-of-memory kill or a hard restart. And the directory is named with the process id, so
+nothing collides, but nothing cleans up an older one either.
+
+A load's scratch goes in `holos-ingest` beside the database rather than in the system
+temporary directory, so the ingest can *move* its files into the store instead of copying them
+across a filesystem boundary — and so the scratch lands on the volume an operator sized for the
+store rather than on whatever `/tmp` happens to be. It is removed on success and on failure.
+The consequence is the sizing above, and it is worth doing the arithmetic once. At the peak of
+the 30.4 GB load the volume held the 30.4 GB source, 48.3 GB of runs and a partly written
+store: **about 2.6 times the source file, all at the same moment**, settling to 20.7 GB when
+the merge consumed the runs and the scratch was removed. Put the source somewhere else and it
+is 1.6×; leave it where it is and budget for the whole 2.6.
+
+Nothing checks this. `compact` refuses when its headroom estimate says it will not fit, and a
+load has no equivalent — it will fill a volume eighty per cent of the way through three hours
+of work. `holos stats` reports free space; run it first.
+
+The estimate is the source store's size on disk — the whole directory, not just the SST
+files, because the write-ahead log and the manifest have to be copied too. For `compact` it
+is deliberately generous: the point of compacting is that the result is smaller, often much
+smaller, so a store with a lot of deleted data in it will need far less than the check
+demands. `--force` is there for exactly that case.
+
+`POST /backup` answers **507 Insufficient Storage** rather than 500 when it will not fit —
+the request was fine and the server is healthy, so a scheduler can alert on it differently
+from a fault. That endpoint is the one worth watching: it is called nightly by something that
+is not looking, and its hard links are what stop the space coming back.
+
+### If it is already full
+
+A write that runs out of space fails and, since 0.3.0, fails **atomically** — an update or a
+holon tick either lands whole or not at all, so a full disk costs you the write rather than
+the store's consistency. That is the recovery position, not a substitute for headroom.
+
+Order of operations from there: drop what you do not need with `DROP GRAPH` or `DELETE`,
+then `holos compact --to` somewhere with room, because deletion alone reclaims nothing — the
+dictionary is append-only and compaction is the only thing that shrinks it.
+
+---
+
+## Errors
+
+A query or update that fails is answered the way the SPARQL Protocol requires — 400 for a
+request that is wrong as sent, 500 for one the service will not or cannot answer, 403 for
+one the policy refuses — with a body in the HTTP-wide standard for explaining a failure to a
+program as well as a person: an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem
+document, `application/problem+json`.
+
+```json
+{"type":"https://holos.dev/problems/syntax",
+ "title":"The query does not parse",
+ "status":400,
+ "detail":"error at 1:26: expected one of LATERAL, SERVICE, [_]",
+ "line":1,"column":26}
+```
+
+`type` is what a client matches on; `detail` is what a person reads; a syntax error adds
+`line` and `column`. A client whose `Accept` names `text/plain` and nothing else gets the
+one-line text the server always sent. The kinds, by the tail of `type`:
+
+| Kind | Status | Means | What to do |
+|---|---|---|---|
+| `syntax` | 400 | The SPARQL did not parse; `line` and `column` say where | Fix the query |
+| `bad-request` | 400 | The request contradicted itself or the protocol: a parameter given twice, a body of the wrong type, a dataset the update also names | Fix the request |
+| `unknown-function` | 400 | The query names a function this server does not have, or with the wrong number of arguments | [SPARQL-SURFACE.md](SPARQL-SURFACE.md) lists what it has |
+| `service` | 400 | A `SERVICE` the query names cannot be reached from here | The console's policy allows this server only; from a script, check the IRI |
+| `rdf-parse` | 400 | RDF sent with a request did not parse | Fix the data |
+| `policy` | 403 | The policy refused the write, or under `--fail-closed` the read | The principal lacks the right; see [ACCESS-CONTROL.md](ACCESS-CONTROL.md) |
+| `read-only` | 403 | `/update` and the writing Graph Store verbs, while `--read-only` is set | Load with the CLI, or start without the flag |
+| `refused` | 500 | The query was estimated to buffer more rows than `--max-blocking-rows` allows; the detail says which operator and which `LIMIT` would help | Make the pattern more selective, add the `LIMIT`, or raise the budget |
+| `timeout` | 500 | The query ran past `--timeout`; the detail names the limit | Narrow it, or raise the limit |
+| `memory-ceiling` | 500 | The process grew past `--max-query-memory` while answering; the detail carries the numbers | Narrow it, or size the ceiling — a third of what you can spare |
+| `spill-ceiling` | 500 | A spilling `DISTINCT` or `ORDER BY` wrote more scratch than `--max-spill-disk` allows; the detail carries the numbers | Narrow it, raise the ceiling, or point `TMPDIR` at a volume with room |
+| `evaluation` | 500 | The evaluator failed for another reason; the detail says which | Report it with the query |
+| `internal` | 500 | The store or the server failed | The log has the same message; report it |
+
+A failure that arrives while the answer is being written — a timeout or the ceiling reached
+mid-scan — is answered the same way. Before 0.12.0 it reached the client as an empty 500.
+
+What is **not** an error, by specification: an expression that fails inside a query. SPARQL
+makes that a value, not a failure — a `BIND` of a function that could not answer leaves its
+variable unbound, and a `FILTER` that errors drops the row — and nothing in the result says
+why. A function this server lacks is the exception: the evaluator refuses the query rather
+than answering it with holes.
+
+---
+
+## Monitoring
+
+| Endpoint | Use |
+|---|---|
+| `GET /health` | Liveness. Cheap, no store access |
+| `GET /stats` | `{"quads":…, "dictionaryTerms":…, "namedGraphs":…, "version":"0.13.0", "commit":"d4b4fdd", "modified":false}` |
+
+**Which build is answering.** Every response carries a `Server` header naming it — the
+place HTTP gives a server to say what it is (RFC 9110 §10.2.4) — and `/stats` carries the
+same three facts as data:
+
+```sh
+curl -sI http://127.0.0.1:7878/health | grep -i '^server'
+# Server: holos/0.13.0 (d4b4fdd)
+holos-server --version
+# holos-server 0.13.0 (d4b4fdd)
+```
+
+The parenthesis is the commit the binary was built from, and `modified` after it means the
+working tree had uncommitted changes at the time — a binary built between releases, which
+the version number alone cannot tell from the release. A build without a repository, from
+a source tarball, says only its version. The startup banner prints the same line. A front
+door that rewrites `Server` for its own reasons leaves `/stats` and `--version` as they
+are.
+
+`deploy/smoke.sh` exits non-zero on the first failure, so it works as a deployment gate or a
+container health check. It checks thirteen things and changes nothing: content negotiation on
+each endpoint, that a syntax error is a 400 rather than a 500, that the protocol's refusals
+are refusals, and that the graph store answers if it was configured.
+
+Memory goes to RocksDB's block cache plus the term dictionary. Size from `/stats` before
+setting a container limit — a store whose dictionary does not fit will thrash rather than
+fail. For scale: 7.5 million quads produced 2,002,681 dictionary terms and 253 MB on disk —
+about 35 bytes per quad across three index copies of each — because the `TermId` encoding
+inlines every integer, float and short string into the id itself so they never reach storage
+at all. `holos stats --store DIR` reports both for a store you have.
+
+---
+
+## What is missing, and how to work around it
+
+Stated plainly, because finding these out in production is worse.
+
+| Gap | Consequence | Workaround |
+|---|---|---|
+| **No TLS in the server** | Plain HTTP only | Terminate at the front door. Both configs do |
+| **Timeouts are not absolute** | `--timeout` stops a query that is reading or streaming rows; one blocked inside a single in-memory step — the evaluator sorting rows it has already collected, say — is not interruptible | Bound the result size in the query. `SELECT … ORDER BY … LIMIT` is answered from a heap and never reaches that step |
+| **The memory ceiling is per-process, not per-query** | `--max-query-memory` (default 8 GiB) counts what the *process* allocates past its resting set, so it cannot attribute a byte to one query of several running at once. It is read at the scan, so it refuses the next read rather than cancelling on a timer | Set it to at most a **third** of the memory you can spare. A growing buffer asks for its next block before releasing the old, so a container crossing an 8 GiB ceiling wants 24 GiB at that instant — a ceiling near the machine's limit chooses where the abort happens rather than preventing it |
+| **A range `FILTER` is only fast on an inline datatype** | Order-preserving inline encoding covers `xsd:integer`, `xsd:float`, `xsd:dateTime`, `xsd:boolean` and short strings. **`xsd:date` and `xsd:decimal` are not inline.** A numeric range must also read every dictionary-backed literal on that predicate, because an `xsd:decimal` could satisfy it, so on a predicate whose objects are literals the bounded scan reads all of them: about **120 s** for 48.4M rows whether the cut matches 267,738 of them or none, and the same ~120 s with the pushdown switched off entirely. It does not make things worse; it makes nothing better | Store timestamps as `xsd:dateTime` rather than `xsd:date` if you intend to filter ranges over them. There is no flag for this; it is decided by how the data is typed |
+| **`--reorder` costs one scan per change to the store, not one per run** | Statistics are a full scan — about **200 s** on a 653.8-million-triple store — and are then **kept with the store**, stamped with its write generation. Every later run, CLI or server, loads them in well under a second, until a write moves the generation and the next `--reorder` rebuilds. On that store the CLI went from 194 s to 20 s between the first run and the second, the 20 s being the query | Turn `--reorder` on. The first run after a load pays the scan; nothing after it does. The server reports which it did on startup: `statistics loaded from the store` or `built and kept with the store` |
+| **Opening a large store costs memory before it answers anything** | Each SST pins its index and bloom filter for as long as it is open. The 653.8-million-triple store cost about **4 GB** at rest. From 0.9.0 those blocks are partitioned and demand-loaded, measured at 743 MiB against 275 MiB on a 30-million-triple store with no read penalty — but only for files written by 0.9.0 or later | An existing store gets it back by being rewritten: `holos compact --to` produces files with the new layout. Until then, size for the resting cost as well as the query |
+| **The memory ceiling cannot see RocksDB at all** | It reads a counting allocator, which counts *Rust* allocations. The block cache, the table readers, and the bloom filter and index blocks each open SST file pins are all C++ and all invisible to it — as was the 18 GB a bulk load's filter builder reached before 0.9.0 partitioned it | Size the machine for the store as well as the ceiling, and do not read a green `--max-query-memory` as headroom. Resident memory on a large store has a floor the ceiling knows nothing about |
+| **A memory ceiling cannot catch a query that allocates without reading** | It is read in `decide`, which every index read goes through, so an operator filling a buffer *from the scan* is refused on the first quad past the line. One that allocates after the scan is exhausted is not | Nothing short of a fallible allocator could, and Rust's `handle_alloc_error` aborts rather than unwinding. This is why `--max-blocking-rows` exists: refuse early rather than interrupt late |
+| **Admission control needs `--reorder`** | `--max-blocking-rows` (default 10,000,000) refuses an `ORDER BY`, `DISTINCT` or keyed `GROUP BY` whose input is *estimated* over budget. Without statistics there is no estimate and nothing is refused | Turn on `--reorder` if you want it. Note that `--reorder` rebuilds statistics with a full scan after every write, so on a large store that is expensive |
+| **Spilling is what a `DISTINCT` gets instead of a refusal, not instead of the fast path** | `--spill-bytes` (default 128 MiB, formerly `--spill-distinct`) only engages for a `DISTINCT` once `--max-blocking-rows` would have refused the query. Measured on three million rows, spilling took **23.6 s against 2.2 s** and **1,259 MiB against 396 MiB** with the disk never touched — the evaluator deduplicates on internal ids, and this path works above it where every solution is already a heap-allocated term | Leave it on. Ten times slower is a large price for an answer and no price at all against the alternative, which is no answer. It needs `--reorder`, because the estimate is what decides |
+| **A sort spills whatever the estimate says, and is quicker for it** | Unlike `DISTINCT`, an `ORDER BY` the heap declines always goes to the collector when `--spill-bytes` is set, with no statistics involved: below the budget it sorts in memory, above it writes runs. It is **faster** than the evaluator's sort either way — 8.5 s against 20.0 s on two million dates — because the key is decoded once per row rather than twice per comparison | Nothing. Setting `--spill-bytes 0` returns `ORDER BY` to the evaluator, which buffers every row |
+| **Scratch is bounded per query, and lands wherever `TMPDIR` points** | A spilling operator writes in proportion to its *input*, so a sort over a whole large store would write tens of gigabytes — and `TMPDIR` (`TMP`/`TEMP` on Windows) is very often the system volume rather than the one sized for the store. `--max-spill-disk` (default 16 GiB) refuses the query rather than the volume filling; two concurrent queries can each write up to it | Point `TMPDIR` at the volume the store lives on, and leave the ceiling on. A sort of 48.4 million rows writes about 7 GB, so the default has room for the work this store is for |
+| **A spilled `DISTINCT` comes back sorted** | A query that never spills comes back in hash order and one that spills comes back sorted. Neither is arrival order | SPARQL promises no order for `DISTINCT`, so both are conformant. A query that cares says `ORDER BY` |
+| **A keyed `GROUP BY` still buffers** | `DISTINCT` and `ORDER BY` are bounded — the first spills, the second by a heap with a `LIMIT` and by the collector without one — but a keyed `GROUP BY` holds every group in memory, so a large one is refused by `--max-blocking-rows` rather than answered | Make the pattern more selective |
+| **A sort key that mixes datatypes has no dependable order** | SPARQL defines no order between terms of unlike kinds, and the extension every engine uses — comparing lexical forms — is not transitive: `2 < 10` by value, `"1abc" < 2` and `10 < "1abc"` by lexical form, a cycle. Which comes first then depends on the order the rows arrived in, and this engine and the evaluator were measured disagreeing. Rows a sort does not separate are also free to come back in any order, though this engine's sorts are stable and keep arrival order | Sort on a key of one datatype. `ORDER BY xsd:dateTime(?o)` or a second key that breaks the ties makes the answer determined |
+| **A checkpoint is not off-machine** | Hard links share the live store's files, so one disk failure loses both | Copy or replicate the checkpoint elsewhere; or checkpoint to a different filesystem, which copies |
+| **Single process per store** | No read replicas over one directory | Run replicas over separate copies |
+| **CORS is `*`** | Any origin may query | Intentional — a SPARQL endpoint is routinely queried from a page elsewhere, and refusing that makes it useless for its most common job. Restrict at the proxy if you need to |
+| **Direct graph identification is off by default** | `PUT /graph/people` answers 400; the parameter form works | Set `--gsp-base` to the base URI the *outside* sees |
+| **No cost-based planner** | Query order matters: a measured **3×** on a five-pattern query | Reordering is applied automatically when statistics are built; write the most selective pattern first if they are not. See `DESIGN.md` §16 |
+| **`--data` reloads every start** | Slow restarts | Load once with `load.sh`, leave `HOLOS_DATA` empty |
+| **Shapes beyond SHACL Core are refused by the native validator** | A `sh:sparql` constraint, a SHACL-AF rule or a node expression makes `holos validate --engine native` and the holon Boundary refuse the shapes graph, naming the construct, and `holos validate` exit 2 | Deliberate: that validator is what gates a commit, and it used to drop what it could not check and answer *conforms* — a gate that fails open. `holos validate` and `Store.validate` default to `adapted`, which implements them; the Boundary keeps the native one because only it revalidates a delta |
+| **`holos validate` exits 1 on a graph that does not conform** | Exit status is 0 conforms, 1 does not, 2 could not run (a missing file, an unknown `--engine`, a refused shapes graph) — the `shacl` CLI's codes. It used to exit 0 whatever the answer | A CI step can gate on it directly. A script that ran it only for the printed summary, and treated any non-zero status as a crash, now needs to accept 1 |
+| **Compaction is offline** | Writes arriving during `holos compact` are not copied | Stop writers for the window, then swap directories |
+
+---
+
+## Troubleshooting
+
+**The build fails somewhere inside `librocksdb-sys`.** Missing clang or a C++ toolchain.
+`deploy/setup.sh` checks both before starting; run it.
+
+**`Failed to create lock file`.** Another process holds the store. Usually the service,
+during a load.
+
+**Every request is anonymous although the proxy sets the headers.** The server was started
+without `--trust-forwarded-identity`. It says so at start-up:
+
+```
+identity forwarded headers are NOT trusted; every request is anonymous
+```
+
+**A query returns fewer rows than expected.** That is what filtering semantics look like.
+Run the same query with `holos query --audit` to see what policy did, or start with
+`--fail-closed` so refusals become errors instead.
+
+**Restarts are slow.** `HOLOS_DATA` is re-parsing files on every start.

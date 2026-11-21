@@ -1,0 +1,2846 @@
+//! The RocksDB tier — `DESIGN.md` §6.1.
+//!
+//! Oxigraph's column-family layout, because it is already the right answer: six quad
+//! orders, three default-graph triple orders that avoid paying for a graph column, and the
+//! dictionary alongside. What differs is what goes *in* the keys — dense 64-bit
+//! [`TermId`]s rather than 128-bit hashes, which shrinks a quad key from about 64 bytes to
+//! 32 and keeps the door open for the Tier B trie (§5).
+//!
+//! # What is here, and what §6.1 still owes
+//!
+//! Implemented: the thirteen column families, atomic writes through a single batch,
+//! prefix-bounded scans, persisted statistics, and a bulk-load path.
+//!
+//! Not yet: user-defined timestamps for MVCC and time travel, merge-operator refcounts on
+//! the dictionary, checkpoints for branching, and BlobDB value separation. Each is a
+//! discrete addition rather than a redesign, which is the point of building the seam
+//! first.
+
+mod codec;
+mod dictsort;
+mod seen;
+mod sort;
+
+use crate::error::{Result, StorageError};
+use crate::index::{EncodedQuad, GraphFilter, IdRange, QuadScan};
+use crate::storage::Storage;
+use codec::{key, prefix_upper_bound, put_id, put_term, read_id, split_key, StoredTerm};
+use holos_core::{inline, vocab, Tag, TermId, FORMAT_VERSION};
+use oxrdf::{Term, TermRef};
+use rocksdb::{
+    ColumnFamilyDescriptor, DBCompressionType, IteratorMode, Options, ReadOptions, WriteBatch,
+    WriteOptions, DB,
+};
+use rustc_hash::{FxHashMap, FxHashSet};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::path::Path;
+
+// --- column families ---------------------------------------------------------------
+
+/// RocksDB's unnamed default family, where the metadata keys live.
+const DEFAULT_CF: &str = "default";
+const ID2STR: &str = "id2str";
+const STR2ID: &str = "str2id";
+const GRAPHS: &str = "graphs";
+const STATS: &str = "stats";
+/// Quad orders with the graph last, for patterns where the graph is unbound.
+const SPOG: &str = "spog";
+const POSG: &str = "posg";
+const OSPG: &str = "ospg";
+/// Quad orders with the graph first, for patterns where the graph is bound.
+const GSPO: &str = "gspo";
+const GPOS: &str = "gpos";
+const GOSP: &str = "gosp";
+/// Default-graph triple orders — three components per key, no graph column.
+const DSPO: &str = "dspo";
+const DPOS: &str = "dpos";
+const DOSP: &str = "dosp";
+
+const QUAD_ORDERS: [&str; 6] = [SPOG, POSG, OSPG, GSPO, GPOS, GOSP];
+const TRIPLE_ORDERS: [&str; 3] = [DSPO, DPOS, DOSP];
+
+/// Metadata keys in the default column family.
+const META_VERSION: &[u8] = b"format_version";
+const META_QUADS: &[u8] = b"quad_count";
+/// See [`Storage::generation`]. Written in the same batch as every change to the quads.
+const META_GENERATION: &[u8] = b"generation";
+/// See [`Storage::save_statistics`]. In the default family, which is key-addressed only —
+/// `STATS` is iterated at open with every key read as a predicate id, so it cannot hold a
+/// blob whose key is not one.
+const META_STATISTICS: &[u8] = b"statistics";
+const META_NEXT: [(&[u8], Tag); 4] = [
+    (b"next_iri", Tag::Iri),
+    (b"next_blank", Tag::BlankNode),
+    (b"next_literal", Tag::Literal),
+    (b"next_triple_term", Tag::TripleTerm),
+];
+
+/// Serialised terms at or below this length are their own dictionary key. Longer ones are
+/// keyed by a hash — see [`RocksStorage::lookup`] for why that stays exact.
+const INLINE_KEY_MAX: usize = 512;
+const KEY_EXACT: u8 = 0;
+const KEY_HASHED: u8 = 1;
+
+/// Bytes `RocksDB` reads ahead of a scanning iterator, by default.
+///
+/// # Why this is set at all
+///
+/// `RocksDB`'s adaptive readahead for an iterator starts small and doubles to a cap, which
+/// suits a local NVMe where a read costs microseconds and hurts a device where it costs
+/// milliseconds. This store's reference platform is the latter: a Samsung PM871 mSATA SSD
+/// behind a Realtek USB bridge, where every disk-bound phase of a load is limited by the
+/// link rather than by the flash. A scan of one predicate's slice of an index is the most
+/// sequential access this store ever makes, and it is what readahead is for.
+///
+/// Zero leaves `RocksDB` to its own devices. See `holos-bench`'s `scanread`, which sweeps it
+/// against a real store and is where this number comes from.
+pub const DEFAULT_SCAN_READAHEAD: usize = 0;
+
+/// Whether a scanning iterator prefetches asynchronously, by default.
+///
+/// Only does anything alongside [`DEFAULT_SCAN_READAHEAD`]: it lets RocksDB issue the next
+/// readahead while the current block is being handed out, which is worth more the longer a
+/// read takes. Measured with the readahead sweep rather than assumed.
+pub const DEFAULT_SCAN_ASYNC_IO: bool = false;
+
+/// Quads and terms in a RocksDB database.
+#[derive(Debug)]
+pub struct RocksStorage {
+    db: DB,
+    /// Next dense index per dictionary-backed tag. Held in memory, persisted in the same
+    /// batch as the row it numbers, so a crash cannot reissue an id.
+    next: FxHashMap<Tag, u64>,
+    quad_count: u64,
+    predicate_counts: FxHashMap<TermId, u64>,
+    /// See [`Storage::generation`]. Persisted as `META_GENERATION` in the batch that moves it.
+    generation: u64,
+    /// The last bulk load's dictionary reads, kept past `end_bulk_load` so a profile can
+    /// read them after the fact.
+    last_resolves: crate::storage::BulkResolves,
+    /// `Some` while a bulk load is running: see [`RocksStorage::begin_bulk_load`].
+    bulk: Option<BulkState>,
+    /// `Some` while a commit scope is open: see [`Storage::begin`].
+    scope: Option<ScopeState>,
+    /// Where the database lives, so a bulk load can write its sorted files beside it —
+    /// the same filesystem, which is what lets the ingest move them instead of copying.
+    path: std::path::PathBuf,
+    /// How many quads a load may hold before it spills them to a sorted run.
+    ingest_limit: usize,
+    /// How many rows the final merge puts in one index file before starting the next.
+    index_file_rows: usize,
+    /// How many bytes of dictionary rows a load may hold before it spills a sorted run.
+    dict_spill_bytes: usize,
+    /// How large a filter a load keeps over the terms it has interned. See `seen`.
+    seen_bytes: usize,
+    /// Bytes `RocksDB` reads ahead of an iterator. Zero leaves it to `RocksDB`.
+    scan_readahead: usize,
+    /// Whether an iterator prefetches asynchronously. Needs `scan_readahead`.
+    scan_async_io: bool,
+    /// Whether a scan verifies each block's checksum as it reads it.
+    scan_verify_checksums: bool,
+    /// How many times the current or most recent bulk load spilled.
+    spills: usize,
+}
+
+/// How many buffered operations a commit scope may hold.
+///
+/// A scope keeps everything in one batch so the write is atomic, and one batch has to fit in
+/// memory: roughly ten operations per quad, so this is a few hundred thousand quads in a
+/// single commit. Past that it refuses, because the alternative — spilling to several
+/// batches — would silently drop the one guarantee the scope exists to give, and the caller
+/// would go on believing in an atomicity it no longer had.
+///
+/// The way past it is not a bigger number. A commit that large is a load, and a load belongs
+/// on [`RocksStorage::begin_bulk_load`], which buffers in bounded batches precisely because
+/// it does *not* promise to be atomic.
+const MAX_SCOPE_OPS: usize = 4 << 20;
+
+/// Whether something is in the store now, and whether it was before the scope opened.
+///
+/// Both are needed. `present` answers a read; `in_db` says whether the database iterator
+/// will produce it, which is what keeps an overlaid scan from yielding a quad twice.
+#[derive(Debug, Clone, Copy)]
+struct Presence {
+    in_db: bool,
+    present: bool,
+}
+
+/// What a commit scope has to remember.
+///
+/// The buffered writes, and enough about them to answer every read that would otherwise go
+/// to the database. That second half is not optional: a buffered write is invisible to a
+/// `get` and to an iterator, so without it a scope would show the caller the store as it was
+/// when the scope opened — and SPARQL requires each update operation to see the effects of
+/// the ones before it. A bulk load can skip all of this because a load does not read.
+///
+/// Everything here is bounded by the size of the commit rather than of the store, which is
+/// why a scope suits a tick and the bulk path suits a load.
+#[derive(Debug, Default)]
+struct ScopeState {
+    pending: Vec<Pending>,
+    /// Quads the scope has touched. Consulted by `contains_encoded` and overlaid onto
+    /// `scan` — without it, inserting one quad twice inside a scope writes and counts it
+    /// twice, and a `DELETE WHERE` cannot see what an earlier `INSERT DATA` added.
+    quads: FxHashMap<EncodedQuad, Presence>,
+    /// Named graphs the scope has created or dropped, for the same reason.
+    graphs: FxHashMap<TermId, Presence>,
+    /// Terms interned since the scope opened, keyed by their **exact serialised bytes** for
+    /// the reason `BulkState::terms` documents. Without it a term interned inside a scope is
+    /// interned again the next time it appears, and the two quads that mention it get
+    /// different ids and no longer join.
+    terms: FxHashMap<Vec<u8>, TermId>,
+    /// The same map backwards, which the bulk path has no use for and a scope does: `decode`
+    /// turns an id into a term on the read path, and an id minted inside the scope has no
+    /// `id2str` row yet.
+    strings: FxHashMap<TermId, Vec<u8>>,
+    /// Candidate lists for hashed dictionary keys, buffered so a second term hashing to a key
+    /// this scope already appended to extends that list rather than the stale one on disk.
+    /// Rare, and it is exactly the collision case §5 exists to survive.
+    candidates: FxHashMap<Vec<u8>, Vec<u8>>,
+    /// The counters as they were when the scope opened. They live in memory and are written
+    /// in the same batch, so discarding the batch has to discard them too.
+    quad_count: u64,
+    predicate_counts: FxHashMap<TermId, u64>,
+    generation: u64,
+}
+
+/// What a bulk load has to remember that the database cannot yet answer.
+///
+/// Writes are buffered, so a `get` during the load does not see them. Two consequences
+/// have to be handled rather than tolerated:
+///
+/// - **Term ids.** Interning the same new term twice within one buffer would allocate two
+///   ids for one term and silently alias them. The map below is therefore mandatory, not
+///   an optimisation, and it bounds a load's memory by its number of *distinct* terms.
+///   Loads bigger than memory need the external merge sort that `DESIGN.md` §6.1 pairs
+///   with `SstFileWriter`, which is not built yet.
+/// - **Counters.** Duplicate quads cannot be detected against the buffer cheaply, so
+///   `quad_count` and the predicate statistics are recomputed by one pass over the index
+///   when the load finishes, rather than maintained during it.
+/// One buffered write, held as owned bytes.
+///
+/// A `rocksdb::WriteBatch` would be the natural buffer and cannot be used: it wraps a raw
+/// pointer and is therefore not `Sync`, which would make the whole store un-shareable
+/// across the HTTP server's request threads. Owning the bytes costs one allocation per
+/// key over a batch's shared buffer, and buys a store that many readers can hold at once.
+#[derive(Debug)]
+enum Pending {
+    Put(&'static str, Box<[u8]>, Box<[u8]>),
+    Delete(&'static str, Box<[u8]>),
+}
+
+/// How many quads a load holds before it sorts them and writes them out to a run file.
+///
+/// Not a cap on the load: a load larger than this spills, and goes on spilling, and the runs
+/// are merged back into one sorted stream per order at the end. What it caps is *memory* — an
+/// `EncodedQuad` is 40 bytes and the partitioned key rows another 24 or 32, so a buffer this
+/// size peaks somewhere around half a gigabyte and stays there however much is loaded.
+///
+/// Larger is faster, up to a point, because it means fewer runs to merge and fewer bytes
+/// written to disk and read back. Smaller is friendlier to a machine doing other things.
+const SPILL_QUADS: usize = 4 << 20;
+
+/// How many rows the final merge puts in one index file before starting the next.
+///
+/// An `SstFileWriter` holds a file's filter and index in memory until the file is finished,
+/// and for an order over 654 million quads that is about a gigabyte — which was the load's
+/// memory peak, reached three times over once three orders were written at once. Cutting
+/// each order's stream into files of this many rows bounds that by the file rather than by
+/// the load: the files do not overlap, so `RocksDB` still adopts every one at the bottom
+/// level, and the loading thread ingests each as it lands rather than waiting for the order.
+const INDEX_FILE_ROWS: usize = 32 << 20;
+
+/// The two dictionary families, each accumulating sorted runs.
+///
+/// Kept apart rather than in one accumulator because they are ingested into different
+/// column families, and an `SstFileWriter` writes one file for one family.
+struct DictBuffers {
+    str2id: dictsort::DictRuns,
+    id2str: dictsort::DictRuns,
+    /// How many times these have been flushed, so each ingested file gets its own name.
+    flushes: usize,
+}
+
+impl DictBuffers {
+    fn new(dir: &std::path::Path, budget: usize, flushes: usize) -> Self {
+        Self {
+            str2id: dictsort::DictRuns::new(dir, STR2ID, budget).in_window(flushes),
+            id2str: dictsort::DictRuns::new(dir, ID2STR, budget).in_window(flushes),
+            flushes,
+        }
+    }
+
+    /// Whether either family has reached its budget.
+    ///
+    /// Either, not both: they are written in step, one row each per interned term, so one
+    /// reaching its budget means the other is close behind. Flushing them together is what
+    /// makes it safe to clear the term cache, which needs *every* row of a term on disk.
+    fn full(&self) -> bool {
+        self.str2id.at_budget() || self.id2str.at_budget()
+    }
+
+    /// The accumulator for a family, or `None` if the family is not a dictionary one.
+    fn family(&mut self, name: &str) -> Option<&mut dictsort::DictRuns> {
+        match name {
+            STR2ID => Some(&mut self.str2id),
+            ID2STR => Some(&mut self.id2str),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Default)]
+struct BulkState {
+    pending: Vec<Pending>,
+    /// Terms interned since the last write, keyed by their **exact serialised bytes**.
+    ///
+    /// Not by the `str2id` key: past 512 bytes that key is a hash, and two different long
+    /// literals sharing one would be handed the same id. On disk that case is resolved by
+    /// verifying candidates against `id2str`, but a buffered term is not on disk yet, so
+    /// the buffer has to be exact.
+    ///
+    /// Each entry counts its hits since the last flush, and a flush keeps the entries hit
+    /// often enough to be worth keeping — see `flush_dictionary`. A predicate, a class, an
+    /// enumerated literal: those recur in every window and were being looked up on disk
+    /// once per window after the flush dropped them.
+    terms: FxHashMap<Vec<u8>, Cached>,
+    /// Every term this load has interned, as a filter, so a new term can be allocated
+    /// without first proving on disk that it is new. `None` unless the dictionary was
+    /// empty when the load began — the only case in which "this load never interned it"
+    /// means "it does not exist". See `seen`.
+    seen: Option<seen::Seen>,
+    /// Quads held back for sorted ingestion rather than written as index keys.
+    ///
+    /// One `EncodedQuad` here replaces the nine or ten key copies the batch path would have
+    /// built, which is why holding the whole load is affordable at all: the keys are
+    /// generated one order at a time, while that order's file is being written.
+    quads: Vec<EncodedQuad>,
+    /// Named graphs seen, so the catalogue can be written once at the end.
+    graphs: FxHashSet<TermId>,
+    /// Whether the sorted-ingestion path is on.
+    sst: bool,
+    /// Dictionary rows held for sorted ingestion rather than written as a batch.
+    ///
+    /// The same trade the index orders make, and for the same reason: `loadprofile` puts
+    /// the dictionary at three quarters of a bulk load on data with high term cardinality,
+    /// and most of that is these rows going through a `WriteBatch`. `None` when the load is
+    /// not using the sorted path, in which case they go back to `pending`.
+    dict: Option<DictBuffers>,
+    /// The previous dictionary window, while a thread is writing it out. See `DictFlush`.
+    dict_flush: Option<DictFlush>,
+    /// See [`crate::storage::BulkResolves`].
+    resolves: crate::storage::BulkResolves,
+    /// Encodes since the last flush: the clock `Cached` positions are read from.
+    position: u32,
+    /// The counters as they stood at the previous flush, so each flush can report its own
+    /// window rather than a running total.
+    resolves_at_last_flush: crate::storage::BulkResolves,
+    /// The thread sorting and writing index runs, once the load outgrew its buffer.
+    ///
+    /// Absent for any load that fits in one buffer, which is the common case: the merge then
+    /// collapses to sorting a vector and nothing touches the disk.
+    spilled: Option<SpillWorker>,
+}
+
+/// The spread an entry needs to survive a flush: [`HOT_SPREAD`], raised until no more than
+/// [`HOT_CAPACITY`] entries qualify.
+///
+/// Found by selection rather than a sort — the spreads are copied out (four bytes each, so
+/// a few megabytes for a full cache) and the cap-th largest is picked in linear time.
+/// Ties at the threshold all survive, so the cap can be exceeded by however many entries
+/// share that exact value; that is bounded by the cache and is not worth a tiebreak.
+fn hot_threshold(spreads: impl Iterator<Item = u32>) -> u32 {
+    let mut wide: Vec<u32> = spreads.filter(|&s| s >= HOT_SPREAD).collect();
+    if wide.len() <= HOT_CAPACITY {
+        return HOT_SPREAD;
+    }
+    // The cap-th largest is at index `len - cap` once ascending.
+    let at = wide.len() - HOT_CAPACITY;
+    let (_, nth, _) = wide.select_nth_unstable(at);
+    (*nth).max(HOT_SPREAD)
+}
+
+/// A term-cache entry: the id, and where in the current window it was first and last used.
+///
+/// Positions are in encodes since the last flush. Their difference — the *spread* — is
+/// what a flush keeps entries by, and it is a better signal than a hit count for the thing
+/// being asked, which is "will this term turn up again next window?" A subject's dozen
+/// quads are adjacent in the file, so it is hit a dozen times across a span of a dozen
+/// quads and then never again; a postal code shared by a thousand subjects is hit a
+/// handful of times across the whole window and again in every window after. Counting
+/// hits ranks the subject above the postal code. Measuring spread ranks them the right
+/// way round, and it is the postal code that costs a disk read every window if forgotten.
+#[derive(Debug, Clone, Copy)]
+struct Cached {
+    id: TermId,
+    /// First use in this window, or `NOT_USED` if none yet.
+    first: u32,
+    /// Most recent use in this window.
+    last: u32,
+}
+
+impl Cached {
+    const NOT_USED: u32 = u32::MAX;
+
+    fn new(id: TermId, at: u32) -> Self {
+        Self {
+            id,
+            first: at,
+            last: at,
+        }
+    }
+
+    fn touch(&mut self, at: u32) {
+        if self.first == Self::NOT_USED {
+            self.first = at;
+        }
+        self.last = at;
+    }
+
+    /// How far apart the first and last use were, in encodes. Zero if unused this window.
+    fn spread(&self) -> u32 {
+        if self.first == Self::NOT_USED {
+            0
+        } else {
+            self.last.saturating_sub(self.first)
+        }
+    }
+}
+
+/// A cache entry survives a flush if its uses in the window were at least this far apart.
+///
+/// In encodes, so about a third as many quads. A subject's cluster of quads spans a few
+/// dozen; anything spread across thousands has been used from more than one place in the
+/// file, which is what recurrence looks like from inside one window.
+const HOT_SPREAD: u32 = 8_192;
+
+/// The most entries a flush keeps, by spread. At 222 bytes each this is about 44 MB.
+///
+/// The bound, in case a dataset is nothing but spread-out terms — which would be unusual,
+/// and forty megabytes is the price of not having to know that in advance.
+const HOT_CAPACITY: usize = 200_000;
+
+/// A dictionary window being written out on its own thread.
+///
+/// A flush used to happen in line: merge the window's runs, write an SST per family,
+/// ingest both, trim the term cache, resume. The merge and the write are the cost — a run
+/// read back from disk and a compressed, filtered SST written — and neither touches the
+/// database, so they run here while the load goes on. What stays on the loading thread is
+/// the ingest, which needs the database, and the trim, which needs the ingest: a term may
+/// only be forgotten once both of its rows are readable on disk, and a term looked up while
+/// its rows are still being written must be found in the cache, or it would be allocated a
+/// second id. So the cache is not trimmed at the flush but at `settle_dictionary`, when the
+/// files are in — a few seconds later, during which the cache holds one window and a
+/// fraction of the next.
+///
+/// One in flight at a time. The next flush waits for this one: the window's rows are on
+/// disk as a run by the time it is handed over, so what the wait bounds is not memory but
+/// the number of files a load has out at once.
+struct DictFlush {
+    sequence: usize,
+    /// The id counters when the window was handed over. A cached term whose id is at or
+    /// past its tag's counter was allocated into the *next* window, whose rows are not on
+    /// disk when this one settles, and the trim leaves it alone.
+    next: FxHashMap<Tag, u64>,
+    handle: std::thread::JoinHandle<Result<Vec<(&'static str, std::path::PathBuf)>>>,
+}
+
+/// The thread that sorts and writes index runs, and the channel that feeds it.
+///
+/// The loading thread was doing this itself: every four million quads, stop interning, sort
+/// the buffer once per order, write each out, resume. By `loadprofile` that is about 15% of
+/// the loading thread's time, and none of it touches the dictionary or the id sequence — so
+/// it is the cleanest piece of the load to take off that thread. The buffer is handed over
+/// whole, the worker sorts and writes it while the loading thread fills the next, and the
+/// run paths accumulate in the worker's `Spilled`, which comes back when the sender is
+/// dropped and the thread joined.
+///
+/// A channel of capacity one is the whole memory story: at most one buffer is being sorted
+/// while one is being filled, so the extra cost is one buffer — 128 MB at the default
+/// `ingest_limit` — and a loading thread that outruns the sorter blocks on `send` rather
+/// than stacking buffers up.
+struct SpillWorker {
+    to_worker: std::sync::mpsc::SyncSender<Vec<EncodedQuad>>,
+    handle: std::thread::JoinHandle<Result<Box<Spilled>>>,
+}
+
+impl SpillWorker {
+    fn start(dir: &std::path::Path) -> Self {
+        let (to_worker, from_loader) = std::sync::mpsc::sync_channel::<Vec<EncodedQuad>>(1);
+        let mut spilled = Box::new(Spilled::new(dir));
+        let handle = std::thread::spawn(move || {
+            for quads in from_loader {
+                let (mut triples, mut named) = partition(&quads);
+                drop(quads);
+                // One buffer, nine orders, sorted in place each time. Copying it per order
+                // would multiply by nine the memory this whole mechanism exists to bound.
+                for (runs, perm) in spilled.triples.iter_mut().zip(TRIPLE_PERMS.map(|(_, p)| p)) {
+                    runs.spill(&mut triples, perm)?;
+                }
+                for (runs, perm) in spilled.named.iter_mut().zip(QUAD_PERMS.map(|(_, p)| p)) {
+                    runs.spill(&mut named, perm)?;
+                }
+            }
+            Ok(spilled)
+        });
+        Self { to_worker, handle }
+    }
+
+    /// Hands a buffer over. Blocks while the worker is still on the previous one.
+    ///
+    /// Fails only when the worker has already stopped, which it does on a write that failed;
+    /// the buffer comes back so the caller can join the worker and report that failure.
+    fn send(&self, quads: Vec<EncodedQuad>) -> std::result::Result<(), Vec<EncodedQuad>> {
+        self.to_worker.send(quads).map_err(|e| e.0)
+    }
+
+    /// Ends the worker and returns every run it wrote.
+    ///
+    /// A worker that panicked is reported as an error rather than propagated as a panic:
+    /// the load has already failed at that point, and the caller can say so.
+    fn finish(self) -> Result<Box<Spilled>> {
+        drop(self.to_worker);
+        self.handle
+            .join()
+            .map_err(|_| StorageError::Io(std::io::Error::other("the spill worker panicked")))?
+    }
+}
+
+/// How many index orders the final merge works on at once.
+///
+/// Three, not nine: each merge holds a copy of the in-memory tail and a reader per run, and
+/// each streams a run set off the disk while writing a file back to it. Three is the whole
+/// of a default-graph load's orders, and on an SSD three streams each way is still well
+/// short of the disk. Past that the number is a guess, and a guess that costs memory.
+const MERGE_THREADS: usize = 3;
+
+/// One order's share of the final merge.
+#[derive(Clone, Copy)]
+enum MergeJob {
+    Triples(usize),
+    Named(usize),
+}
+
+impl MergeJob {
+    /// Merges the order's runs with its tail and writes its files, on whichever thread
+    /// claimed it, handing each finished file to `emit`. The tail is copied because the
+    /// merge sorts it in place and the other orders need it unsorted.
+    fn run(
+        self,
+        dir: &std::path::Path,
+        spilled: &Spilled,
+        triples: &[[TermId; 3]],
+        named: &[[TermId; 4]],
+        file_rows: usize,
+        emit: &mut dyn FnMut(&'static str, std::path::PathBuf),
+    ) -> Result<()> {
+        match self {
+            Self::Triples(i) => {
+                let (family, perm) = TRIPLE_PERMS[i];
+                let mut tail = triples.to_vec();
+                let merged = spilled.triples[i].merge(&mut tail, perm)?;
+                write_index_files(dir, family, merged, file_rows, emit)
+            }
+            Self::Named(i) => {
+                let (family, perm) = QUAD_PERMS[i];
+                let mut tail = named.to_vec();
+                let merged = spilled.named[i].merge(&mut tail, perm)?;
+                write_index_files(dir, family, merged, file_rows, emit)
+            }
+        }
+    }
+}
+
+/// The sorted runs on disk, one set per index order.
+///
+/// Boxed inside `SpillWorker` because it holds nine vectors of paths and crosses a thread
+/// boundary twice.
+struct Spilled {
+    triples: [sort::Runs<3>; 3],
+    named: [sort::Runs<4>; 6],
+}
+
+impl std::fmt::Debug for BulkState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BulkState")
+            .field("buffered_ops", &self.pending.len())
+            .field("distinct_terms", &self.terms.len())
+            .field("buffered_quads", &self.quads.len())
+            .field("named_graphs", &self.graphs.len())
+            .field("sorted_ingestion", &self.sst)
+            .field("spilled", &self.spilled.is_some())
+            .finish()
+    }
+}
+
+/// How many buffered operations trigger a write.
+const BULK_BATCH_OPS: usize = 64 * 1024;
+
+impl RocksStorage {
+    /// Opens or creates a store at `path`.
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let mut db_opts = Options::default();
+        db_opts.create_if_missing(true);
+        db_opts.create_missing_column_families(true);
+        db_opts.set_compression_type(DBCompressionType::Lz4);
+        // One writer, many readers — the discipline the `Storage` trait already encodes
+        // by taking `&mut self` for writes.
+        db_opts.increase_parallelism(num_cpus());
+        // Three index copies per triple means a lot of small keys; the default 64 MiB
+        // memtable flushes constantly under a load.
+        db_opts.set_write_buffer_size(256 * 1024 * 1024);
+        db_opts.set_max_write_buffer_number(4);
+        db_opts.set_min_write_buffer_number_to_merge(2);
+        db_opts.set_max_background_jobs(num_cpus());
+
+        let mut families = vec![ColumnFamilyDescriptor::new(ID2STR, value_opts())];
+        families.push(ColumnFamilyDescriptor::new(STR2ID, str2id_opts()));
+        families.push(ColumnFamilyDescriptor::new(GRAPHS, index_opts(codec::ID)));
+        families.push(ColumnFamilyDescriptor::new(STATS, value_opts()));
+        for name in QUAD_ORDERS {
+            families.push(ColumnFamilyDescriptor::new(name, index_opts(codec::ID)));
+        }
+        for name in TRIPLE_ORDERS {
+            families.push(ColumnFamilyDescriptor::new(name, index_opts(codec::ID)));
+        }
+
+        let path = path.as_ref().to_path_buf();
+        let db = DB::open_cf_descriptors(&db_opts, &path, families).map_err(rocks_err)?;
+
+        // Refuse a store written by an incompatible encoding rather than silently
+        // decoding its term ids as something else (`holos_core::FORMAT_VERSION`).
+        match db.get(META_VERSION).map_err(rocks_err)? {
+            Some(bytes) => {
+                let found = u32::from_be_bytes(
+                    bytes
+                        .as_slice()
+                        .try_into()
+                        .map_err(|_| StorageError::corruption("bad format version"))?,
+                );
+                if found != FORMAT_VERSION {
+                    return Err(StorageError::corruption(format!(
+                        "store was written with format version {found}, this build speaks \
+                         {FORMAT_VERSION}"
+                    )));
+                }
+            }
+            None => db
+                .put(META_VERSION, FORMAT_VERSION.to_be_bytes())
+                .map_err(rocks_err)?,
+        }
+
+        let mut next = FxHashMap::default();
+        for (meta_key, tag) in META_NEXT {
+            next.insert(tag, read_u64(&db, meta_key)?.unwrap_or(0));
+        }
+        let quad_count = read_u64(&db, META_QUADS)?.unwrap_or(0);
+        let generation = read_u64(&db, META_GENERATION)?.unwrap_or(0);
+
+        // Statistics are small — one row per predicate — so they are read once at open
+        // and served from memory, which is what lets `predicate_count` be infallible.
+        let mut predicate_counts = FxHashMap::default();
+        let cf = cf(&db, STATS)?;
+        for row in db.iterator_cf(cf, IteratorMode::Start) {
+            let (k, v) = row.map_err(rocks_err)?;
+            predicate_counts.insert(read_id(&k)?, u64::from_be_bytes(to_8(&v)?));
+        }
+
+        Ok(Self {
+            db,
+            next,
+            quad_count,
+            predicate_counts,
+            generation,
+            last_resolves: crate::storage::BulkResolves::default(),
+            bulk: None,
+            scope: None,
+            path,
+            ingest_limit: SPILL_QUADS,
+            index_file_rows: INDEX_FILE_ROWS,
+            dict_spill_bytes: dictsort::SPILL_BYTES,
+            seen_bytes: seen::DEFAULT_BYTES,
+            scan_readahead: DEFAULT_SCAN_READAHEAD,
+            scan_async_io: DEFAULT_SCAN_ASYNC_IO,
+            scan_verify_checksums: true,
+            spills: 0,
+        })
+    }
+
+    /// How many times the current or most recent bulk load spilled to disk.
+    ///
+    /// Zero means the whole load fitted in one buffer and never touched the scratch
+    /// directory, which is the fast case. A large number against a load that had memory to
+    /// spare is the signal to raise [`Self::set_ingest_limit`]: each spill is the buffer
+    /// written out and read back again.
+    #[must_use]
+    pub fn spills(&self) -> usize {
+        self.spills
+    }
+
+    /// How many quads a bulk load holds before spilling them to a sorted run.
+    ///
+    /// The default is [`SPILL_QUADS`], which peaks somewhere around half a gigabyte. This is
+    /// not a limit on the load — a load larger than this spills and goes on spilling, and the
+    /// runs are merged at the end — it is the load's memory ceiling, and it holds whatever
+    /// the load's size.
+    ///
+    /// Lower it on a machine that cannot spare that: the load writes and reads more scratch,
+    /// and still finishes. Raise it and there is less scratch and less merging, up to the
+    /// point where the buffer stops fitting in memory, which is the one direction that turns
+    /// a slow load into a killed one.
+    pub fn set_ingest_limit(&mut self, quads: usize) {
+        self.ingest_limit = quads;
+    }
+
+    /// How many rows the final merge writes to one index file before starting the next.
+    ///
+    /// See [`INDEX_FILE_ROWS`]. Tests set it low to make a small load produce several
+    /// files per order.
+    pub fn set_index_file_rows(&mut self, rows: usize) {
+        self.index_file_rows = rows.max(1);
+    }
+
+    /// How many bytes of dictionary rows a load holds before spilling a sorted run.
+    ///
+    /// The counterpart to [`Self::set_ingest_limit`] for the other half of a load, and it
+    /// exists for the same two reasons: an operator with less memory than the default
+    /// assumes, and a test that needs to reach the spill-and-merge path without interning
+    /// a quarter of a gigabyte of terms to get there.
+    pub fn set_dict_spill_bytes(&mut self, bytes: usize) {
+        self.dict_spill_bytes = bytes;
+    }
+
+    /// Sets the size of the filter a bulk load keeps over the terms it has interned.
+    ///
+    /// The default is [`seen::DEFAULT_BYTES`]. Larger is fewer false positives, each of
+    /// which is one dictionary read the load did not need; smaller is less memory. Zero
+    /// disables it, which is how the load ran before it existed.
+    pub fn set_seen_bytes(&mut self, bytes: usize) {
+        self.seen_bytes = bytes;
+    }
+
+    /// Sets how far `RocksDB` reads ahead of a scanning iterator, in bytes. Zero leaves it
+    /// to `RocksDB`'s own adaptive readahead.
+    ///
+    /// See [`DEFAULT_SCAN_READAHEAD`] for why this is worth setting and where the default
+    /// came from. `holos-bench`'s `scanread` sweeps it against a real store.
+    pub fn set_scan_readahead(&mut self, bytes: usize) {
+        self.scan_readahead = bytes;
+    }
+
+    /// Sets whether a scanning iterator prefetches asynchronously. Does nothing unless
+    /// [`Self::set_scan_readahead`] is non-zero.
+    pub fn set_scan_async_io(&mut self, enabled: bool) {
+        self.scan_async_io = enabled;
+    }
+
+    /// Sets whether a scan verifies each block's checksum. Off is faster on a CPU-bound
+    /// scan and gives up `RocksDB`'s detection of a corrupt block, so it is not a default.
+    pub fn set_scan_verify_checksums(&mut self, enabled: bool) {
+        self.scan_verify_checksums = enabled;
+    }
+
+    /// Read options for an iteration, carrying whatever readahead is configured.
+    ///
+    /// Every scan goes through this rather than `ReadOptions::default`, so a change here
+    /// reaches the index orders and the dictionary alike and none of them can be forgotten.
+    fn scan_opts(&self) -> ReadOptions {
+        let mut opts = ReadOptions::default();
+        if self.scan_readahead > 0 {
+            opts.set_readahead_size(self.scan_readahead);
+            opts.set_async_io(self.scan_async_io);
+        }
+        if !self.scan_verify_checksums {
+            opts.set_verify_checksums(false);
+        }
+        opts
+    }
+
+    /// Starts a bulk load: writes are buffered into large batches and the write-ahead
+    /// log is skipped.
+    ///
+    /// A load interrupted part-way leaves the store in an unspecified state and must be
+    /// discarded — that is the trade being made for the speed. `DESIGN.md` §6.1 wants
+    /// `SstFileWriter` ingestion here eventually, which is faster still *and* keeps crash
+    /// safety, at the cost of needing its input sorted.
+    fn start_bulk(&mut self) -> Result<()> {
+        self.spills = 0;
+        let dir = self.ingest_dir()?;
+        // The filter is only sound when nothing was interned before the load: a term that
+        // predates it is not in the filter, and skipping its lookup would allocate it twice.
+        let seen = (self.dictionary_len() == 0 && self.seen_bytes > 0)
+            .then(|| seen::Seen::with_bytes(self.seen_bytes));
+        self.bulk = Some(BulkState {
+            sst: true,
+            dict: Some(DictBuffers::new(&dir, self.dict_spill_bytes, 0)),
+            seen,
+            ..BulkState::default()
+        });
+        // Auto-compaction during a load is wasted work: it rewrites levels that the rest
+        // of the load is about to invalidate. Turned off here and re-enabled, followed by
+        // one deliberate compaction, when the load ends.
+        self.set_compactions(false);
+        Ok(())
+    }
+
+    /// Enables or disables automatic compaction on every index family.
+    fn set_compactions(&self, enabled: bool) {
+        let value = if enabled { "false" } else { "true" };
+        for name in QUAD_ORDERS.iter().chain(TRIPLE_ORDERS.iter()) {
+            if let Ok(handle) = cf(&self.db, name) {
+                // A failure here costs throughput, never correctness, so it is not fatal.
+                let _ = self
+                    .db
+                    .set_options_cf(handle, &[("disable_auto_compactions", value)]);
+            }
+        }
+    }
+
+    /// Ends a bulk load, writing what is buffered and rebuilding the counters.
+    fn finish_bulk(&mut self) -> Result<()> {
+        self.settle_dictionary(true)?;
+        if let Some(state) = self.bulk.take() {
+            let BulkState {
+                pending,
+                quads,
+                graphs,
+                sst,
+                spilled,
+                dict,
+                resolves,
+                ..
+            } = state;
+            self.last_resolves = resolves;
+            // The dictionary first: the index files name term ids, and a store holding an id
+            // it cannot decode is corrupt in a way no later step would notice.
+            if let Some(dict) = dict {
+                let sequence = dict.flushes;
+                let dir = self.ingest_dir()?;
+                for (family, path) in write_dict_ssts(&dir, sequence, dict)? {
+                    self.ingest_dict_sst(family, path)?;
+                }
+            }
+            self.write_pending(pending, true)?;
+            // Everything the worker wrote, once it has written it. Joined here and not
+            // earlier: the dictionary's own flush above ran on this thread while the worker
+            // was still sorting, which is the overlap the worker exists for.
+            let spilled = spilled.map(SpillWorker::finish).transpose()?;
+            if sst && !(quads.is_empty() && spilled.is_none()) {
+                self.ingest_quads(quads, &graphs, spilled)?;
+            }
+        }
+        self.set_compactions(true);
+        self.recount()
+    }
+
+    /// Sorts what has been collected and writes it out as a run per index order.
+    ///
+    /// Called when the buffer reaches its size, which is what keeps a load's memory flat
+    /// however large the load is. The runs are merged back at the end.
+    fn spill(&mut self) -> Result<()> {
+        let dir = self.ingest_dir()?;
+        self.spills += 1;
+        let Some(state) = self.bulk.as_mut() else {
+            return Ok(());
+        };
+        let quads = std::mem::take(&mut state.quads);
+        // The buffer's capacity went with it; the next one grows back to the limit as it
+        // fills, which costs a few reallocations per spill and nothing worth reserving for.
+        let worker = state
+            .spilled
+            .get_or_insert_with(|| SpillWorker::start(&dir));
+        if worker.send(quads).is_err() {
+            // The worker stops early only on a write that failed. Joining it yields that
+            // error, which is the one worth reporting; a worker that somehow stopped clean
+            // is reported as the stop itself.
+            let worker = state.spilled.take().expect("the worker was just there");
+            worker.finish()?;
+            return Err(StorageError::Io(std::io::Error::other(
+                "the spill worker stopped before the load finished",
+            )));
+        }
+        Ok(())
+    }
+
+    /// The scratch directory, made if it is not there.
+    ///
+    /// Beside the database rather than in the system temp directory, so the ingest can move
+    /// the files instead of copying them across a filesystem boundary — and so a load's
+    /// scratch lands on the volume the operator sized for the store.
+    fn ingest_dir(&self) -> Result<std::path::PathBuf> {
+        let dir = self.path.join("holos-ingest");
+        if !dir.exists() {
+            std::fs::create_dir_all(&dir).map_err(StorageError::Io)?;
+        }
+        Ok(dir)
+    }
+
+    /// Writes one sorted file per index order and hands them to `RocksDB`.
+    ///
+    /// This is `DESIGN.md` §6.1's `SstFileWriter` + `IngestExternalFile`. The batch path
+    /// writes every key through the memtable and the write-ahead log, and the levels then
+    /// compact it all again; a sorted file that does not overlap what is already there can be
+    /// adopted at the bottom level without any of that.
+    ///
+    /// The orders are merged [`MERGE_THREADS`] at a time. Each merge is a heap over the
+    /// order's runs feeding a compressed file, and one thread doing nine of them in turn
+    /// took fourteen minutes of a 56-minute load at 654 million quads while the other cores
+    /// sat idle. Each thread takes its own copy of the in-memory tail, because the merge
+    /// sorts it in place; the tail is at most one buffer, so three copies is bounded the way
+    /// everything else here is. Each order is written as files of [`INDEX_FILE_ROWS`], and
+    /// the ingest of each stays on this thread — it needs the database — and happens as the
+    /// file lands, so scratch holds runs plus the files in flight rather than runs plus
+    /// every order's output.
+    fn ingest_quads(
+        &mut self,
+        quads: Vec<EncodedQuad>,
+        graphs: &FxHashSet<TermId>,
+        spilled: Option<Box<Spilled>>,
+    ) -> Result<()> {
+        let dir = self.ingest_dir()?;
+        let (triples, named) = partition(&quads);
+        drop(quads);
+
+        // No spills means no runs, and the merge below is then a sort of what is in memory —
+        // the same work the first version of this did, reached by the same path.
+        let spilled = spilled.unwrap_or_else(|| Box::new(Spilled::new(&dir)));
+
+        let outcome = (|| -> Result<()> {
+            // One job per order, claimed by index: a counter past the end is how a failure
+            // tells the other threads to stop after the file they are on.
+            let jobs: Vec<MergeJob> = (0..TRIPLE_PERMS.len())
+                .map(MergeJob::Triples)
+                .chain((0..QUAD_PERMS.len()).map(MergeJob::Named))
+                .collect();
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let claim = || {
+                let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                jobs.get(i).copied()
+            };
+            let stop = || next.store(jobs.len(), std::sync::atomic::Ordering::Relaxed);
+
+            let (done, finished) = std::sync::mpsc::channel();
+            // Borrowed here, by name, so the `move` below takes references and not the
+            // values: the runs and the tails are shared by every worker.
+            let (dir, spilled, triples, named) = (&dir, &*spilled, &triples, &named);
+            let file_rows = self.index_file_rows;
+            std::thread::scope(|scope| -> Result<()> {
+                let workers: Vec<_> = (0..MERGE_THREADS.min(jobs.len()))
+                    .map(|_| {
+                        let done = done.clone();
+                        scope.spawn(move || {
+                            // A receiver that has gone is a load that has already failed;
+                            // there is nobody left to tell.
+                            let mut emit = |family, path| {
+                                let _ = done.send(Ok((family, path)));
+                            };
+                            while let Some(job) = claim() {
+                                let ran =
+                                    job.run(dir, spilled, triples, named, file_rows, &mut emit);
+                                if let Err(e) = ran {
+                                    let _ = done.send(Err(e));
+                                    stop();
+                                    return;
+                                }
+                            }
+                        })
+                    })
+                    .collect();
+                // This thread's own sender, so the channel closes when the workers are done.
+                drop(done);
+
+                // The first failure is the one reported; what arrives after it is drained
+                // so the workers can finish, and ignored.
+                let mut outcome = Ok(());
+                for written in finished {
+                    if outcome.is_err() {
+                        continue;
+                    }
+                    outcome =
+                        written.and_then(|(family, path)| self.ingest_index_sst(family, path));
+                    if outcome.is_err() {
+                        stop();
+                    }
+                }
+                for worker in workers {
+                    worker.join().map_err(|_| {
+                        StorageError::Io(std::io::Error::other("a merge thread panicked"))
+                    })?;
+                }
+                outcome
+            })?;
+
+            // The catalogue is one row per graph, so a batch is the right tool.
+            let mut batch = WriteBatch::default();
+            let handle = cf(&self.db, GRAPHS)?;
+            for graph in graphs {
+                batch.put_cf(handle, put_id(*graph), []);
+            }
+            self.db.write(batch).map_err(rocks_err)
+        })();
+
+        // The runs delete themselves; this takes the directory with them. A failure to tidy
+        // is not worth failing a load that otherwise worked.
+        drop(spilled);
+        let _ = std::fs::remove_dir_all(&dir);
+        outcome
+    }
+
+    /// Hands both dictionary families to a thread to be written out; the terms are
+    /// forgotten when it has, at `settle_dictionary`.
+    ///
+    /// # Why this happens during the load and not only at the end
+    ///
+    /// `bulk.terms` is what stops a term being interned twice, and it is the only thing
+    /// that does while its rows are still buffered: `resolve` reads the database, and a
+    /// buffered row is not there yet. So for as long as the rows are held back, the cache
+    /// has to hold *every* term the load has seen, and it grows without bound —
+    /// **222 bytes per distinct term, measured**, which for a file with 281 million of them
+    /// is 62 GB and an aborted process.
+    ///
+    /// Ingesting mid-load fixes that by making the rows readable. Once a term is in an
+    /// ingested file, `resolve` finds it, so the cache is an optimisation again rather than
+    /// a correctness requirement, and it can be dropped. Memory then tracks the budget
+    /// rather than the file.
+    ///
+    /// The cost is several ingested files per load instead of one, which RocksDB compacts
+    /// in the background, and a `resolve` that has real files to look in — the condition
+    /// under which a bloom filter on `str2id` might finally pay, and which the measurement
+    /// that rejected one did not have.
+    fn flush_dictionary(&mut self) -> Result<()> {
+        // The flush before this one first, however far it has got: one window in flight is
+        // the bound, and its trim has to happen before this window's terms join the cache's
+        // count of what is worth keeping.
+        self.settle_dictionary(true)?;
+        let budget = self.dict_spill_bytes;
+        let dir = self.ingest_dir()?;
+        let Some(state) = self.bulk.as_mut() else {
+            return Ok(());
+        };
+        let Some(dict) = state.dict.take() else {
+            return Ok(());
+        };
+        let sequence = dict.flushes;
+
+        let handle = {
+            let dir = dir.clone();
+            std::thread::spawn(move || write_dict_ssts(&dir, sequence, dict))
+        };
+        state.dict_flush = Some(DictFlush {
+            sequence,
+            next: self.next.clone(),
+            handle,
+        });
+        state.dict = Some(DictBuffers::new(&dir, budget, sequence + 1));
+        Ok(())
+    }
+
+    /// Takes in the dictionary window being written, once its files are there.
+    ///
+    /// Polled from the write path with `wait` off, where it costs one atomic load per call
+    /// until the thread is done; called with `wait` on before the next flush and at the end
+    /// of the load, where it has to be done.
+    fn settle_dictionary(&mut self, wait: bool) -> Result<()> {
+        let Some(state) = self.bulk.as_mut() else {
+            return Ok(());
+        };
+        let Some(flush) = state.dict_flush.as_ref() else {
+            return Ok(());
+        };
+        if !wait && !flush.handle.is_finished() {
+            return Ok(());
+        }
+        let DictFlush {
+            sequence,
+            next: next_at_flush,
+            handle,
+        } = state.dict_flush.take().expect("checked above");
+        let files = handle.join().map_err(|_| {
+            StorageError::Io(std::io::Error::other(
+                "the dictionary flush thread panicked",
+            ))
+        })??;
+        for (family, path) in files {
+            self.ingest_dict_sst(family, path)?;
+        }
+
+        // Only now: a term is safe to forget once *both* of its rows are readable. The
+        // ones worth remembering anyway are the ones hit often enough that forgetting them
+        // means looking them up again next window: keep the most-hit, up to a cap, and
+        // start their counts over.
+        //
+        // An entry allocated since the flush is not up for forgetting at all. It was
+        // interned into the window still being filled, its rows are in that window's runs
+        // and nowhere on disk, and a lookup that missed it would allocate the term again.
+        // Told apart by its id: ids are issued densely per tag, so one at or past the
+        // counter as it stood at the flush is one the flush did not see. It is evaluated
+        // like any other at the next settle, by which time its rows are in.
+        if let Some(state) = self.bulk.as_mut() {
+            let since_flush = |cached: &Cached| {
+                let issued = next_at_flush.get(&cached.id.tag()).copied().unwrap_or(0);
+                cached.id.payload() >= issued
+            };
+            let threshold = hot_threshold(
+                state
+                    .terms
+                    .values()
+                    .filter(|cached| !since_flush(cached))
+                    .map(Cached::spread),
+            );
+            let mut kept_hot = 0u64;
+            state.terms.retain(|_, cached| {
+                let keep = if since_flush(cached) {
+                    true
+                } else {
+                    let hot = cached.spread() >= threshold;
+                    kept_hot += u64::from(hot);
+                    hot
+                };
+                // Unused until touched again; an entry that stays unused for a whole window
+                // has spread zero at the next flush and is dropped then.
+                cached.first = Cached::NOT_USED;
+                keep
+            });
+            state.terms.shrink_to_fit();
+            state.position = 0;
+            state.resolves.retained += kept_hot;
+
+            // One line per flush on stderr: the shape of the read cost across a load is what
+            // separates "a filter would help" from "the disk is saturated" from "nothing is
+            // wrong", and a single average at the end cannot show a shape.
+            let r = state.resolves;
+            let p = state.resolves_at_last_flush;
+            let (hits, misses, nanos) = (r.hits - p.hits, r.misses - p.misses, r.nanos - p.nanos);
+            let reads = hits + misses;
+            let b: Vec<u64> = (0..4).map(|i| r.buckets[i] - p.buckets[i]).collect();
+            eprintln!(
+                "  flush {sequence}: {} terms; reads {hits} hits + {misses} misses at {:.1} us \
+[<10us {} | <50 {} | <200 {} | 200+ {}]; {} kept hot",
+                state.seen.as_ref().map_or(0, seen::Seen::inserted),
+                if reads == 0 {
+                    0.0
+                } else {
+                    nanos as f64 / 1e3 / reads as f64
+                },
+                b[0],
+                b[1],
+                b[2],
+                b[3],
+                kept_hot,
+            );
+            state.resolves_at_last_flush = r;
+        }
+        Ok(())
+    }
+
+    /// Ingests one dictionary SST that `write_dict_sst` wrote.
+    fn ingest_dict_sst(&self, family: &'static str, path: std::path::PathBuf) -> Result<()> {
+        let mut opts = rocksdb::IngestExternalFileOptions::default();
+        opts.set_move_files(true);
+        self.db
+            .ingest_external_file_cf_opts(cf(&self.db, family)?, &opts, vec![path])
+            .map_err(rocks_err)
+    }
+
+    /// Ingests one index SST that `write_index_sst` wrote.
+    fn ingest_index_sst(&self, family: &'static str, path: std::path::PathBuf) -> Result<()> {
+        let mut opts = rocksdb::IngestExternalFileOptions::default();
+        // The file was written for this store and is of no use afterwards.
+        opts.set_move_files(true);
+        self.db
+            .ingest_external_file_cf_opts(cf(&self.db, family)?, &opts, vec![path])
+            .map_err(rocks_err)
+    }
+
+    /// Recomputes the quad count and predicate statistics from the index.
+    ///
+    /// One pass, at the end of a load, instead of maintaining counters against writes the
+    /// buffer has not yet made visible.
+    fn recount(&mut self) -> Result<()> {
+        let mut counts: FxHashMap<TermId, u64> = FxHashMap::default();
+        let mut total: u64 = 0;
+        for row in self.scan_order(DSPO, &[])? {
+            let [_, p, _] = split_key::<3>(&row?)?;
+            *counts.entry(p).or_insert(0) += 1;
+            total += 1;
+        }
+        for row in self.scan_order(GSPO, &[])? {
+            let [_, _, p, _] = split_key::<4>(&row?)?;
+            *counts.entry(p).or_insert(0) += 1;
+            total += 1;
+        }
+        let mut batch = WriteBatch::default();
+        let stats = cf(&self.db, STATS)?;
+        for old in self.predicate_counts.keys() {
+            batch.delete_cf(stats, put_id(*old));
+        }
+        for (p, n) in &counts {
+            batch.put_cf(stats, put_id(*p), n.to_be_bytes());
+        }
+        batch.put(META_QUADS, total.to_be_bytes());
+        // A bulk load is one change however many quads it brought, and a recount that found
+        // nothing new is still a moment after which everything derived from the quads must
+        // be re-derived — the load may have replaced quads and kept the count.
+        let generation = self.generation + 1;
+        batch.put(META_GENERATION, generation.to_be_bytes());
+        self.db.write(batch).map_err(rocks_err)?;
+        // The counters are now authoritative again.
+        self.predicate_counts = counts;
+        self.quad_count = total;
+        self.generation = generation;
+        Ok(())
+    }
+
+    /// Compacts every column family. Worth running once after a bulk load.
+    pub fn compact(&mut self) -> Result<()> {
+        for name in QUAD_ORDERS.iter().chain(TRIPLE_ORDERS.iter()) {
+            self.db
+                .compact_range_cf(cf(&self.db, name)?, None::<&[u8]>, None::<&[u8]>);
+        }
+        Ok(())
+    }
+
+    /// Records one write, buffering it during a bulk load.
+    fn put(&mut self, family: &'static str, key: Vec<u8>, value: Vec<u8>) -> Result<()> {
+        self.commit_ops(vec![Pending::Put(family, key.into(), value.into())])
+    }
+
+    /// Records one delete, buffering it during a bulk load.
+    fn delete(&mut self, family: &'static str, key: Vec<u8>) -> Result<()> {
+        self.commit_ops(vec![Pending::Delete(family, key.into())])
+    }
+
+    /// Applies a group of writes atomically, or buffers them.
+    fn commit_ops(&mut self, ops: Vec<Pending>) -> Result<()> {
+        // A scope buffers without flushing: the whole point is that nothing reaches the
+        // database until the commit, so a crash before it leaves the store as it was.
+        if let Some(scope) = self.scope.as_mut() {
+            scope.pending.extend(ops);
+            if scope.pending.len() > MAX_SCOPE_OPS {
+                return Err(StorageError::corruption(format!(
+                    "a commit scope exceeded {MAX_SCOPE_OPS} buffered operations, about \
+                     {} quads. A commit that large is a load, and a load belongs on the bulk \
+                     path, which is built for the volume and does not promise atomicity.",
+                    MAX_SCOPE_OPS / 10
+                )));
+            }
+            return Ok(());
+        }
+        if let Some(state) = self.bulk.as_mut() {
+            // Dictionary rows are diverted to their own sorted runs; everything else — the
+            // id counters, the graph catalogue — stays on the batch path, where it is a
+            // handful of rows rather than two per interned term.
+            //
+            // A `Delete` is never diverted. The dictionary is not garbage-collected
+            // (`Store::remove` says so), so one should not arise during a load; if one ever
+            // does, the batch path still applies it in order, and an ingested file that
+            // silently outlived a delete would be far worse than a slow one.
+            if state.dict.is_some() {
+                for op in ops {
+                    match op {
+                        Pending::Put(family, key, value) => {
+                            let diverted = state
+                                .dict
+                                .as_mut()
+                                .and_then(|d| d.family(family))
+                                .map(|runs| runs.push(key.clone(), value.clone()))
+                                .transpose()?
+                                .is_some();
+                            if !diverted {
+                                state.pending.push(Pending::Put(family, key, value));
+                            }
+                        }
+                        other => state.pending.push(other),
+                    }
+                }
+            } else {
+                state.pending.extend(ops);
+            }
+            let full = state.dict.as_ref().is_some_and(DictBuffers::full);
+            if state.pending.len() >= BULK_BATCH_OPS {
+                let pending = std::mem::take(&mut state.pending);
+                self.write_pending(pending, true)?;
+            }
+            // The previous window's files, if its thread has finished them; the cache is
+            // trimmed here rather than at the flush, once they are readable.
+            self.settle_dictionary(false)?;
+            if full {
+                self.flush_dictionary()?;
+            }
+            return Ok(());
+        }
+        self.write_pending(ops, false)
+    }
+
+    /// Turns buffered operations into one `WriteBatch` and writes it.
+    fn write_pending(&self, pending: Vec<Pending>, bulk: bool) -> Result<()> {
+        if pending.is_empty() {
+            return Ok(());
+        }
+        let mut batch = WriteBatch::default();
+        for op in pending {
+            match op {
+                Pending::Put(family, key, value) => {
+                    batch.put_cf(cf(&self.db, family)?, key, value);
+                }
+                Pending::Delete(family, key) => {
+                    batch.delete_cf(cf(&self.db, family)?, key);
+                }
+            }
+        }
+        if bulk {
+            self.db
+                .write_opt(batch, &bulk_write_opts())
+                .map_err(rocks_err)
+        } else {
+            self.db.write(batch).map_err(rocks_err)
+        }
+    }
+
+    /// Allocates the next dense id for a tag and records the new counter in `batch`.
+    fn allocate(&mut self, tag: Tag, ops: &mut Vec<Pending>) -> Result<TermId> {
+        let slot = self.next.entry(tag).or_insert(0);
+        let index = *slot;
+        *slot += 1;
+        let meta_key = META_NEXT
+            .iter()
+            .find(|(_, t)| *t == tag)
+            .map(|(k, _)| *k)
+            .ok_or_else(|| StorageError::corruption(format!("{tag:?} has no id counter")))?;
+        ops.push(Pending::Put(
+            DEFAULT_CF,
+            meta_key.to_vec().into(),
+            (index + 1).to_be_bytes().to_vec().into(),
+        ));
+        Ok(TermId::new(tag, index))
+    }
+
+    /// The `str2id` key for a serialised term, and whether candidates need verifying.
+    fn dictionary_key(serialised: &[u8]) -> (Vec<u8>, bool) {
+        if serialised.len() <= INLINE_KEY_MAX {
+            let mut k = Vec::with_capacity(serialised.len() + 1);
+            k.push(KEY_EXACT);
+            k.extend_from_slice(serialised);
+            (k, false)
+        } else {
+            let mut k = Vec::with_capacity(17);
+            k.push(KEY_HASHED);
+            k.extend_from_slice(&hash128(serialised));
+            (k, true)
+        }
+    }
+
+    /// Interns a term, writing any new rows into `batch`.
+    fn encode_into(&mut self, term: TermRef<'_>, ops: &mut Vec<Pending>) -> Result<TermId> {
+        // Well-known and inline terms never touch the dictionary at all (§5).
+        if let TermRef::NamedNode(n) = term {
+            if let Some(id) = vocab::encode_iri(n.as_str()) {
+                return Ok(id);
+            }
+        }
+        if let TermRef::Literal(l) = term {
+            if let Some(id) = inline::encode_literal(l) {
+                return Ok(id);
+            }
+        }
+
+        // A triple term is identified by the ids of its parts, so nested terms intern
+        // bottom-up and a deep RDF 1.2 term costs one row per distinct sub-term.
+        let (tag, components) = match term {
+            TermRef::NamedNode(_) => (Tag::Iri, None),
+            TermRef::BlankNode(_) => (Tag::BlankNode, None),
+            TermRef::Literal(_) => (Tag::Literal, None),
+            TermRef::Triple(t) => {
+                let ids = [
+                    self.encode_into(t.subject.as_ref().into(), ops)?,
+                    self.encode_into(t.predicate.as_ref().into(), ops)?,
+                    self.encode_into(t.object.as_ref(), ops)?,
+                ];
+                (Tag::TripleTerm, Some(ids))
+            }
+        };
+
+        // Serialised straight from the borrowed term: cloning it to an owned
+        // first cost three string allocations per quad on the hottest path there is.
+        let serialised = put_term(term, components);
+        let (dict_key, hashed) = Self::dictionary_key(&serialised);
+
+        if let Some(state) = self.bulk.as_mut() {
+            state.position = state.position.wrapping_add(1);
+            let at = state.position;
+            if let Some(cached) = state.terms.get_mut(&serialised) {
+                cached.touch(at);
+                return Ok(cached.id);
+            }
+        }
+        if let Some(state) = self.scope.as_ref() {
+            if let Some(existing) = state.terms.get(&serialised) {
+                return Ok(*existing);
+            }
+        }
+
+        // A term the filter has never seen was never interned by this load, and the filter
+        // exists only when nothing was interned before it — so it is new, and the read that
+        // would have proved so is skipped. That read was the whole of the flush penalty:
+        // 1,268,458 misses at 3.9 us against 100,287 hits, measured.
+        let provably_new = self
+            .bulk
+            .as_ref()
+            .and_then(|s| s.seen.as_ref())
+            .is_some_and(|seen| !seen.may_contain(&serialised));
+        let resolved = if provably_new {
+            if let Some(state) = self.bulk.as_mut() {
+                state.resolves.skipped += 1;
+            }
+            None
+        } else {
+            let timed = self.bulk.is_some().then(std::time::Instant::now);
+            let resolved = self.resolve(&dict_key, hashed, term)?;
+            if let (Some(started), Some(state)) = (timed, self.bulk.as_mut()) {
+                state
+                    .resolves
+                    .record(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
+                if resolved.is_some() {
+                    state.resolves.hits += 1;
+                } else {
+                    state.resolves.misses += 1;
+                }
+            }
+            resolved
+        };
+        if let Some(existing) = resolved {
+            // Remember it: without this every *repeated* term costs a random read, which
+            // dominates a bulk load — a term appearing a thousand times is looked up a
+            // thousand times.
+            if let Some(state) = self.bulk.as_mut() {
+                let at = state.position;
+                state.terms.insert(serialised, Cached::new(existing, at));
+            }
+            return Ok(existing);
+        }
+
+        let id = self.allocate(tag, ops)?;
+        if let Some(state) = self.bulk.as_mut() {
+            if let Some(seen) = state.seen.as_mut() {
+                seen.insert(&serialised);
+            }
+            let at = state.position;
+            state.terms.insert(serialised.clone(), Cached::new(id, at));
+        }
+        if let Some(state) = self.scope.as_mut() {
+            state.terms.insert(serialised.clone(), id);
+            state.strings.insert(id, serialised.clone());
+        }
+        ops.push(Pending::Put(
+            ID2STR,
+            put_id(id).to_vec().into(),
+            serialised.clone().into(),
+        ));
+        if hashed {
+            // Append to the candidate list rather than replacing it, so a hash collision
+            // between two genuinely different terms keeps both.
+            let buffered = self
+                .scope
+                .as_ref()
+                .and_then(|s| s.candidates.get(&dict_key))
+                .cloned();
+            let mut candidates = match buffered {
+                Some(list) => list,
+                None => self
+                    .db
+                    .get_cf(cf(&self.db, STR2ID)?, &dict_key)
+                    .map_err(rocks_err)?
+                    .unwrap_or_default(),
+            };
+            candidates.extend_from_slice(&put_id(id));
+            if let Some(state) = self.scope.as_mut() {
+                state
+                    .candidates
+                    .insert(dict_key.clone(), candidates.clone());
+            }
+            ops.push(Pending::Put(STR2ID, dict_key.into(), candidates.into()));
+        } else {
+            ops.push(Pending::Put(
+                STR2ID,
+                dict_key.into(),
+                put_id(id).to_vec().into(),
+            ));
+        }
+        Ok(id)
+    }
+
+    /// Resolves a dictionary key to an id.
+    ///
+    /// For a hashed key the stored value is a list of candidates, each of which is decoded
+    /// and compared against the term itself. That is what keeps a hash collision from
+    /// conflating two distinct RDF terms — the failure mode §5 exists to prevent.
+    fn resolve(&self, dict_key: &[u8], hashed: bool, term: TermRef<'_>) -> Result<Option<TermId>> {
+        let Some(value) = self
+            .db
+            .get_cf(cf(&self.db, STR2ID)?, dict_key)
+            .map_err(rocks_err)?
+        else {
+            return Ok(None);
+        };
+        if !hashed {
+            return Ok(Some(read_id(&value)?));
+        }
+        for chunk in value.chunks(codec::ID) {
+            let candidate = read_id(chunk)?;
+            if self.decode(candidate)?.as_ref().map(oxrdf::Term::as_ref) == Some(term) {
+                return Ok(Some(candidate));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Whether the database holds a quad, ignoring any open scope.
+    ///
+    /// The scope needs this to learn what it is overlaying: `Presence::in_db` is answered
+    /// once, when the scope first touches a quad, and remembered.
+    fn db_contains(&self, quad: EncodedQuad) -> Result<bool> {
+        let (order, k) = match quad.graph_name {
+            None => (DSPO, key(&[quad.subject, quad.predicate, quad.object])),
+            Some(g) => (GSPO, key(&[g, quad.subject, quad.predicate, quad.object])),
+        };
+        Ok(self
+            .db
+            .get_pinned_cf(cf(&self.db, order)?, k)
+            .map_err(rocks_err)?
+            .is_some())
+    }
+
+    /// Whether the database holds a named graph, ignoring any open scope.
+    fn db_contains_graph(&self, graph: TermId) -> Result<bool> {
+        Ok(self
+            .db
+            .get_pinned_cf(cf(&self.db, GRAPHS)?, put_id(graph))
+            .map_err(rocks_err)?
+            .is_some())
+    }
+
+    /// Records what a scope did to a quad.
+    ///
+    /// `in_db_if_new` is what the caller already learned by asking: both callers reach here
+    /// having just run `contains_encoded`, so when there is no entry yet its answer came from
+    /// the database and settles `in_db` without a second read.
+    fn note_quad(&mut self, quad: EncodedQuad, present: bool, in_db_if_new: bool) {
+        if let Some(scope) = self.scope.as_mut() {
+            scope
+                .quads
+                .entry(quad)
+                .or_insert(Presence {
+                    in_db: in_db_if_new,
+                    present,
+                })
+                .present = present;
+        }
+    }
+
+    /// Records what a scope did to a named graph.
+    ///
+    /// Unlike a quad this may need a read: `insert_encoded` creates a graph as a side effect
+    /// without ever asking whether it was there. Once per distinct graph per scope.
+    fn note_graph(&mut self, graph: TermId, present: bool) -> Result<()> {
+        if self.scope.is_none() {
+            return Ok(());
+        }
+        let in_db = match self.scope.as_ref().and_then(|s| s.graphs.get(&graph)) {
+            Some(known) => known.in_db,
+            None => self.db_contains_graph(graph)?,
+        };
+        if let Some(scope) = self.scope.as_mut() {
+            scope.graphs.insert(graph, Presence { in_db, present });
+        }
+        Ok(())
+    }
+
+    /// A scan bounded by a prefix *and* a span on the component after it.
+    ///
+    /// The keys are big-endian ids laid end to end, so a span on one component is a
+    /// contiguous byte range and `RocksDB`'s own iterate bounds do the work — the same
+    /// mechanism as a prefix seek, one component further in.
+    ///
+    /// `total_order_seek` for the same reason `scan_order` uses it when there is no prefix:
+    /// with an empty prefix the range starts at a span rather than at a value the column
+    /// family's prefix extractor knows about, and a prefix-constrained iterator would stop
+    /// early.
+    fn scan_order_span(
+        &self,
+        order: &'static str,
+        prefix: &[TermId],
+        span: IdRange,
+    ) -> Result<RowScan<'_>> {
+        let mut lower = key(prefix);
+        lower.extend_from_slice(&put_id(span.first));
+        let mut upper = key(prefix);
+        upper.extend_from_slice(&put_id(span.last));
+        let mut opts = self.scan_opts();
+        if prefix.is_empty() {
+            opts.set_total_order_seek(true);
+        }
+        opts.set_iterate_lower_bound(lower);
+        // The iterate bound is exclusive and the span is inclusive, so the bound is the
+        // first key that cannot match: one past the span's last id. `None` means every byte
+        // was 0xFF and there is no such key — the span reaches the end of the keyspace, so
+        // there is nothing to bound it with and nothing beyond it to exclude.
+        if let Some(next) = prefix_upper_bound(&upper) {
+            opts.set_iterate_upper_bound(next);
+        }
+        Ok(RowScan {
+            inner: self
+                .db
+                .iterator_cf_opt(cf(&self.db, order)?, opts, IteratorMode::Start),
+        })
+    }
+
+    fn scan_order(&self, order: &'static str, prefix: &[TermId]) -> Result<RowScan<'_>> {
+        let lower = key(prefix);
+        let upper = prefix_upper_bound(&lower);
+        let mut opts = self.scan_opts();
+        if lower.is_empty() {
+            // Without a bound prefix the iterator must not be constrained by the
+            // column family's prefix extractor.
+            opts.set_total_order_seek(true);
+        } else {
+            opts.set_iterate_lower_bound(lower.clone());
+        }
+        if let Some(upper) = upper {
+            opts.set_iterate_upper_bound(upper);
+        }
+        Ok(RowScan {
+            inner: self
+                .db
+                .iterator_cf_opt(cf(&self.db, order)?, opts, IteratorMode::Start),
+        })
+    }
+}
+
+/// Rows coming back from one column family.
+struct RowScan<'a> {
+    inner: rocksdb::DBIteratorWithThreadMode<'a, DB>,
+}
+
+impl Iterator for RowScan<'_> {
+    type Item = Result<Vec<u8>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner
+            .next()
+            .map(|row| row.map(|(k, _)| k.into_vec()).map_err(rocks_err))
+    }
+}
+
+impl Storage for RocksStorage {
+    fn encode(&mut self, term: TermRef<'_>) -> Result<TermId> {
+        let mut ops = Vec::new();
+        let id = self.encode_into(term, &mut ops)?;
+        self.commit_ops(ops)?;
+        Ok(id)
+    }
+
+    fn lookup(&self, term: TermRef<'_>) -> Result<Option<TermId>> {
+        if let TermRef::NamedNode(n) = term {
+            if let Some(id) = vocab::encode_iri(n.as_str()) {
+                return Ok(Some(id));
+            }
+        }
+        if let TermRef::Literal(l) = term {
+            if let Some(id) = inline::encode_literal(l) {
+                return Ok(Some(id));
+            }
+        }
+        let components = match term {
+            TermRef::Triple(t) => {
+                let (Some(s), Some(p), Some(o)) = (
+                    self.lookup(t.subject.as_ref().into())?,
+                    self.lookup(t.predicate.as_ref().into())?,
+                    self.lookup(t.object.as_ref())?,
+                ) else {
+                    return Ok(None);
+                };
+                Some([s, p, o])
+            }
+            _ => None,
+        };
+        let serialised = put_term(term, components);
+        // A term interned inside a scope has no `str2id` row yet, so resolving against the
+        // database alone reports it absent — and `contains` is built on this, which would
+        // make a quad the scope had just written invisible to duplicate detection.
+        if let Some(state) = self.scope.as_ref() {
+            if let Some(existing) = state.terms.get(&serialised) {
+                return Ok(Some(*existing));
+            }
+        }
+        let (dict_key, hashed) = Self::dictionary_key(&serialised);
+        self.resolve(&dict_key, hashed, term)
+    }
+
+    /// One `MultiGet` for every term that needs the disk; the rest answered in line.
+    ///
+    /// Well-known and inline terms never touch the dictionary, a term interned in an open
+    /// scope has no row yet, and a hashed key needs its candidates verified one by one —
+    /// those go through [`Storage::lookup`]. Everything else is a plain key, and those are
+    /// gathered and asked for together, sorted, since a batch in key order lets `RocksDB`
+    /// walk each file once.
+    fn lookup_many(&self, terms: &[TermRef<'_>]) -> Result<Vec<Option<TermId>>> {
+        let mut answers = vec![None; terms.len()];
+        // (key, index into `terms`) for the ones the batch will answer.
+        let mut batch: Vec<(Vec<u8>, usize)> = Vec::new();
+        for (i, term) in terms.iter().enumerate() {
+            let plain = match term {
+                TermRef::NamedNode(n) => vocab::encode_iri(n.as_str()).is_none(),
+                TermRef::Literal(l) => inline::encode_literal(*l).is_none(),
+                TermRef::BlankNode(_) => true,
+                TermRef::Triple(_) => false,
+            };
+            if !plain || self.scope.is_some() {
+                answers[i] = self.lookup(*term)?;
+                continue;
+            }
+            let serialised = put_term(*term, None);
+            let (dict_key, hashed) = Self::dictionary_key(&serialised);
+            if hashed {
+                answers[i] = self.resolve(&dict_key, true, *term)?;
+            } else {
+                batch.push((dict_key, i));
+            }
+        }
+        if batch.is_empty() {
+            return Ok(answers);
+        }
+        batch.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        let found = self.db.batched_multi_get_cf(
+            cf(&self.db, STR2ID)?,
+            batch.iter().map(|(key, _)| key),
+            true,
+        );
+        for ((_, i), value) in batch.iter().zip(found) {
+            if let Some(value) = value.map_err(rocks_err)? {
+                answers[*i] = Some(read_id(&value)?);
+            }
+        }
+        Ok(answers)
+    }
+
+    fn decode(&self, id: TermId) -> Result<Option<Term>> {
+        if id.tag() == Tag::Vocab {
+            return Ok(vocab::decode_iri(id).map(|s| oxrdf::NamedNode::new_unchecked(s).into()));
+        }
+        if id.tag().is_inline() {
+            return Ok(inline::decode(id));
+        }
+        // A term minted inside a scope has no `id2str` row yet, so the scope answers first.
+        let bytes = if let Some(bytes) = self.scope.as_ref().and_then(|s| s.strings.get(&id)) {
+            bytes.clone()
+        } else {
+            let Some(bytes) = self
+                .db
+                .get_cf(cf(&self.db, ID2STR)?, put_id(id))
+                .map_err(rocks_err)?
+            else {
+                return Ok(None);
+            };
+            bytes
+        };
+        Ok(match codec::read_term(&bytes)? {
+            StoredTerm::Complete(term) => Some(term),
+            StoredTerm::Triple([s, p, o]) => {
+                let subject = match self.decode(s)? {
+                    Some(Term::NamedNode(n)) => n.into(),
+                    Some(Term::BlankNode(b)) => b.into(),
+                    Some(_) => {
+                        return Err(StorageError::corruption(format!(
+                            "triple term {id:?} has a non-node subject"
+                        )))
+                    }
+                    None => return Ok(None),
+                };
+                let Some(Term::NamedNode(predicate)) = self.decode(p)? else {
+                    return Err(StorageError::corruption(format!(
+                        "triple term {id:?} has a non-IRI predicate"
+                    )));
+                };
+                let Some(object) = self.decode(o)? else {
+                    return Ok(None);
+                };
+                Some(Term::Triple(Box::new(oxrdf::Triple {
+                    subject,
+                    predicate,
+                    object,
+                })))
+            }
+        })
+    }
+
+    fn dictionary_len(&self) -> usize {
+        usize::try_from(self.next.values().sum::<u64>()).unwrap_or(usize::MAX)
+    }
+
+    fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    fn save_statistics(&mut self, bytes: &[u8]) -> Result<()> {
+        // Straight to the database, outside any scope and without touching the generation:
+        // a snapshot describes the quads and is not a change to them, so a rollback has no
+        // reason to undo it and a reader has no reason to see it as a write.
+        self.db.put(META_STATISTICS, bytes).map_err(rocks_err)
+    }
+
+    fn load_statistics(&self) -> Result<Option<Vec<u8>>> {
+        self.db.get(META_STATISTICS).map_err(rocks_err)
+    }
+
+    /// One bounded iterator over `id2str` instead of a point lookup per id.
+    ///
+    /// The ids for a tag are dense and the keys are their big-endian bytes, so `from..to` is
+    /// a contiguous key range and the iterator's own bounds do the work. `id2str` has no
+    /// prefix extractor, so no `total_order_seek` is needed.
+    ///
+    /// Terms minted inside an open scope have no `id2str` row yet, exactly as in `decode`, so
+    /// the scope is walked afterwards for anything in range. Order between the two is not
+    /// promised — the trait says ascending, and the store side is; a caller that cares about
+    /// order across a scope boundary is asking for something no caller currently needs.
+    fn for_each_in_range(
+        &self,
+        tag: Tag,
+        from: usize,
+        to: usize,
+        f: &mut dyn FnMut(TermId, Term) -> Result<()>,
+    ) -> Result<()> {
+        if from >= to {
+            return Ok(());
+        }
+        // Inline and well-known ids have no rows to walk; the general path answers them.
+        if tag.is_inline() {
+            for i in from..to {
+                let id = TermId::new(tag, i as u64);
+                if let Some(term) = self.decode(id)? {
+                    f(id, term)?;
+                }
+            }
+            return Ok(());
+        }
+
+        let mut opts = self.scan_opts();
+        opts.set_iterate_lower_bound(put_id(TermId::new(tag, from as u64)).to_vec());
+        opts.set_iterate_upper_bound(put_id(TermId::new(tag, to as u64)).to_vec());
+        for item in self
+            .db
+            .iterator_cf_opt(cf(&self.db, ID2STR)?, opts, IteratorMode::Start)
+        {
+            let (key, value) = item.map_err(rocks_err)?;
+            let id = codec::read_id(&key)?;
+            let term = match codec::read_term(&value)? {
+                StoredTerm::Complete(term) => term,
+                // A triple term decodes through its components; rare, and `decode` already
+                // knows how. Falling back keeps one definition of that rather than two.
+                StoredTerm::Triple(_) => match self.decode(id)? {
+                    Some(term) => term,
+                    None => continue,
+                },
+            };
+            f(id, term)?;
+        }
+
+        if let Some(scope) = self.scope.as_ref() {
+            let range = (from as u64)..(to as u64);
+            for id in scope.strings.keys() {
+                if id.tag() == tag && range.contains(&id.payload()) {
+                    if let Some(term) = self.decode(*id)? {
+                        f(*id, term)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn dictionary_count_for(&self, tag: Tag) -> usize {
+        self.next
+            .get(&tag)
+            .copied()
+            .map_or(0, |n| usize::try_from(n).unwrap_or(usize::MAX))
+    }
+
+    fn insert_encoded(&mut self, quad: EncodedQuad) -> Result<bool> {
+        // During a bulk load the buffer is not visible to a `get`, so duplicate detection
+        // is deferred: writing the same key twice is idempotent in RocksDB, and the
+        // counters are rebuilt at the end.
+        if self.bulk.is_none() && self.contains_encoded(quad)? {
+            return Ok(false);
+        }
+        // Sorted ingestion holds the quad instead of writing nine or ten keys for it now.
+        // The keys are built later, one order at a time, in the order that order wants —
+        // which is what lets each become a single file RocksDB can adopt whole.
+        if let Some(state) = self.bulk.as_mut() {
+            if state.sst {
+                state.quads.push(quad);
+                if let Some(g) = quad.graph_name {
+                    state.graphs.insert(g);
+                }
+                if state.quads.len() >= self.ingest_limit {
+                    self.spill()?;
+                }
+                return Ok(true);
+            }
+        }
+
+        let EncodedQuad {
+            subject: s,
+            predicate: p,
+            object: o,
+            graph_name,
+        } = quad;
+        let mut ops = Vec::with_capacity(10);
+        let empty = || -> Box<[u8]> { Box::from(&[][..]) };
+        match graph_name {
+            None => {
+                ops.push(Pending::Put(DSPO, key(&[s, p, o]).into(), empty()));
+                ops.push(Pending::Put(DPOS, key(&[p, o, s]).into(), empty()));
+                ops.push(Pending::Put(DOSP, key(&[o, s, p]).into(), empty()));
+            }
+            Some(g) => {
+                ops.push(Pending::Put(SPOG, key(&[s, p, o, g]).into(), empty()));
+                ops.push(Pending::Put(POSG, key(&[p, o, s, g]).into(), empty()));
+                ops.push(Pending::Put(OSPG, key(&[o, s, p, g]).into(), empty()));
+                ops.push(Pending::Put(GSPO, key(&[g, s, p, o]).into(), empty()));
+                ops.push(Pending::Put(GPOS, key(&[g, p, o, s]).into(), empty()));
+                ops.push(Pending::Put(GOSP, key(&[g, o, s, p]).into(), empty()));
+                ops.push(Pending::Put(GRAPHS, put_id(g).to_vec().into(), empty()));
+            }
+        }
+        if self.bulk.is_none() {
+            self.quad_count += 1;
+            ops.push(Pending::Put(
+                DEFAULT_CF,
+                META_QUADS.to_vec().into(),
+                self.quad_count.to_be_bytes().to_vec().into(),
+            ));
+            self.generation += 1;
+            ops.push(Pending::Put(
+                DEFAULT_CF,
+                META_GENERATION.to_vec().into(),
+                self.generation.to_be_bytes().to_vec().into(),
+            ));
+            let count = self.predicate_counts.entry(p).or_insert(0);
+            *count += 1;
+            ops.push(Pending::Put(
+                STATS,
+                put_id(p).to_vec().into(),
+                count.to_be_bytes().to_vec().into(),
+            ));
+        }
+        self.commit_ops(ops)?;
+        // `contains_encoded` said no just above, so a quad with no entry yet is one the
+        // database does not hold.
+        self.note_quad(quad, true, false);
+        if let Some(g) = graph_name {
+            self.note_graph(g, true)?;
+        }
+        Ok(true)
+    }
+
+    fn remove_encoded(&mut self, quad: EncodedQuad) -> Result<bool> {
+        if !self.contains_encoded(quad)? {
+            return Ok(false);
+        }
+        let EncodedQuad {
+            subject: s,
+            predicate: p,
+            object: o,
+            graph_name,
+        } = quad;
+        let mut ops = Vec::with_capacity(9);
+        match graph_name {
+            None => {
+                ops.push(Pending::Delete(DSPO, key(&[s, p, o]).into()));
+                ops.push(Pending::Delete(DPOS, key(&[p, o, s]).into()));
+                ops.push(Pending::Delete(DOSP, key(&[o, s, p]).into()));
+            }
+            Some(g) => {
+                ops.push(Pending::Delete(SPOG, key(&[s, p, o, g]).into()));
+                ops.push(Pending::Delete(POSG, key(&[p, o, s, g]).into()));
+                ops.push(Pending::Delete(OSPG, key(&[o, s, p, g]).into()));
+                ops.push(Pending::Delete(GSPO, key(&[g, s, p, o]).into()));
+                ops.push(Pending::Delete(GPOS, key(&[g, p, o, s]).into()));
+                ops.push(Pending::Delete(GOSP, key(&[g, o, s, p]).into()));
+                // The graph itself survives, matching SPARQL Update: DELETE DATA does not
+                // drop a graph just because it emptied it.
+            }
+        }
+        self.quad_count -= 1;
+        ops.push(Pending::Put(
+            DEFAULT_CF,
+            META_QUADS.to_vec().into(),
+            self.quad_count.to_be_bytes().to_vec().into(),
+        ));
+        self.generation += 1;
+        ops.push(Pending::Put(
+            DEFAULT_CF,
+            META_GENERATION.to_vec().into(),
+            self.generation.to_be_bytes().to_vec().into(),
+        ));
+        decrement(&mut self.predicate_counts, p, &mut ops);
+        self.commit_ops(ops)?;
+        // And here it said yes, so a quad with no entry yet is one the database does hold.
+        self.note_quad(quad, false, true);
+        Ok(true)
+    }
+
+    fn contains_encoded(&self, quad: EncodedQuad) -> Result<bool> {
+        // The scope's own writes first. A buffered write is invisible to the `get` below, so
+        // without this a scope that inserts a quad and then asks whether it is there is told
+        // no — and duplicate detection is exactly that question.
+        if let Some(known) = self.scope.as_ref().and_then(|s| s.quads.get(&quad)) {
+            return Ok(known.present);
+        }
+        self.db_contains(quad)
+    }
+
+    fn quads_with_object_in(
+        &self,
+        subject: Option<TermId>,
+        predicate: Option<TermId>,
+        span: IdRange,
+        graph: GraphFilter,
+    ) -> QuadScan<'_> {
+        if span.is_empty() {
+            return Box::new(std::iter::empty());
+        }
+        // A scope buffers, so its quads are not in the index the span is about to bound.
+        // Falling back to the trait's scan-and-filter keeps the answer right; a load or an
+        // update is not where a range scan earns anything anyway.
+        if self.scope.is_some() {
+            return Box::new(self.scan(subject, predicate, None, graph).filter(
+                move |quad| match quad {
+                    Ok(quad) => span.contains(quad.object),
+                    Err(_) => true,
+                },
+            ));
+        }
+        let rows: QuadScan<'_> = match graph {
+            GraphFilter::Any => Box::new(
+                self.quads_with_object_in(subject, predicate, span, GraphFilter::Default)
+                    .chain(self.quads_with_object_in(
+                        subject,
+                        predicate,
+                        span,
+                        GraphFilter::AnyNamed,
+                    )),
+            ),
+            _ => match self.routed_span(predicate, span, graph) {
+                Ok(iter) => iter,
+                Err(e) => Box::new(std::iter::once(Err(e))),
+            },
+        };
+        // The subject sits behind the object in every order a span can bound, so it cannot
+        // narrow the range and is checked on the way out.
+        match subject {
+            None => rows,
+            Some(s) => Box::new(rows.filter(move |q| match q {
+                Ok(quad) => quad.subject == s,
+                Err(_) => true,
+            })),
+        }
+    }
+
+    fn scan(
+        &self,
+        subject: Option<TermId>,
+        predicate: Option<TermId>,
+        object: Option<TermId>,
+        graph: GraphFilter,
+    ) -> QuadScan<'_> {
+        match graph {
+            GraphFilter::Any => Box::new(
+                self.scan(subject, predicate, object, GraphFilter::Default)
+                    .chain(self.scan(subject, predicate, object, GraphFilter::AnyNamed)),
+            ),
+            _ => match self.routed_scan(subject, predicate, object, graph) {
+                Ok(iter) => match self.scope.as_ref() {
+                    None => iter,
+                    // The overlay: drop what the scope removed, add what it wrote. The second
+                    // half is restricted to quads the database does not hold, so a quad
+                    // removed and re-inserted inside the scope is yielded once, by the
+                    // iterator, rather than twice.
+                    Some(scope) => Box::new(
+                        iter.filter(move |row| match row {
+                            Ok(quad) => scope.quads.get(quad).is_none_or(|k| k.present),
+                            Err(_) => true,
+                        })
+                        .chain(
+                            scope
+                                .quads
+                                .iter()
+                                .filter(move |(quad, known)| {
+                                    known.present
+                                        && !known.in_db
+                                        && matches(**quad, subject, predicate, object, graph)
+                                })
+                                .map(|(quad, _)| Ok(*quad)),
+                        ),
+                    ),
+                },
+                Err(e) => Box::new(std::iter::once(Err(e))),
+            },
+        }
+    }
+
+    fn len(&self) -> usize {
+        usize::try_from(self.quad_count).unwrap_or(usize::MAX)
+    }
+
+    fn insert_named_graph(&mut self, graph: TermId) -> Result<bool> {
+        if self.contains_named_graph(graph)? {
+            return Ok(false);
+        }
+        self.put(GRAPHS, put_id(graph).to_vec(), Vec::new())?;
+        self.note_graph(graph, true)?;
+        Ok(true)
+    }
+
+    fn remove_named_graph(&mut self, graph: TermId) -> Result<bool> {
+        let existed = self.contains_named_graph(graph)?;
+        let doomed = self
+            .scan(None, None, None, GraphFilter::Named(graph))
+            .collect::<Result<Vec<_>>>()?;
+        for quad in doomed {
+            self.remove_encoded(quad)?;
+        }
+        if existed {
+            self.delete(GRAPHS, put_id(graph).to_vec())?;
+            self.note_graph(graph, false)?;
+        }
+        Ok(existed)
+    }
+
+    fn contains_named_graph(&self, graph: TermId) -> Result<bool> {
+        if let Some(known) = self.scope.as_ref().and_then(|s| s.graphs.get(&graph)) {
+            return Ok(known.present);
+        }
+        self.db_contains_graph(graph)
+    }
+
+    fn named_graphs(&self) -> Result<Vec<TermId>> {
+        let mut out = Vec::new();
+        for row in self
+            .db
+            .iterator_cf(cf(&self.db, GRAPHS)?, IteratorMode::Start)
+        {
+            let (k, _) = row.map_err(rocks_err)?;
+            let id = read_id(&k)?;
+            // Dropped inside the scope: on disk until the commit, gone as far as a reader
+            // is concerned.
+            if let Some(known) = self.scope.as_ref().and_then(|s| s.graphs.get(&id)) {
+                if !known.present {
+                    continue;
+                }
+            }
+            out.push(id);
+        }
+        if let Some(scope) = self.scope.as_ref() {
+            // Created inside the scope, so the iterator above could not have produced them.
+            out.extend(
+                scope
+                    .graphs
+                    .iter()
+                    .filter(|(_, known)| known.present && !known.in_db)
+                    .map(|(id, _)| *id),
+            );
+        }
+        Ok(out)
+    }
+
+    fn predicate_count(&self, predicate: TermId) -> u64 {
+        self.predicate_counts.get(&predicate).copied().unwrap_or(0)
+    }
+
+    fn predicate_histogram(&self) -> Vec<(TermId, u64)> {
+        let mut v: Vec<_> = self
+            .predicate_counts
+            .iter()
+            .map(|(k, n)| (*k, *n))
+            .collect();
+        v.sort_unstable_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        v
+    }
+
+    fn begin(&mut self) -> Result<()> {
+        if self.bulk.is_some() {
+            return Err(StorageError::corruption(
+                "a bulk load is running; its buffer and a scope's would interleave",
+            ));
+        }
+        if self.scope.is_some() {
+            return Err(StorageError::corruption(
+                "a commit scope is already open; nesting them would read as two commits and \
+                 be one",
+            ));
+        }
+        self.scope = Some(ScopeState {
+            quad_count: self.quad_count,
+            predicate_counts: self.predicate_counts.clone(),
+            generation: self.generation,
+            ..ScopeState::default()
+        });
+        Ok(())
+    }
+
+    fn commit(&mut self) -> Result<()> {
+        let Some(scope) = self.scope.take() else {
+            return Err(StorageError::corruption("no commit scope is open"));
+        };
+        // One batch, one write. This is the whole guarantee: RocksDB applies a batch
+        // atomically, so a crash lands either before the commit or after it.
+        let ScopeState {
+            pending,
+            quad_count,
+            predicate_counts,
+            ..
+        } = scope;
+        if let Err(e) = self.write_pending(pending, false) {
+            // The batch did not land, so the counters must not keep the values the scope
+            // gave them. They were advanced in memory as the scope ran, and dropping the
+            // scope's copies here — which the first version of this did — would leave
+            // `len` and `predicate_count` reporting writes that are not in the database,
+            // for the life of the process.
+            //
+            // The same restore as `rollback`, for the same reason: nothing was written.
+            //
+            // Not covered by a test, and it is worth saying why rather than leaving a reader
+            // to assume it is. The only way here is a RocksDB write failure — a full disk, a
+            // failing device — and there is no way to provoke one in-process through the
+            // public API. The argument is structural: this restores exactly the two fields
+            // `rollback` restores, from the same saved copies, and `rollback` *is* tested.
+            self.quad_count = quad_count;
+            self.predicate_counts = predicate_counts;
+            return Err(e);
+        }
+        Ok(())
+    }
+
+    fn rollback(&mut self) {
+        let Some(scope) = self.scope.take() else {
+            return;
+        };
+        // Nothing was written, so there is nothing to undo in the database — which is what
+        // makes this infallible where a compensating-write undo is not. Only the in-memory
+        // counters moved, and they go back to what the scope opened with.
+        self.quad_count = scope.quad_count;
+        self.predicate_counts = scope.predicate_counts;
+        self.generation = scope.generation;
+        // `next` is deliberately left where it is. Restoring it would hand the ids the
+        // abandoned scope minted to *different* terms, so a caller holding one would silently
+        // read the wrong term; leaving it burns those ids instead, and a caller holding one
+        // gets a real miss. The same choice the in-memory store makes, for the same
+        // reason: the dictionary is append-only and `holos compact` is what reclaims it.
+    }
+
+    fn in_scope(&self) -> bool {
+        self.scope.is_some()
+    }
+
+    fn bulk_spills(&self) -> usize {
+        self.spills
+    }
+
+    fn bulk_resolves(&self) -> crate::storage::BulkResolves {
+        self.last_resolves
+    }
+
+    fn on_disk_bytes(&self) -> Option<u64> {
+        Some(directory_bytes(&self.path))
+    }
+
+    fn begin_bulk_load(&mut self) -> Result<()> {
+        if self.scope.is_some() {
+            return Err(StorageError::corruption(
+                "a commit scope is open; a bulk load inside one would buffer into it",
+            ));
+        }
+        self.start_bulk()
+    }
+
+    fn end_bulk_load(&mut self) -> Result<()> {
+        self.finish_bulk()?;
+        self.db.flush().map_err(rocks_err)
+    }
+
+    fn checkpoint(&self, destination: &std::path::Path) -> Result<()> {
+        checkpoint_to(self, destination)
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        if self.bulk.is_some() {
+            self.finish_bulk()?;
+        }
+        self.db.flush().map_err(rocks_err)?;
+        for name in QUAD_ORDERS.iter().chain(TRIPLE_ORDERS.iter()) {
+            self.db.flush_cf(cf(&self.db, name)?).map_err(rocks_err)?;
+        }
+        for name in [ID2STR, STR2ID, GRAPHS, STATS] {
+            self.db.flush_cf(cf(&self.db, name)?).map_err(rocks_err)?;
+        }
+        Ok(())
+    }
+}
+
+impl RocksStorage {
+    /// Routes a pattern to the one order whose prefix it binds — the same decision
+    /// [`QuadIndex::plan`](crate::QuadIndex::plan) makes for the in-memory tier.
+    /// Picks the order whose key puts the object where a span can bound it.
+    ///
+    /// With a predicate bound that is `pos`, where the object follows the prefix; without
+    /// one it is `osp`, where the object leads. Those are the only two shapes: in every
+    /// other order the object sits behind something unbound, and a span on it is not a
+    /// contiguous range.
+    fn routed_span(
+        &self,
+        p: Option<TermId>,
+        span: IdRange,
+        graph: GraphFilter,
+    ) -> Result<QuadScan<'_>> {
+        Ok(match (graph, p) {
+            (GraphFilter::Default, Some(p)) => Box::new(
+                self.scan_order_span(DPOS, &[p], span)?
+                    .map(move |k| Ok(un_dpos(split_key::<3>(&k?)?))),
+            ),
+            (GraphFilter::Default, None) => Box::new(
+                self.scan_order_span(DOSP, &[], span)?
+                    .map(move |k| Ok(un_dosp(split_key::<3>(&k?)?))),
+            ),
+            (GraphFilter::Named(g), Some(p)) => Box::new(
+                self.scan_order_span(GPOS, &[g, p], span)?
+                    .map(move |k| Ok(un_gpos(split_key::<4>(&k?)?))),
+            ),
+            (GraphFilter::Named(g), None) => Box::new(
+                self.scan_order_span(GOSP, &[g], span)?
+                    .map(move |k| Ok(un_gosp(split_key::<4>(&k?)?))),
+            ),
+            (GraphFilter::AnyNamed, Some(p)) => Box::new(
+                self.scan_order_span(POSG, &[p], span)?
+                    .map(move |k| Ok(un_posg(split_key::<4>(&k?)?))),
+            ),
+            (GraphFilter::AnyNamed, None) => Box::new(
+                self.scan_order_span(OSPG, &[], span)?
+                    .map(move |k| Ok(un_ospg(split_key::<4>(&k?)?))),
+            ),
+            (GraphFilter::Any, _) => unreachable!("handled by the caller"),
+        })
+    }
+
+    fn routed_scan(
+        &self,
+        s: Option<TermId>,
+        p: Option<TermId>,
+        o: Option<TermId>,
+        graph: GraphFilter,
+    ) -> Result<QuadScan<'_>> {
+        Ok(match graph {
+            GraphFilter::Default => {
+                let (order, prefix, un): (_, Vec<TermId>, fn([TermId; 3]) -> EncodedQuad) =
+                    match (s, p, o) {
+                        (Some(s), Some(p), Some(o)) => (DSPO, vec![s, p, o], un_dspo),
+                        (Some(s), Some(p), None) => (DSPO, vec![s, p], un_dspo),
+                        (Some(s), None, Some(o)) => (DOSP, vec![o, s], un_dosp),
+                        (Some(s), None, None) => (DSPO, vec![s], un_dspo),
+                        (None, Some(p), Some(o)) => (DPOS, vec![p, o], un_dpos),
+                        (None, Some(p), None) => (DPOS, vec![p], un_dpos),
+                        (None, None, Some(o)) => (DOSP, vec![o], un_dosp),
+                        (None, None, None) => (DSPO, vec![], un_dspo),
+                    };
+                Box::new(
+                    self.scan_order(order, &prefix)?
+                        .map(move |k| Ok(un(split_key::<3>(&k?)?))),
+                )
+            }
+            GraphFilter::Named(g) => {
+                let (order, prefix, un): (_, Vec<TermId>, fn([TermId; 4]) -> EncodedQuad) =
+                    match (s, p, o) {
+                        (Some(s), Some(p), Some(o)) => (GSPO, vec![g, s, p, o], un_gspo),
+                        (Some(s), Some(p), None) => (GSPO, vec![g, s, p], un_gspo),
+                        (Some(s), None, Some(o)) => (GOSP, vec![g, o, s], un_gosp),
+                        (Some(s), None, None) => (GSPO, vec![g, s], un_gspo),
+                        (None, Some(p), Some(o)) => (GPOS, vec![g, p, o], un_gpos),
+                        (None, Some(p), None) => (GPOS, vec![g, p], un_gpos),
+                        (None, None, Some(o)) => (GOSP, vec![g, o], un_gosp),
+                        (None, None, None) => (GSPO, vec![g], un_gspo),
+                    };
+                Box::new(
+                    self.scan_order(order, &prefix)?
+                        .map(move |k| Ok(un(split_key::<4>(&k?)?))),
+                )
+            }
+            GraphFilter::AnyNamed => {
+                let (order, prefix, un): (_, Vec<TermId>, fn([TermId; 4]) -> EncodedQuad) =
+                    match (s, p, o) {
+                        (Some(s), Some(p), Some(o)) => (SPOG, vec![s, p, o], un_spog),
+                        (Some(s), Some(p), None) => (SPOG, vec![s, p], un_spog),
+                        (Some(s), None, Some(o)) => (OSPG, vec![o, s], un_ospg),
+                        (Some(s), None, None) => (SPOG, vec![s], un_spog),
+                        (None, Some(p), Some(o)) => (POSG, vec![p, o], un_posg),
+                        (None, Some(p), None) => (POSG, vec![p], un_posg),
+                        (None, None, Some(o)) => (OSPG, vec![o], un_ospg),
+                        (None, None, None) => (SPOG, vec![], un_spog),
+                    };
+                Box::new(
+                    self.scan_order(order, &prefix)?
+                        .map(move |k| Ok(un(split_key::<4>(&k?)?))),
+                )
+            }
+            GraphFilter::Any => unreachable!("handled by the caller"),
+        })
+    }
+}
+
+/// The default-graph index orders, and which components each one's key is made of.
+///
+/// One table, used by the spill, the merge and the file writer, so those three cannot come to
+/// disagree about what `dpos` means. `[1, 2, 0]` is `pos` over `spo`.
+const TRIPLE_PERMS: [(&str, [usize; 3]); 3] =
+    [(DSPO, [0, 1, 2]), (DPOS, [1, 2, 0]), (DOSP, [2, 0, 1])];
+
+/// The named-graph index orders, likewise, over `spog`.
+const QUAD_PERMS: [(&str, [usize; 4]); 6] = [
+    (SPOG, [0, 1, 2, 3]),
+    (POSG, [1, 2, 0, 3]),
+    (OSPG, [2, 0, 1, 3]),
+    (GSPO, [3, 0, 1, 2]),
+    (GPOS, [3, 1, 2, 0]),
+    (GOSP, [3, 2, 0, 1]),
+];
+
+impl Spilled {
+    fn new(dir: &std::path::Path) -> Self {
+        Self {
+            triples: TRIPLE_PERMS.map(|(family, _)| sort::Runs::new(dir, family)),
+            named: QUAD_PERMS.map(|(family, _)| sort::Runs::new(dir, family)),
+        }
+    }
+}
+
+/// Writes one merged index order as SSTs of at most `file_rows` rows, handing each to
+/// `emit` as it is finished. An order with nothing in it writes nothing, which is ordinary:
+/// a load of only default-graph triples writes no quad orders at all.
+///
+/// The merge is already sorted and already deduplicated, which is what an `SstFileWriter`
+/// requires and a `WriteBatch` never did. Consecutive files of one order do not overlap, so
+/// the ingest treats them as it would one file. Free of the store so it can run on any
+/// thread.
+fn write_index_files<const N: usize>(
+    dir: &std::path::Path,
+    family: &'static str,
+    mut merged: sort::Merged<'_, N>,
+    file_rows: usize,
+    emit: &mut dyn FnMut(&'static str, std::path::PathBuf),
+) -> Result<()> {
+    // Held in a binding: a writer borrows its options for its whole life.
+    let opts = index_opts(codec::ID);
+    let width = sort::Merged::<N>::width();
+    let mut files = 0;
+    let mut open: Option<(rocksdb::SstFileWriter<'_>, std::path::PathBuf, usize)> = None;
+    while let Some(row) = merged.next()? {
+        if open.is_none() {
+            let path = dir.join(format!("{family}.{files}.sst"));
+            files += 1;
+            let writer = rocksdb::SstFileWriter::create(&opts);
+            writer.open(&path).map_err(rocks_err)?;
+            open = Some((writer, path, 0));
+        }
+        let (writer, _, rows) = open.as_mut().expect("opened above");
+        writer.put(&row[..width], []).map_err(rocks_err)?;
+        *rows += 1;
+        if *rows >= file_rows {
+            let (mut writer, path, _) = open.take().expect("just written to");
+            writer.finish().map_err(rocks_err)?;
+            emit(family, path);
+        }
+    }
+    if let Some((mut writer, path, _)) = open {
+        writer.finish().map_err(rocks_err)?;
+        emit(family, path);
+    }
+    Ok(())
+}
+
+/// Merges one dictionary window into an SST per family, ready to ingest.
+///
+/// Free of the store on purpose: it runs on its own thread while the load goes on, and
+/// nothing here touches the database. The ingest, which does, is the caller's.
+fn write_dict_ssts(
+    dir: &std::path::Path,
+    sequence: usize,
+    dict: DictBuffers,
+) -> Result<Vec<(&'static str, std::path::PathBuf)>> {
+    let mut files = Vec::new();
+    for (family, runs) in [(STR2ID, dict.str2id), (ID2STR, dict.id2str)] {
+        if runs.is_empty() {
+            continue;
+        }
+        if let Some(path) = write_dict_sst(dir, family, sequence, runs.merge()?)? {
+            files.push((family, path));
+        }
+    }
+    Ok(files)
+}
+
+/// Writes one sorted dictionary family as an SST, returning its path — or `None` when the
+/// family had nothing to write, since an empty file is not ingestable.
+///
+/// The index counterpart writes keys with empty values; these carry a value, and the merge
+/// has already combined any that share a key, so the stream is strictly increasing — which
+/// is what `SstFileWriter` requires and will not check for you.
+fn write_dict_sst(
+    dir: &std::path::Path,
+    family: &'static str,
+    sequence: usize,
+    mut merged: dictsort::Merged,
+) -> Result<Option<std::path::PathBuf>> {
+    // Numbered: a load flushes more than once now, and the ingest moves the file away,
+    // but a failure between writing and ingesting would otherwise leave one behind for
+    // the next flush to trip over.
+    let path = dir.join(format!("{family}.{sequence}.dict.sst"));
+    // The family's own options, so the file is written with the comparator and
+    // compression the column family will read it back with.
+    let opts = if family == STR2ID {
+        str2id_opts()
+    } else {
+        value_opts()
+    };
+    let mut writer = rocksdb::SstFileWriter::create(&opts);
+    writer.open(&path).map_err(rocks_err)?;
+
+    let mut wrote = false;
+    while let Some((key, value)) = merged.next()? {
+        writer.put(&key, &value).map_err(rocks_err)?;
+        wrote = true;
+    }
+    if !wrote {
+        // A load that interned nothing new — every term already in the dictionary — is
+        // ordinary.
+        drop(writer);
+        let _ = std::fs::remove_file(&path);
+        return Ok(None);
+    }
+    writer.finish().map_err(rocks_err)?;
+    Ok(Some(path))
+}
+
+/// Splits quads into the two key shapes the index uses.
+///
+/// Default-graph triples and named-graph quads are stored in different column families with
+/// different key widths, so they sort separately from here on.
+fn partition(quads: &[EncodedQuad]) -> (Vec<[TermId; 3]>, Vec<[TermId; 4]>) {
+    let mut triples = Vec::new();
+    let mut named = Vec::new();
+    for quad in quads {
+        match quad.graph_name {
+            None => triples.push([quad.subject, quad.predicate, quad.object]),
+            Some(g) => named.push([quad.subject, quad.predicate, quad.object, g]),
+        }
+    }
+    (triples, named)
+}
+
+/// Whether a quad answers a scan's pattern.
+///
+/// The database side of a scan is answered by choosing an index order and a key prefix; the
+/// scope side has no index, so it is answered by looking. That is affordable for exactly the
+/// reason the scope is bounded: a commit is small.
+fn matches(
+    quad: EncodedQuad,
+    subject: Option<TermId>,
+    predicate: Option<TermId>,
+    object: Option<TermId>,
+    graph: GraphFilter,
+) -> bool {
+    if subject.is_some_and(|s| s != quad.subject)
+        || predicate.is_some_and(|p| p != quad.predicate)
+        || object.is_some_and(|o| o != quad.object)
+    {
+        return false;
+    }
+    match graph {
+        GraphFilter::Default => quad.graph_name.is_none(),
+        GraphFilter::Named(g) => quad.graph_name == Some(g),
+        GraphFilter::AnyNamed => quad.graph_name.is_some(),
+        GraphFilter::Any => true,
+    }
+}
+
+// --- key un-permutation --------------------------------------------------------------
+
+fn triple(s: TermId, p: TermId, o: TermId) -> EncodedQuad {
+    EncodedQuad {
+        subject: s,
+        predicate: p,
+        object: o,
+        graph_name: None,
+    }
+}
+
+fn quad(s: TermId, p: TermId, o: TermId, g: TermId) -> EncodedQuad {
+    EncodedQuad {
+        subject: s,
+        predicate: p,
+        object: o,
+        graph_name: Some(g),
+    }
+}
+
+fn un_dspo([s, p, o]: [TermId; 3]) -> EncodedQuad {
+    triple(s, p, o)
+}
+fn un_dpos([p, o, s]: [TermId; 3]) -> EncodedQuad {
+    triple(s, p, o)
+}
+fn un_dosp([o, s, p]: [TermId; 3]) -> EncodedQuad {
+    triple(s, p, o)
+}
+fn un_spog([s, p, o, g]: [TermId; 4]) -> EncodedQuad {
+    quad(s, p, o, g)
+}
+fn un_posg([p, o, s, g]: [TermId; 4]) -> EncodedQuad {
+    quad(s, p, o, g)
+}
+fn un_ospg([o, s, p, g]: [TermId; 4]) -> EncodedQuad {
+    quad(s, p, o, g)
+}
+fn un_gspo([g, s, p, o]: [TermId; 4]) -> EncodedQuad {
+    quad(s, p, o, g)
+}
+fn un_gpos([g, p, o, s]: [TermId; 4]) -> EncodedQuad {
+    quad(s, p, o, g)
+}
+fn un_gosp([g, o, s, p]: [TermId; 4]) -> EncodedQuad {
+    quad(s, p, o, g)
+}
+
+// --- helpers ---------------------------------------------------------------------------
+
+/// Takes a hard-linked consistent snapshot of an open store.
+///
+/// RocksDB's own checkpoint: it flushes the write-ahead log and then hard-links the SST
+/// files into `destination`, so the copy is consistent, near-instant, and initially costs
+/// almost no disk. Two consequences worth knowing:
+///
+/// * **Hard links need the same filesystem.** Checkpointing to another mount makes RocksDB
+///   copy the files instead — still correct, no longer instant.
+/// * **A checkpoint pins the SST files it links.** They cannot be deleted while it exists,
+///   so as compaction proceeds the snapshot and the live store diverge and disk use climbs.
+///   A checkpoint left lying around is a slow disk leak; retention is the caller's job.
+///
+/// # Errors
+///
+/// Refuses while a bulk load is running, because those writes are buffered in this process
+/// rather than in RocksDB: a checkpoint taken then would be internally consistent and
+/// missing data, which is worse than a failure. Otherwise propagates RocksDB's own error —
+/// including the refusal to write into a directory that already exists.
+fn checkpoint_to(storage: &RocksStorage, destination: &std::path::Path) -> Result<()> {
+    if storage.bulk.is_some() {
+        return Err(StorageError::Unsupported(
+            "a bulk load is in progress; its writes are buffered outside RocksDB, so a \
+             checkpoint taken now would be consistent and incomplete"
+                .to_owned(),
+        ));
+    }
+    let checkpoint = rocksdb::checkpoint::Checkpoint::new(&storage.db).map_err(rocks_err)?;
+    checkpoint.create_checkpoint(destination).map_err(rocks_err)
+}
+
+fn cf<'a>(db: &'a DB, name: &str) -> Result<&'a rocksdb::ColumnFamily> {
+    db.cf_handle(name)
+        .ok_or_else(|| StorageError::corruption(format!("column family {name} is missing")))
+}
+
+/// Bytes a directory occupies, through its whole tree.
+///
+/// An entry that cannot be read is skipped rather than fatal. This answers "roughly how much
+/// space does a copy of this need", and refusing to answer because one file could not be
+/// stat'd would be less useful than answering slightly low.
+fn directory_bytes(dir: &std::path::Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return 0;
+    };
+    let mut total = 0;
+    for entry in entries.flatten() {
+        match entry.metadata() {
+            Ok(meta) if meta.is_dir() => total += directory_bytes(&entry.path()),
+            Ok(meta) => total += meta.len(),
+            Err(_) => {}
+        }
+    }
+    total
+}
+
+fn rocks_err(e: rocksdb::Error) -> StorageError {
+    StorageError::Io(std::io::Error::other(e.to_string()))
+}
+
+fn read_u64(db: &DB, key: &[u8]) -> Result<Option<u64>> {
+    Ok(match db.get(key).map_err(rocks_err)? {
+        Some(v) => Some(u64::from_be_bytes(to_8(&v)?)),
+        None => None,
+    })
+}
+
+fn to_8(bytes: &[u8]) -> Result<[u8; 8]> {
+    bytes
+        .try_into()
+        .map_err(|_| StorageError::corruption("expected an 8-byte value"))
+}
+
+fn decrement(counts: &mut FxHashMap<TermId, u64>, predicate: TermId, ops: &mut Vec<Pending>) {
+    if let Some(n) = counts.get_mut(&predicate) {
+        *n -= 1;
+        if *n == 0 {
+            counts.remove(&predicate);
+            ops.push(Pending::Delete(STATS, put_id(predicate).to_vec().into()));
+        } else {
+            ops.push(Pending::Put(
+                STATS,
+                put_id(predicate).to_vec().into(),
+                n.to_be_bytes().to_vec().into(),
+            ));
+        }
+    }
+}
+
+/// A 128-bit digest, used only to bound dictionary key length. Collisions are resolved by
+/// verifying candidates, so this needs to be fast and well-spread, not cryptographic.
+fn hash128(bytes: &[u8]) -> [u8; 16] {
+    let mut a = DefaultHasher::new();
+    bytes.hash(&mut a);
+    let mut b = DefaultHasher::new();
+    0xA5A5_A5A5_u32.hash(&mut b);
+    bytes.hash(&mut b);
+    let mut out = [0u8; 16];
+    out[..8].copy_from_slice(&a.finish().to_be_bytes());
+    out[8..].copy_from_slice(&b.finish().to_be_bytes());
+    out
+}
+
+fn bulk_write_opts() -> WriteOptions {
+    let mut opts = WriteOptions::default();
+    // A load that is interrupted is discarded and restarted, so the log buys nothing.
+    opts.disable_wal(true);
+    opts
+}
+
+fn value_opts() -> Options {
+    let mut opts = Options::default();
+    opts.set_compression_type(DBCompressionType::Lz4);
+    // No bloom filter here, unlike the index families below, and that is a measured choice
+    // rather than an oversight. A whole-key filter would be the textbook setting for a family
+    // read by point lookup, and `str2id` takes a miss for every term a load has not seen
+    // before. But `loadprofile` finds it worth nothing either way at 750k quads — the family
+    // is small enough to sit in the block cache, so a miss never reaches a file to skip.
+    //
+    // Revisited at 3M quads with 2M distinct terms, which is the scale the note above asked
+    // for, on data whose dictionary is nearly all singletons. It is **slower**, and not
+    // marginally: alternating the two builds so page-cache state hits both equally, the
+    // dictionary layer went 11.97/11.79/13.93 s without to 14.07/14.86/14.82 s with. A bulk
+    // load writes this family continuously, so the filter blocks are built on every flush
+    // and compaction, and that cost lands on the write path while the read it would save is
+    // one the block cache was already serving. The textbook setting is for a family that is
+    // read far more than it is written; during a load this one is the opposite.
+    //
+    // Revisited a third time, in the regime the note above asked for: sixty mid-load
+    // flushes, so a miss has ingested files to consult. A partitioned filter took a read
+    // from 3.7 to 2.8 us — and the dictionary layer as a whole did not move, because every
+    // flush now built filter partitions and that cost landed where the note said it would.
+    // 2.8 us for a filtered miss is the tell: with sixty uncompacted files a miss pays a
+    // per-file check whatever the filter says, and a filter cannot fix the file count. The
+    // load answers that question in memory instead — see `BulkState::seen`.
+    //
+    // And a fourth time, at full scale, where the reads that remained were 43.7 million
+    // *hits* at 28 us — 1,230 s of a 4,417 s load. A partitioned filter on `str2id` alone,
+    // measured on the same file: 1,300 s at 29.6 us. The reads that cost are not spent
+    // deciding which file holds the key. RocksDB's own log had `str2id` at two or three L0
+    // files throughout, so it is not the level structure either. Nor is it the page cache:
+    // opening the sort runs and the source with `FILE_FLAG_SEQUENTIAL_SCAN`, so they would
+    // not evict the dictionary, made the reads slower (27 and 34 us at the flushes where
+    // they had been 21 and 25), and the process sat at 139% CPU throughout — not waiting.
+    // Four measurements, four regimes, no filter; this note is so there is not a fifth.
+    opts
+}
+
+/// `str2id`: the value family's options plus a whole — not partitioned — bloom filter.
+///
+/// The fifth measurement of a filter on this family, and the one that found what the four
+/// before it were missing. They measured the *mean* cost of a dictionary read and found a
+/// filter did not move it, at any scale. A histogram of the same reads on the
+/// 653.8-million-triple load showed the shape instead: not a fast majority and a slow tail,
+/// as a disk problem would give, but the whole distribution walking right as the load went
+/// on — 66% of reads under 10 µs at the first flush, 9% by the eighth — while RocksDB's own
+/// log had the family at two or three L0 files throughout. A dictionary that size has half a
+/// dozen levels, and without a filter a get reads a data block at each to learn the key is
+/// not there. With a *partitioned* filter it reads a filter partition instead, and on a block
+/// cache too small to hold them that costs the same syscall — which is why partitioning
+/// measured as nothing, four times.
+///
+/// A whole filter is held by the table reader, outside any cache, for as long as the file
+/// is open. A get then checks each level in memory and reads one data block. Measured on
+/// the same eight flushes: **9.5 → 15.3 µs, flat from the fourth**, against 11.0 → 36.5 and
+/// still climbing. What is left is one block read per hit, which on this platform is the
+/// floor without holding data blocks in memory.
+///
+/// Whole, when the index families went partitioned in 0.9.0 to stop a bulk load building a
+/// filter over two gigabytes of file in one piece: this family's files are about sixty
+/// megabytes per flush, its whole filter over the entire 199-million-term dictionary is
+/// about 250 MB, and that is bounded by the dictionary rather than by the load. `id2str`
+/// keeps `value_opts`: it is read by id, ids are dense, and the load never reads it.
+fn str2id_opts() -> Options {
+    let mut opts = value_opts();
+    let mut block = rocksdb::BlockBasedOptions::default();
+    block.set_bloom_filter(10.0, false);
+    opts.set_block_based_table_factory(&block);
+    opts
+}
+
+/// Index column families get a fixed-length prefix extractor so RocksDB can build a
+/// prefix bloom filter over the first term of a key — the common case for a bound
+/// subject, predicate or graph (`DESIGN.md` §6.1). Scans with no bound prefix opt out
+/// through `total_order_seek`.
+fn index_opts(prefix_len: usize) -> Options {
+    let mut opts = value_opts();
+    opts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(prefix_len));
+    let mut block = rocksdb::BlockBasedOptions::default();
+    block.set_bloom_filter(10.0, false);
+    // Partitioned, unconditionally, and both halves of the reason matter.
+    //
+    // A *whole* filter is built in one piece: `FullFilterBlockBuilder` keeps a 64-bit hash
+    // per key until `finish`. A memtable flush does that for a few thousand keys and nobody
+    // notices. A bulk load writes one file per order for the **whole store**, so the vector
+    // is 8 bytes times every triple loaded — 5.2 GB at 653 million, twice that while it
+    // doubles. Measured: a 653,839,702-triple load streamed at a flat 2.4 GB for three and a
+    // half hours, then reached **18 GB** in the final merge, once per triple order, on a
+    // 32 GB machine. Nothing in HOLOS could see it coming: `holos_engine`'s ceiling reads a
+    // counting allocator, which counts Rust allocations, and this vector is RocksDB's.
+    //
+    // A whole filter is also *pinned* by the table reader for as long as the file is open,
+    // which is what makes a large store expensive merely to have open — that store costs
+    // about 4 GB before it answers anything.
+    //
+    // So the write side needs this and the read side wants it, and applying it to the
+    // families rather than only to the bulk writer is what stops a `compact` rewriting every
+    // ingested file with whole filters and handing back what the load just avoided.
+    //
+    // `partition_filters` requires the two-level index; RocksDB rejects it otherwise.
+    block.set_index_type(rocksdb::BlockBasedIndexType::TwoLevelIndexSearch);
+    block.set_partition_filters(true);
+    opts.set_block_based_table_factory(&block);
+    opts
+}
+
+fn num_cpus() -> i32 {
+    i32::try_from(
+        std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(2),
+    )
+    .unwrap_or(2)
+}
