@@ -364,6 +364,30 @@ fn shacl12_core_adapted() {
     );
 }
 
+/// SHACL-SPARQL through the native evaluator, which hands SPARQL constraints to the adapted
+/// engine and merges its results (`CompiledShapes::has_sparql`). Measured separately from
+/// the adapted ratchet below because the result is a merge of two validators, and that is
+/// what can go wrong.
+#[test]
+fn shacl_sparql() {
+    run_shacl_suite_with(
+        "shacl-sparql",
+        "data-shapes-test-suite",
+        "sparql",
+        holos_conformance::shacl::Engine::Native,
+    );
+}
+
+#[test]
+fn shacl12_sparql() {
+    run_shacl_suite_with(
+        "shacl12-sparql",
+        "shacl12-test-suite",
+        "sparql",
+        holos_conformance::shacl::Engine::Native,
+    );
+}
+
 #[test]
 fn shacl_sparql_adapted() {
     run_shacl_suite_with(

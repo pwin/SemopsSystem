@@ -15,12 +15,21 @@ ex:PersonShape a sh:NodeShape ;
   sh:property [ sh:path ex:name ; sh:minCount 1 ] .
 ";
 
-/// The same constraint as a SPARQL constraint: beyond SHACL Core, so the native validator
-/// refuses it and the adapted one checks it.
+/// The same constraint as a SPARQL constraint: beyond SHACL Core. The adapted validator
+/// checks it; the native one hands it to the adapted engine and merges the result.
 const SPARQL_SHAPES: &str = "@prefix ex: <http://example.com/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 ex:S a sh:NodeShape ; sh:targetClass ex:Person ;
   sh:sparql [ sh:select \"SELECT $this WHERE { FILTER NOT EXISTS { $this <http://example.com/name> ?n } }\" ] .
+";
+
+/// A SHACL-AF custom target, which the native validator still does not implement: it refuses
+/// the shapes rather than check fewer focus nodes than they select.
+const TARGET_SHAPES: &str = "@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+ex:S a sh:NodeShape ;
+  sh:target [ a sh:SPARQLTarget ; sh:select \"SELECT ?this WHERE { ?this a <http://example.com/Person> }\" ] ;
+  sh:property [ sh:path ex:name ; sh:minCount 1 ] .
 ";
 
 const CONFORMING: &str = "@prefix ex: <http://example.com/> .
@@ -57,6 +66,7 @@ struct Files {
     violating: String,
     shapes: String,
     sparql_shapes: String,
+    target_shapes: String,
 }
 
 fn files() -> Files {
@@ -66,6 +76,7 @@ fn files() -> Files {
         violating: write(dir.path(), "bad.ttl", VIOLATING),
         shapes: write(dir.path(), "shapes.ttl", SHAPES),
         sparql_shapes: write(dir.path(), "sparql.ttl", SPARQL_SHAPES),
+        target_shapes: write(dir.path(), "target.ttl", TARGET_SHAPES),
         _dir: dir,
     }
 }
@@ -104,15 +115,27 @@ fn the_default_is_the_adapted_validator() {
 }
 
 #[test]
-fn a_shapes_graph_the_engine_refuses_exits_2_not_1() {
+fn the_native_validator_checks_a_sparql_constraint_too() {
     let f = files();
     let output = validate(&f.violating, &f.sparql_shapes, &["--engine", "native"]);
+    assert_eq!(
+        code(&output),
+        1,
+        "the SPARQL constraint was checked (by the adapted engine) and Bob violates it: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn a_shapes_graph_the_engine_refuses_exits_2_not_1() {
+    let f = files();
+    let output = validate(&f.violating, &f.target_shapes, &["--engine", "native"]);
     assert_eq!(
         code(&output),
         2,
         "refused, so no answer: not the same as 'does not conform'"
     );
-    assert!(String::from_utf8_lossy(&output.stderr).contains("sh:sparql"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("sh:target"));
 }
 
 #[test]

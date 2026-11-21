@@ -71,6 +71,14 @@ impl Bridged {
         intern(store, &mut self.terms, &mut self.forward, id)
     }
 
+    /// Engine id → HOLOS id, for the terms the bridge has seen: how a result the engine
+    /// reports is turned back into the store's own terms. (Not by label: the engine writes a
+    /// blank node's scope into its label, so a label lookup would miss the store's node.)
+    #[must_use]
+    pub fn reverse(&self) -> FxHashMap<EngineId, HolosId> {
+        self.forward.iter().map(|(holos, engine)| (*engine, *holos)).collect()
+    }
+
     /// How many triples were bridged.
     #[must_use]
     pub fn len(&self) -> usize {
