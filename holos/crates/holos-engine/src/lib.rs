@@ -27,11 +27,14 @@ pub mod distinct;
 pub mod dump;
 pub mod entailment;
 pub mod equality;
-pub mod functions;
+/// The extension function library, which lives in `semops-functions` so that the SHACL
+/// validators and tarka register the same one.
+pub use semops_functions as functions;
 pub mod geo_ext;
 pub mod group;
 pub mod memory;
 pub mod options;
+pub mod pfunc;
 pub mod range;
 pub mod reach;
 pub mod rules;
@@ -620,13 +623,17 @@ impl Engine {
         for (name, function) in geo_ext::EXTRA_GEOSPARQL_FUNCTIONS {
             evaluator = evaluator.with_custom_function(name.into_owned(), function);
         }
-        // fn:, afn: and spif: — the three extension libraries queries written for other
+        // fn:, math:, afn: and spif: — the extension libraries queries written for other
         // stores reach for. Without them such a query fails with "not supported", which is
-        // accurate and unhelpful when the function has an exact equivalent here.
-        for (name, function) in functions::all() {
-            evaluator = evaluator.with_custom_function(name, function);
-        }
-        evaluator
+        // accurate and unhelpful when the function has an exact equivalent here. The same
+        // library is registered by both SHACL validators and by tarka. Built per query, so
+        // fn:current-dateTime and afn:now give the query's start, as NOW() does.
+        evaluator = semops_functions::register(evaluator);
+        // How a staged property function hands a blank node to the next step (see pfunc).
+        evaluator.with_custom_function(
+            oxrdf::NamedNode::new_unchecked(pfunc::BLANK_NODE_FUNCTION),
+            pfunc::blank_node,
+        )
     }
 
     /// Parses and evaluates a SPARQL 1.2 query against a view.
@@ -683,6 +690,53 @@ impl Engine {
         Self::run(view, parsed, options)
     }
 
+    /// Every solution of a pattern, collected: what a staged property function is applied
+    /// to. Evaluated through [`Engine::run`], so the step gets the same rewrites, policy and
+    /// time limit as the query it is part of.
+    pub(crate) fn solutions_of<'a>(
+        view: &'a DatasetView<'a>,
+        pattern: &spargebra::algebra::GraphPattern,
+        dataset: Option<spargebra::algebra::QueryDataset>,
+        base_iri: Option<oxiri::Iri<String>>,
+        options: &QueryOptions,
+    ) -> Result<Vec<semops_functions::pfunc::Bindings>, EngineError> {
+        let mut variables = Vec::new();
+        pattern.on_in_scope_variable(|v| {
+            if !variables.contains(v) {
+                variables.push(v.clone());
+            }
+        });
+        // A value given for a variable this step does not mention is not this step's: the
+        // evaluator refuses a substitution for a variable a query never uses.
+        let mut options = options.clone();
+        options
+            .substitutions
+            .retain(|(variable, _)| variables.contains(variable));
+        let query = spargebra::Query::Select {
+            dataset,
+            pattern: spargebra::algebra::GraphPattern::Project {
+                inner: Box::new(pattern.clone()),
+                variables,
+            },
+            base_iri,
+        };
+        let (results, _) = Self::run(view, query, &options)?;
+        let QueryResults::Solutions(solutions) = results else {
+            return Ok(Vec::new());
+        };
+        let mut out = Vec::new();
+        for solution in solutions {
+            let solution = solution?;
+            out.push(
+                solution
+                    .iter()
+                    .map(|(v, t)| (v.clone(), t.clone()))
+                    .collect(),
+            );
+        }
+        Ok(out)
+    }
+
     /// The query pipeline: every entry point that evaluates a query ends here.
     ///
     /// Check, shortcut, admit, rewrite, plan, and evaluate -- in that order, and once. The
@@ -697,6 +751,22 @@ impl Engine {
         options: &QueryOptions,
     ) -> Result<(QueryResults<'a>, Option<spareval::QueryExplanation>), EngineError> {
         crate::validate::check(&parsed)?;
+
+        // Property functions first: what follows is ordinary SPARQL. A function of its
+        // arguments is evaluated where it stands, over the solutions of the patterns before
+        // it, each step a query through this same pipeline (see `pfunc`).
+        let parsed = if crate::pfunc::in_query(&parsed) {
+            let dataset = parsed_dataset(&parsed);
+            let base_iri = parsed_base(&parsed);
+            let mut step_options = options.clone();
+            step_options.explain = false;
+            let mut evaluate = |pattern: &spargebra::algebra::GraphPattern| {
+                Self::solutions_of(view, pattern, dataset.clone(), base_iri.clone(), &step_options)
+            };
+            crate::pfunc::stage_query(parsed, &mut evaluate)?
+        } else {
+            parsed
+        };
 
         // `SELECT DISTINCT ?p WHERE { ?s ?p ?o }` from the store's own predicate list, each
         // confirmed visible through this view. Before admission, which would otherwise see a
@@ -1378,6 +1448,26 @@ fn guard_with_deadline<'a>(results: QueryResults<'a>, deadline: Deadline) -> Que
         }
         // A boolean is already computed; there is nothing left to interrupt.
         other => other,
+    }
+}
+
+/// A query's dataset (`FROM`, `FROM NAMED`), whatever its form.
+fn parsed_dataset(query: &spargebra::Query) -> Option<spargebra::algebra::QueryDataset> {
+    match query {
+        spargebra::Query::Select { dataset, .. }
+        | spargebra::Query::Construct { dataset, .. }
+        | spargebra::Query::Describe { dataset, .. }
+        | spargebra::Query::Ask { dataset, .. } => dataset.clone(),
+    }
+}
+
+/// A query's base IRI, whatever its form.
+fn parsed_base(query: &spargebra::Query) -> Option<oxiri::Iri<String>> {
+    match query {
+        spargebra::Query::Select { base_iri, .. }
+        | spargebra::Query::Construct { base_iri, .. }
+        | spargebra::Query::Describe { base_iri, .. }
+        | spargebra::Query::Ask { base_iri, .. } => base_iri.clone(),
     }
 }
 

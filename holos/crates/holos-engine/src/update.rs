@@ -302,6 +302,17 @@ fn delete_insert(
     // the operation, not against a store changing underneath the iterator.
     let (to_delete, to_insert) = {
         let view = engine.view(session);
+        // Property functions in the WHERE are staged as a query's are (see `pfunc`).
+        let staged;
+        let pattern = if crate::pfunc::mentions(pattern) {
+            let mut evaluate = |p: &spargebra::algebra::GraphPattern| {
+                Engine::solutions_of(&view, p, using.clone(), None, &crate::QueryOptions::new())
+            };
+            staged = crate::pfunc::stage_pattern(pattern, &mut evaluate)?;
+            &staged
+        } else {
+            pattern
+        };
         let evaluator = Engine::evaluator();
         let prepared = evaluator.prepare_delete_insert(
             delete.to_vec(),
