@@ -820,7 +820,10 @@ fn evaluate<'a>(
         .cloned()
         .partition(|(_, t)| matches!(t, Term::BlankNode(_)));
 
-    let evaluator = QueryEvaluator::new();
+    // XPath fn: and math:, Jena's afn: and TopBraid's spif:, which SHACL and SPIN rule sets
+    // call more than any queries do: the library HOLOS queries and tarka use, so a
+    // function that works in one works in the other (semops-functions).
+    let evaluator = semops_functions::register(QueryEvaluator::new());
     let substituted = substitute(query, &ground);
 
     // A variable the query never mentions cannot be substituted — the

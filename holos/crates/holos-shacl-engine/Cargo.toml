@@ -18,6 +18,7 @@ default = []
 parallel = ["dep:rayon"]
 
 [dependencies]
+semops-functions.workspace = true
 oxrdf.workspace = true
 oxrdfio.workspace = true
 oxttl = { version = "0.2", features = ["rdf-12"] }
