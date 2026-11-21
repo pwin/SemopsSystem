@@ -3,7 +3,8 @@
 #
 #   examples/check.sh [path-to-shacl]
 #
-# Defaults to target/release/shacl, so it works against a source build; pass a
+# Defaults to the workspace's target/release/shacl (two levels up: this directory is
+# shacl/examples in SemOps System), so it works against a source build; pass a
 # path to check a downloaded release binary instead.
 #
 # Exit status is 0 only if every expectation holds, so this is usable as a
@@ -11,7 +12,7 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 
-SHACL="${1:-../target/release/shacl}"
+SHACL="${1:-../../target/release/shacl}"
 [ -x "$SHACL" ] || SHACL="$SHACL.exe"
 if ! "$SHACL" --version >/dev/null 2>&1; then
   echo "cannot run $SHACL — build it with: cargo build --release -p shacl-cli" >&2
