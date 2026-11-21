@@ -115,16 +115,29 @@ jobs:
       - run: cargo test --locked -p shacl --no-default-features --features parallel
 
   # The rust-version every crate declares. A dependency update that needs a newer compiler
-  # fails here rather than in someone's build.
+  # fails here rather than in someone's build. There are two floors: 1.90 for the workspace,
+  # and 1.95 for tarka's Polars input and the two crates built on it, because polars 0.55
+  # needs sysinfo 0.39 and every sysinfo 0.39 release needs Rust 1.95.
   msrv:
+    name: msrv (${{ matrix.toolchain }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: "1.90"
+            args: --workspace --exclude tarka-polars --exclude tarka-cli --exclude tarka-python --exclude holos-python --exclude shacl-python
+          - toolchain: "1.95"
+            args: ""
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.90
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
         with:
-          key: msrv
-      - run: cargo check --locked
+          key: msrv-${{ matrix.toolchain }}
+      - run: cargo check --locked ${{ matrix.args }}
 
   examples:
     runs-on: ubuntu-latest

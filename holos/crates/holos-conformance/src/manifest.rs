@@ -536,11 +536,63 @@ pub fn path_to_file_url(path: &Path) -> String {
 }
 
 /// Converts a `file://` URL back into a path, undoing percent-encoding.
+///
+/// The slash after `file://` belongs to the path everywhere except before a Windows drive
+/// letter: `file:///C:/x` is `C:/x`, but `file:///home/x` is `/home/x`. Dropping it in both
+/// cases made every manifest unreadable on Linux and macOS, where `home/x` was then looked
+/// for relative to the working directory.
 #[must_use]
 pub fn file_url_to_path(url: &str) -> Option<PathBuf> {
     let rest = url.strip_prefix("file://")?;
-    let rest = rest.strip_prefix('/').unwrap_or(rest);
+    let rest = match rest.strip_prefix('/') {
+        Some(after) if has_drive_letter(after) => after,
+        _ => rest,
+    };
     Some(PathBuf::from(percent_decode(rest)))
+}
+
+/// Whether a path starts with a Windows drive: a letter and a colon, then a slash or nothing.
+fn has_drive_letter(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 2
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes.len() == 2 || bytes[2] == b'/')
+}
+
+#[cfg(test)]
+mod url_tests {
+    use super::{file_url_to_path, path_to_file_url};
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn a_unix_path_keeps_its_root() {
+        assert_eq!(
+            file_url_to_path("file:///home/runner/suite/manifest.ttl"),
+            Some(PathBuf::from("/home/runner/suite/manifest.ttl"))
+        );
+    }
+
+    #[test]
+    fn a_windows_path_loses_the_slash_before_its_drive() {
+        assert_eq!(
+            file_url_to_path("file:///C:/repos/suite/manifest.ttl"),
+            Some(PathBuf::from("C:/repos/suite/manifest.ttl"))
+        );
+    }
+
+    #[test]
+    fn a_path_survives_the_round_trip() {
+        let path = Path::new("/srv/suites/a%20b/manifest.ttl");
+        let url = path_to_file_url(path);
+        assert_eq!(url, "file:///srv/suites/a%20b/manifest.ttl");
+        // Percent-decoding is the point of the reverse direction, so the escape comes back as
+        // a space.
+        assert_eq!(
+            file_url_to_path(&url),
+            Some(PathBuf::from("/srv/suites/a b/manifest.ttl"))
+        );
+    }
 }
 
 fn percent_decode(s: &str) -> String {

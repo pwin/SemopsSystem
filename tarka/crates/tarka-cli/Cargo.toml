@@ -3,7 +3,9 @@ name = "tarka-cli"
 description = "The tarka command: triplify CSV with TARQL queries or OTTR templates"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+# polars 0.55 needs sysinfo 0.39, and every sysinfo 0.39 release needs Rust 1.95. The rest
+# of the workspace builds on 1.90 (ci.yml, msrv).
+rust-version = "1.95"
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
