@@ -19,7 +19,9 @@ were taken from the root of the Oxigraph repository. `Cargo.toml` is the normali
 cargo publishes, unchanged but for one line: its `resolver = "2"` is removed, because cargo
 ignores a resolver set by a package that is not the workspace root and warns about it on every
 command. `Cargo.toml.orig` is the one it was normalised from and is not read
-by cargo.
+by cargo. One line is added, `exclude = ["Cargo.toml.orig"]`, which leaves that copy out of
+packaging: the `semops-system` sdist packages this crate, and `cargo package` refuses a
+package that contains a file named `Cargo.toml.orig`.
 
 ## The change
 

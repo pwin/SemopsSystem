@@ -1254,8 +1254,10 @@ fn spargeo_names() -> Vec<String> {
         .collect()
 }
 
+/// The module. Public, so that the `semops-system` wheel's one extension can carry it as a
+/// submodule.
 #[pymodule]
-fn _holosdb(module: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn _holosdb(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("__version__", env!("CARGO_PKG_VERSION"))?;
     module.add("HolosError", module.py().get_type::<HolosError>())?;
     module.add("SyntaxError", module.py().get_type::<SyntaxError>())?;

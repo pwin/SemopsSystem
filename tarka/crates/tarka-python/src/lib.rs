@@ -303,9 +303,11 @@ fn write_to(
     }
 }
 
+/// The module. Public, so that the `semops-system` wheel's one extension can carry it as a
+/// submodule.
 #[pymodule]
 #[pyo3(name = "tarka_rdf")]
-fn tarka_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn tarka_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Mapping>()?;
     m.add_function(wrap_pyfunction!(expand, m)?)?;
     m.add_function(wrap_pyfunction!(bottr, m)?)?;

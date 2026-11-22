@@ -38,16 +38,46 @@ def one(store: Store, select: str, var: str):
     return rows[0].term(var)
 
 
-def test_submodules_are_the_engines_themselves():
-    import holosdb
-    import shacl
-    import tarka_rdf
+def test_submodules_are_the_engines_modules():
+    import semops_system.holos
+    from semops_system.shacl import Shapes  # noqa: F401
+    from semops_system.tarka import Mapping  # noqa: F401
 
-    assert so.holos is holosdb and so.shacl is shacl and so.tarka is tarka_rdf
+    assert semops_system.holos is so.holos is so._native._holosdb
+    assert so.shacl is so._native.shacl and so.tarka is so._native.tarka_rdf
 
 
 def test_persistent_store_is_compiled_in():
     assert so.holos.has_rocksdb()
+
+
+# ---------------------------------------------------------------- the quality checks
+
+ONTOLOGY = """
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <https://example.org/shop#> .
+
+<https://example.org/shop> a owl:Ontology .
+ex:Shop a owl:Class ; rdfs:label "Shop"@en .
+ex:Bookshop a owl:Class ; rdfs:subClassOf ex:Shop .
+"""
+
+
+def test_the_quality_checks_run_on_text_and_files(tmp_path):
+    checks = so.list_checks()
+    assert len(checks) == 61 and all(c["id"] and c["default_severity"] for c in checks)
+    run = so.check_text(ONTOLOGY, "ttl")
+    assert run["complete"], run["failed"]
+    assert {f["severity"] for f in run["findings"]} <= {"Violation", "Warning", "Info"}
+    # The same ten findings `semops check` gives on this file.
+    assert len(run["findings"]) == 10
+    path = tmp_path / "shop.ttl"
+    path.write_text(ONTOLOGY, encoding="utf-8")
+    assert len(so.check(str(path))["findings"]) == 10
+    assert len(so.check(str(path), engine="sparql")["findings"]) >= 1
+    with pytest.raises(ValueError):
+        so.check(str(path), engine="owl")
 
 
 # ---------------------------------------------------------------- RDF 1.2 and SPARQL 1.2
@@ -171,13 +201,15 @@ def test_store_validates_shacl_sparql_with_the_adapted_validator(tmp_path):
     assert result["violations"] == 1
 
 
-def test_native_validator_refuses_shacl_sparql_rather_than_passing_it(tmp_path):
-    """HOLOS 0.27.0's native, incremental validator has no SHACL-SPARQL. It fails closed:
-    it refuses the shapes rather than report a conforming graph. One validator covering
-    both is phase 4 work (docs/decisions/0003)."""
-    store = store_with(tmp_path, DATA_BAD)
-    with pytest.raises(so.holos.HolosError, match="sh:sparql"):
-        store.validate(shapes_file(tmp_path, SHAPES), engine="native")
+def test_native_validator_checks_shacl_sparql_too(tmp_path):
+    """The native, incremental validator checks SHACL Core itself and hands SHACL-SPARQL
+    constraints to the adapted engine, merging the reports. (HOLOS 0.27.0, which the bridge
+    release installed, refused such shapes instead.)"""
+    bad = store_with(tmp_path, DATA_BAD).validate(shapes_file(tmp_path, SHAPES), engine="native")
+    assert bad["conforms"] is False and bad["violations"] == 1
+    assert bad["results"][0]["component"].endswith("#SPARQLConstraintComponent")
+    good = store_with(tmp_path, DATA_GOOD).validate(shapes_file(tmp_path, SHAPES), engine="native")
+    assert good["conforms"] is True
 
 
 # ---------------------------------------------------------------- tarka, and the RDF 1.2 lift

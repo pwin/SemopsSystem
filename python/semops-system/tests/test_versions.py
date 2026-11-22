@@ -1,28 +1,28 @@
-"""The package installs exactly the engine releases versions.toml says belong together."""
+"""One build: every part of the package comes from the same release of the workspace."""
 
 import tomllib
-from importlib.metadata import requires
+from importlib.metadata import requires, version
 from pathlib import Path
 
 import semops_system
 
-VERSIONS = Path(__file__).resolve().parents[3] / "versions.toml"
+CARGO = Path(__file__).resolve().parents[3] / "Cargo.toml"
 
 
-def pinned_in_versions_toml() -> dict[str, str]:
-    pins = tomllib.loads(VERSIONS.read_text(encoding="utf-8"))
-    return {dist: engine["version"] for engine in pins["engines"].values() for dist in engine.get("pypi", [])}
+def test_the_version_is_the_workspace_release():
+    workspace = tomllib.loads(CARGO.read_text(encoding="utf-8"))["workspace"]["package"]["version"]
+    assert semops_system.__version__ == workspace
+    assert version("semops-system") == workspace
 
 
-def test_dependencies_are_the_versions_toml_pins():
-    declared = {}
-    for req in requires("semops-system") or []:
-        if "extra ==" in req:
-            continue
-        name, _, version = req.partition("==")
-        declared[name.strip()] = version.strip()
-    assert declared == pinned_in_versions_toml()
+def test_every_part_is_from_this_build():
+    assert set(semops_system.ENGINES.values()) == {semops_system.__version__}
+    assert semops_system.holos.__version__ == semops_system.__version__
 
 
-def test_installed_engines_are_the_pinned_ones():
-    assert semops_system.ENGINES == pinned_in_versions_toml()
+def test_the_engines_are_not_separate_installs():
+    # The bridge release depended on holosdb, shacl and tarka-rdf; the native wheel carries
+    # them. Only polars, which tarka converts data frames through, is required.
+    declared = [r for r in requires("semops-system") or [] if "extra ==" not in r]
+    names = {r.split(">")[0].split("=")[0].split("<")[0].strip().lower() for r in declared}
+    assert names == {"polars"}

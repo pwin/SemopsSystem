@@ -1,4 +1,5 @@
-# Builds, tests and publishes the `semops-system` Python package.
+# Builds, tests and publishes the `semops-system` Python package: the native wheel, built
+# from the workspace (crates/semops-python, python/semops-system).
 #
 # The filename is fixed: PyPI's and TestPyPI's trusted publishers for `semops-system` are
 # registered against pwin/SemopsSystem and `.github/workflows/workflow.yml`. Renaming this
@@ -10,20 +11,18 @@
 #   Tag  py-v*                       build, test, then publish to PyPI
 #
 # The tag is `py-v*`, not `v*`, so that a workspace release tag does not publish the Python
-# package by accident while the two are versioned apart (this package is the 0.29.0.devN
-# bridge; the workspace's own wheel comes with phase 3).
+# package by accident.
 name: python package
 
 on:
-  # No `paths` filter on push: GitHub applies it to tag pushes too, and a `py-v*` tag on a
-  # commit that touched nothing listed would then publish nothing. The build is cheap.
+  # No `paths` filter on push, so that a `py-v*` tag always runs whatever its commit touched.
   push:
     branches: [main]
     tags: ["py-v*"]
   pull_request:
     paths:
       - "python/semops-system/**"
-      - "versions.toml"
+      - "crates/semops-python/**"
       - ".github/workflows/workflow.yml"
   workflow_dispatch:
     inputs:
@@ -36,26 +35,106 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_PROFILE_RELEASE_DEBUG: "false"
+  # Named so maturin-action does not ask `cargo metadata` on the host of a containerised
+  # Linux build, where no Rust is installed (as in holos/.github/workflows/python.yml).
+  CARGO_TARGET_DIR: target
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  # One wheel per platform. abi3 means each serves every CPython the package supports, so
+  # the matrix is over platforms, not interpreters. The platform list and the fixes in the
+  # steps are HOLOS's, from holos/.github/workflows/python.yml, which explains each.
+  wheels:
+    name: wheel (${{ matrix.platform.os }} / ${{ matrix.platform.target }})
+    runs-on: ${{ matrix.platform.os }}
+    # RocksDB from C++ and Polars, in release mode, on every platform.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          # manylinux_2_28: bindgen, for RocksDB, needs a libclang the 2014 image lacks.
+          - { os: ubuntu-latest, target: x86_64, manylinux: "2_28" }
+          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: "2_28" }
+          # Both macOS architectures from the arm64 runner; macos-13 is retired.
+          - { os: macos-latest, target: aarch64, manylinux: "auto" }
+          - { os: macos-latest, target: x86_64, manylinux: "auto" }
+          - { os: windows-latest, target: x64, manylinux: "auto" }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.13"
-      - run: python -m pip install build twine
-      - run: python -m build python/semops-system --outdir dist
-      - run: python -m twine check --strict dist/*
-      - uses: actions/upload-artifact@v4
+          python-version: "3.12"
+      - name: macOS build environment
+        if: runner.os == 'macOS'
+        run: |
+          lib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          test -f "$lib/libclang.dylib" || { echo "no libclang.dylib under $lib"; exit 1; }
+          echo "LIBCLANG_PATH=$lib" >> "$GITHUB_ENV"
+          if [ "${{ matrix.platform.target }}" = "x86_64" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=10.13" >> "$GITHUB_ENV"
+          fi
+      - name: Point bindgen at libclang (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $lib = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path "$lib\libclang.dll")) { throw "no libclang.dll under $lib" }
+          "LIBCLANG_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build the wheel
+        uses: PyO3/maturin-action@v1
         with:
-          name: dist
-          path: dist/
+          working-directory: python/semops-system
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.manylinux }}
+          args: --release --out dist
+          sccache: "true"
+          before-script-linux: |
+            set -eux
+            if command -v dnf >/dev/null; then
+              dnf install -y gcc-c++ clang-devel llvm-devel
+            elif command -v yum >/dev/null; then
+              yum install -y gcc-c++ clang-devel llvm-devel
+            elif command -v apt-get >/dev/null; then
+              apt-get update && apt-get install -y g++ clang libclang-dev
+            fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.platform.os }}-${{ matrix.platform.target }}
+          path: python/semops-system/dist
 
-  # The wheel as a user installs it, with the pinned engines from PyPI, on each platform the
-  # engines publish wheels for, at the oldest and newest CPython they support.
+  sdist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: python/semops-system
+          command: sdist
+          args: --out dist
+      # What a build from the sdist needs first: every path dependency and [patch] target in
+      # the archive. (maturin leaves [patch] paths out unless something depends on them by
+      # path; crates/semops-python/Cargo.toml does.) Not --locked: maturin trims the
+      # workspace's member list in the sdist, so cargo prunes the lock file's entries for
+      # the members left out. The packages that remain keep their locked versions.
+      - name: The sdist resolves on its own
+        run: |
+          mkdir sdist-check
+          tar -xzf python/semops-system/dist/*.tar.gz -C sdist-check
+          cargo metadata --format-version 1 \
+            --manifest-path sdist-check/*/crates/semops-python/Cargo.toml > /dev/null
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-sdist
+          path: python/semops-system/dist
+
+  # The wheel as a user installs it, on each platform, at the oldest and newest CPython the
+  # package supports. Against the wheel, not the working tree, so a packaging fault shows.
   test:
-    needs: build
+    needs: wheels
     strategy:
       fail-fast: false
       matrix:
@@ -67,21 +146,22 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
-          name: dist
+          pattern: wheels-*
+          merge-multiple: true
           path: dist
       - name: Install and test
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --find-links dist "semops-system[test]"
-          python -c "import semops_system as so; print(so.__version__, so.ENGINES)"
+          python -m pip install --only-binary semops-system --find-links dist "semops-system[test]"
+          python -c "import semops_system as so; print(so.__version__, len(so.list_checks()), 'checks')"
           python -m pytest python/semops-system/tests -v
 
   publish-testpypi:
     name: publish to TestPyPI
-    needs: test
+    needs: [test, sdist]
     if: github.event_name == 'workflow_dispatch' && inputs.index == 'testpypi'
     runs-on: ubuntu-latest
     environment:
@@ -90,9 +170,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
-          name: dist
+          pattern: wheels-*
+          merge-multiple: true
           path: dist
       - run: ls -l dist
       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -101,7 +182,7 @@ jobs:
 
   publish-pypi:
     name: publish to PyPI
-    needs: test
+    needs: [test, sdist]
     if: >
       (github.event_name == 'workflow_dispatch' && inputs.index == 'pypi') ||
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/py-v'))
@@ -112,9 +193,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
-          name: dist
+          pattern: wheels-*
+          merge-multiple: true
           path: dist
       - run: ls -l dist
       - uses: pypa/gh-action-pypi-publish@release/v1

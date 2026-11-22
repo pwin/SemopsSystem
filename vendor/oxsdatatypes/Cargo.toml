@@ -21,6 +21,9 @@ autobins = false
 autoexamples = false
 autotests = false
 autobenches = false
+# Packaging leaves out the pre-normalisation manifest kept for reference: cargo refuses
+# a package containing a file of that name (see PROVENANCE.md).
+exclude = ["Cargo.toml.orig"]
 description = "Some XSD datatypes for SPARQL implementations"
 documentation = "https://docs.rs/oxsdatatypes"
 readme = "README.md"
