@@ -262,3 +262,17 @@ jobs:
           done
       - name: Container Apps Bicep
         run: az bicep build --file deploy/azure/containerapps/main.bicep --stdout > /dev/null
+
+  # The manual (docs/manual): the web edition, the EPUB and the A4 PDF, built from the same
+  # chapters and kept as an artifact for each run. pandoc from the runner's packages;
+  # Chrome, which prints the PDF, comes with the runner.
+  manual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y pandoc
+      - run: python3 docs/manual/build.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: the-semops-system-manual
+          path: docs/manual/build/site/

@@ -15,6 +15,7 @@ engine and the tarka mapper, built, versioned and released together. It implemen
 | [`crates/semops-placetime/`](crates/semops-placetime/) | URIs for calendar intervals, instants and WGS84 points, each described in RDF from the URI alone, in the reference.data.gov.uk patterns; served by `holos-server --placetime` | A Rust rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer), with points added |
 | [`deploy/azure/`](deploy/azure/) | Helm chart for AKS, Bicep for Container Apps, the API Management identity policy, and the guide to Azure hosting and NFS storage | — |
 | [`vendor/`](vendor/) | The two patched Oxigraph crates every engine builds against | One copy of what HOLOS and SHACL_Engine each vendored |
+| [`docs/manual/`](docs/manual/) | The manual: installing, a first run, the server, checking, validating, mapping, storage, security, Azure, and a reference. `python docs/manual/build.py` builds it as a website, an EPUB and an A4 PDF | — |
 | [`docs/decisions/`](docs/decisions/) | Why the workspace is laid out as it is, what it is called, and what it must be able to do | — |
 | [`versions.toml`](versions.toml) | Which engine releases the editor, extension and suite must use until the workspace ships its own packages | — |
 | [`python/semops-system/`](python/semops-system/) | The `semops-system` package on PyPI: the three engines as one install, with tests of everything the product must do | — |
