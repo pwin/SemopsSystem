@@ -1,0 +1,36 @@
+semops-placetime
+Copyright 2026 Peter Winstanley
+
+This crate is a Rust rewrite of IntervalServer, the servlet that served the interval and
+instant URI sets at reference.data.gov.uk:
+
+    https://github.com/epimorphics/IntervalServer
+    Copyright 2010-2016 Epimorphics Limited
+    Licensed under the Apache License, Version 2.0
+
+No Java source was copied. The rewrite keeps IntervalServer's URI patterns (/id/... and
+/doc/..., the British and Gregorian calendar sets, gregorian-instant and gregorian-interval),
+its use of the reference.data.gov.uk intervals vocabulary, OWL-Time and SCOVO, and the wording
+of its labels and comments.
+
+Changes from IntervalServer:
+
+- The base URI is https://{Host}/ by default, or a configured base; IntervalServer used the
+  servlet's own root or a configured hard base.
+- The UK government business calendar (government-year, government-half, government-quarter,
+  government-week) is not implemented.
+- A proleptic Julian calendar set (julian-year ... julian-second) is added, in the same pattern
+  as the Gregorian set.
+- A WGS84 point URI set is added: /id/geopoint/wgs84/X{longitude}Y{latitude}, following the
+  placetime.com pattern, described with GeoSPARQL and the W3C Basic Geo vocabulary.
+- Corrected: a half year's xsd:duration is P6M (IntervalServer gave PT1S); the previous hour of
+  an hour is one hour earlier (IntervalServer gave the same hour a day earlier); a week's label
+  names its own calendar (IntervalServer always said "Gregorian Week"); "fourth", not "forth".
+- Documents describe themselves without IntervalServer's provenance block, which named
+  data.gov.uk as publisher and claimed Crown copyright under the Open Government Licence.
+  Those claims belonged to that deployment and are not repeated here.
+- JSON is served as JSON-LD.
+
+The reference.data.gov.uk ontology files bundled in IntervalServer (intervals.n3/.ttl/.rdf,
+reference.n3, uri-set.n3) and its copy of the VoID vocabulary are not included. Only the
+vocabularies' IRIs are used.

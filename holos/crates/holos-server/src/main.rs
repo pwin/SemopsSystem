@@ -21,6 +21,7 @@
 mod alloc;
 mod gsp;
 mod http;
+mod placetime;
 mod problem;
 mod ui;
 
@@ -68,6 +69,17 @@ GRAPH STORE PROTOCOL      https://www.w3.org/TR/sparql11-http-rdf-update/
     DELETE /graph?graph=<IRI>    Remove a graph
     GET  /stats              Store statistics and the server's version, as JSON
     GET  /health             Liveness
+
+PLACETIME                 (off unless --placetime or --placetime-base is given)
+    GET  /id/<SET>/<REF>     303 See Other to the document describing it
+    GET  /doc/<SET>/<REF>    The description, negotiated, or by extension: .ttl .nt .rdf
+                             .jsonld (and .n3 .json for old links)
+
+    The interval URI sets of reference.data.gov.uk, in its patterns: year/2006,
+    quarter/2006-Q1, day/1752-09-14 (British: Julian until 2 September 1752),
+    gregorian-month/2006-02, julian-day/1582-10-04, gregorian-instant/2006-01-01T00:00:00,
+    gregorian-interval/2006-01-01T00:00:00/P3M; and WGS84 points,
+    geopoint/wgs84/X-0.1276Y51.5072, described with GeoSPARQL. /id/<SET> is the set itself.
 
     Every response carries a Server header naming the build: Server: holos/0.13.0 (d4b4fdd).
 
@@ -147,6 +159,16 @@ SERVER
                              `none` draws geometries over a blank background and the page
                              then reaches nothing beyond the CDN and this server.
 
+PLACETIME
+    --placetime              Serve the placetime URI sets under https://<Host>/, the host
+                             the client named. X-Forwarded-Host is read instead only with
+                             --trust-forwarded-identity. The scheme is https whatever the
+                             request came in on, since a front door that ends TLS hands this
+                             server plain HTTP.
+    --placetime-base <URL>   Serve them under this base instead, for every request: the URIs
+                             are <URL>id/..., answered at the base's path on this server, so
+                             --placetime-base https://example.org/ref/ answers /ref/id/....
+
 MAINTENANCE
     --backup-dir <DIR>       Parent directory for `POST /backup`. With --store it writes a
                              RocksDB checkpoint, holos-<seconds>/. In memory it writes a
@@ -205,6 +227,8 @@ struct Config {
     /// The console map's tile template; `None` draws over a blank background. See `ui`.
     ui_tiles: Option<String>,
     trust_forwarded: bool,
+    /// Where the placetime URI sets' base comes from; `None` serves none of them.
+    placetime: Option<placetime::Mode>,
     roles: Vec<String>,
     clearance: Option<u16>,
     deny_all: bool,
@@ -246,6 +270,7 @@ impl Default for Config {
             ui: true,
             ui_tiles: Some(ui::DEFAULT_TILES.to_owned()),
             trust_forwarded: false,
+            placetime: None,
             roles: Vec::new(),
             clearance: None,
             deny_all: false,
@@ -455,6 +480,15 @@ surprise, check that this is the directory the load wrote to."
         eprintln!("  console  http://{listen}/");
     }
     eprintln!("  query    http://{listen}/query");
+    match &state.config.placetime {
+        Some(placetime::Mode::Host) => {
+            eprintln!("  placetime https://<Host>/id/... (303 to /doc/...)");
+        }
+        Some(placetime::Mode::Fixed(base)) => {
+            eprintln!("  placetime {base}id/... answered at {}id/...", base.path());
+        }
+        None => {}
+    }
     match state.config.max_query_memory {
         Some(limit) => eprintln!(
             "  memory   queries are refused once the process grows {} past its resting set              (--max-query-memory GiB, 0 to disable)",
@@ -647,6 +681,16 @@ fn dispatch(state: &State, mut request: Request) -> Result<()> {
         {
             graph_store(state, request, &params)
         }
+        (method, p)
+            if matches!(method, "GET" | "HEAD")
+                && state
+                    .config
+                    .placetime
+                    .as_ref()
+                    .is_some_and(|m| m.relative(p).is_some()) =>
+        {
+            serve_placetime(state, request, &path, accept.as_deref())
+        }
         _ => respond(request, 404, "text/plain", b"not found".to_vec()),
     }
 }
@@ -703,6 +747,34 @@ fn answer(
     }
 
     serialise(request, results, accept)
+}
+
+/// Answers a placetime URI: see `placetime`.
+fn serve_placetime(
+    state: &State,
+    request: Request,
+    path: &str,
+    accept: Option<&str>,
+) -> Result<()> {
+    let Some(mode) = state.config.placetime.as_ref() else {
+        return respond(request, 404, "text/plain", b"not found".to_vec());
+    };
+    let Some(relative) = mode.relative(path) else {
+        return respond(request, 404, "text/plain", b"not found".to_vec());
+    };
+    let host = header(&request, "host");
+    let forwarded = if state.config.trust_forwarded {
+        header(&request, "x-forwarded-host")
+    } else {
+        None
+    };
+    let answer = placetime::answer(mode, relative, host.as_deref(), forwarded.as_deref(), accept);
+    let extra: Vec<(&str, &str)> = answer
+        .headers
+        .iter()
+        .map(|(name, value)| (*name, value.as_str()))
+        .collect();
+    respond_with(request, answer.status, &answer.content_type, answer.body, &extra)
 }
 
 /// Whether a path addresses the Graph Store Protocol.
@@ -1263,8 +1335,15 @@ fn named_dataset(
 /// Built from the `Host` header so it matches the URI the client actually used, which is
 /// what makes the resolved IRIs meaningful to that client.
 fn base_iri(request: &Request, path: &str) -> String {
-    let host = header(request, "host").unwrap_or_else(|| "localhost".to_owned());
-    format!("http://{host}{path}")
+    service_base(header(request, "host").as_deref(), path)
+}
+
+/// `https://{host}{path}`. The scheme is `https` whatever the request arrived on, as the
+/// placetime URIs' is: a server behind a front door that ends TLS receives plain HTTP, and
+/// reading the scheme off the connection would mint `http://` IRIs for a service published
+/// as `https://`.
+fn service_base(host: Option<&str>, path: &str) -> String {
+    format!("https://{}{path}", host.unwrap_or("localhost"))
 }
 
 fn rdf_format_of(content_type: Option<&str>) -> Option<RdfFormat> {
@@ -1715,6 +1794,15 @@ fn parse_args(args: &[String]) -> Result<Config> {
                 c.ui_tiles = (template != "none").then_some(template);
             }
             "--trust-forwarded-identity" => c.trust_forwarded = true,
+            "--placetime" => {
+                if c.placetime.is_none() {
+                    c.placetime = Some(placetime::Mode::Host);
+                }
+            }
+            "--placetime-base" => {
+                let base = semops_placetime::Base::new(&value(&mut i)?)?;
+                c.placetime = Some(placetime::Mode::Fixed(base));
+            }
             "--role" => c.roles.push(value(&mut i)?),
             "--clearance" => c.clearance = Some(value(&mut i)?.parse()?),
             "--deny-all" => c.deny_all = true,
@@ -1755,6 +1843,15 @@ mod tests {
         assert!(unusable_body(Some("application/sparql-query; charset=\"UTF-8\"")).is_none());
         // No charset at all is the default, which is UTF-8.
         assert!(unusable_body(Some("application/sparql-query")).is_none());
+    }
+
+    #[test]
+    fn relative_iris_resolve_against_an_https_base() {
+        assert_eq!(
+            service_base(Some("data.example:8443"), "/query"),
+            "https://data.example:8443/query"
+        );
+        assert_eq!(service_base(None, "/update"), "https://localhost/update");
     }
 
     #[test]

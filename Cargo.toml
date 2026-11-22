@@ -42,6 +42,7 @@ members = [
     "tarka/crates/tarka-tarql",
     # --- SemOps System
     "crates/semops-functions",
+    "crates/semops-placetime",
     # --- shared
     # Members, not only patches: that is what runs their own tests (82 in oxsdatatypes,
     # 32 in spareval), the only thing guarding the changes made to them. CI keeps clippy off
@@ -83,6 +84,7 @@ default-members = [
     "tarka/crates/tarka-shacl",
     "tarka/crates/tarka-tarql",
     "crates/semops-functions",
+    "crates/semops-placetime",
     "vendor/oxsdatatypes",
     "vendor/spareval",
 ]
@@ -159,6 +161,7 @@ tarka-core = { path = "tarka/crates/tarka-core", version = "0.29.0" }
 tarka-io = { path = "tarka/crates/tarka-io", version = "0.29.0" }
 tarka-tarql = { path = "tarka/crates/tarka-tarql", version = "0.29.0" }
 semops-functions = { path = "crates/semops-functions", version = "0.29.0" }
+semops-placetime = { path = "crates/semops-placetime", version = "0.29.0" }
 tarka-ottr = { path = "tarka/crates/tarka-ottr", version = "0.29.0" }
 tarka = { path = "tarka/crates/tarka", version = "0.29.0" }
 tarka-polars = { path = "tarka/crates/tarka-polars", version = "0.29.0" }

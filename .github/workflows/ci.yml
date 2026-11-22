@@ -85,7 +85,7 @@ jobs:
       - name: rustfmt (SemOps crates, SHACL_Engine, tarka, vendor)
         run: >
           cargo fmt --check
-          -p semops-functions
+          -p semops-functions -p semops-placetime
           -p shacl -p shacl-cli -p shacl-python -p shacl-wasm
           -p tarka -p tarka-bottr -p tarka-cli -p tarka-core -p tarka-io -p tarka-ottr
           -p tarka-polars -p tarka-python -p tarka-shacl -p tarka-tarql

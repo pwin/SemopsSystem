@@ -451,8 +451,10 @@ against the server:
 | `charset=UTF-16` on either media type | **400** — the protocol fixes both at UTF-8 |
 
 Relative IRIs in a query or update resolve against a **service base URI** built from the
-`Host` header and the endpoint path, so `CONSTRUCT { <s> <p> 1 } WHERE {}` parses and its
-IRIs come back absolute and addressable by the client that sent them.
+`Host` header and the endpoint path, `https://<Host>/query` or `https://<Host>/update`, so
+`CONSTRUCT { <s> <p> 1 } WHERE {}` parses and its IRIs come back absolute and addressable by
+the client that sent them. The scheme is `https` even when the request arrived over plain
+HTTP, as it does from a front door that ends TLS.
 
 ## Graph Store Protocol
 
