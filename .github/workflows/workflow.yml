@@ -116,13 +116,15 @@ jobs:
           command: sdist
           args: --out dist
       # What a build from the sdist needs first: every path dependency and [patch] target in
-      # the archive, and the lock file honoured. (maturin leaves [patch] paths out unless
-      # something depends on them by path; crates/semops-python/Cargo.toml does.)
+      # the archive. (maturin leaves [patch] paths out unless something depends on them by
+      # path; crates/semops-python/Cargo.toml does.) Not --locked: maturin trims the
+      # workspace's member list in the sdist, so cargo prunes the lock file's entries for
+      # the members left out. The packages that remain keep their locked versions.
       - name: The sdist resolves on its own
         run: |
           mkdir sdist-check
           tar -xzf python/semops-system/dist/*.tar.gz -C sdist-check
-          cargo metadata --format-version 1 --locked \
+          cargo metadata --format-version 1 \
             --manifest-path sdist-check/*/crates/semops-python/Cargo.toml > /dev/null
       - uses: actions/upload-artifact@v7
         with:
