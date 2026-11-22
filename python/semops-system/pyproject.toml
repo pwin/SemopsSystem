@@ -1,36 +1,33 @@
 [build-system]
-requires = ["hatchling>=1.26"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.9,<2"]
+build-backend = "maturin"
 
 [project]
 name = "semops-system"
-# A bridge release, ahead of the workspace's own native wheel (roadmap phase 3). It installs
-# the engine releases that belong together, as versions.toml lists them, and presents them as
-# one package: `semops_system.holos`, `.shacl` and `.tarka`. The native wheel will keep those
-# names, so code written against this release keeps working when it replaces it.
-version = "0.29.0.dev1"
-description = "SemOps System: RDF 1.2, SPARQL 1.2, SHACL and GeoSPARQL (HOLOS), the SHACL engine and tarka, as one install"
+# The native wheel (roadmap phase 3), built from the workspace: the three engines and the
+# ontology quality checks in one extension module, semops_system._native. It keeps the
+# names the 0.29.0.dev1 bridge used (semops_system.holos, .shacl, .tarka), so code written
+# against the bridge keeps working. The version is the workspace's, read from Cargo.
+dynamic = ["version"]
+description = "SemOps System: an RDF 1.2 store with SPARQL 1.2 and GeoSPARQL, the SHACL engine, tarka mapping and the ontology quality checks, in one native package"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
 authors = [{ name = "Peter Winstanley" }]
-keywords = ["rdf", "rdf-1.2", "sparql", "shacl", "geosparql", "triplestore", "tarql", "ottr", "semantic-web"]
+keywords = ["rdf", "rdf-1.2", "sparql", "shacl", "geosparql", "triplestore", "tarql", "ottr", "ontology", "semantic-web"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Rust",
     "Topic :: Database :: Database Engines/Servers",
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
-# Exact pins: the point of this package is that these three are the ones that agree.
-# Kept equal to versions.toml by tests/test_versions.py.
-dependencies = [
-    "holosdb==0.27.0",
-    "shacl==0.3.9",
-    "tarka-rdf==0.3.1",
-]
+# tarka maps Polars data frames, and its module converts them through the polars package,
+# as the tarka-rdf wheel requires it.
+dependencies = ["polars>=1.30"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
@@ -40,5 +37,8 @@ Homepage = "https://github.com/pwin/SemopsSystem"
 Repository = "https://github.com/pwin/SemopsSystem"
 Issues = "https://github.com/pwin/SemopsSystem/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/semops_system"]
+[tool.maturin]
+manifest-path = "../../crates/semops-python/Cargo.toml"
+python-source = "src"
+module-name = "semops_system._native"
+features = ["pyo3/extension-module"]

@@ -640,8 +640,9 @@ fn rdfs_closure(py: Python<'_>, text: &str, base: &str) -> PyResult<String> {
 /// switch the GIL back on. It is sound here because `Shapes` is immutable and
 /// each validation works on its own cloned store; it is a no-op on the usual
 /// GIL-enabled builds.
+// Public, so that the `semops-system` wheel's one extension can carry it as a submodule.
 #[pymodule(gil_used = false)]
-fn shacl(m: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn shacl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Shapes>()?;
     m.add_class::<Report>()?;
     m.add_class::<Result>()?;

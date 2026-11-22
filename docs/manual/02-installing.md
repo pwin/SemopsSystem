@@ -15,8 +15,7 @@ install worked.
 | [On Azure](#azure-install) | The server on AKS or Container Apps | Cloud deployments |
 
 ::: note
-The container image, the Python bridge and the release binaries lag behind a build from
-source. [What is not finished](12-not-finished.md) lists what each one is missing. The
+The container image and the release binaries lag behind a build from source. [What is not finished](12-not-finished.md) lists what each one is missing. The
 command `semops`, the security settings in [chapter 9](09-security.md) and the Azure
 templates are in this workspace only.
 :::
@@ -134,7 +133,8 @@ the image yourself and push it to your own registry for Kubernetes or Azure.
 pip install semops-system
 ```
 
-It needs Python 3.11 or later, and installs three engines as one package:
+It needs Python 3.11 or later. One native wheel holds the store, the SHACL engine, tarka
+and the quality checks, built from this workspace:
 
 ```python
 import semops_system as so
@@ -145,15 +145,20 @@ print(store.query('ASK { ?s ?p "c" }'))   # True
 
 report = so.shacl.Shapes.from_file("shapes.ttl").validate_file("data.ttl")
 print(report.conforms)
+
+run = so.check("ontology.ttl")           # the quality checks, as `semops check` runs them
+print(len(run["findings"]), run["complete"])
 ```
 
-`so.holos`, `so.shacl` and `so.tarka` are the modules `holosdb`, `shacl` and `tarka_rdf`,
-and each module's own documentation applies.
+`so.holos`, `so.shacl` and `so.tarka` are the modules the `holosdb`, `shacl` and
+`tarka-rdf` wheels carry, and each one's own documentation applies. `so.check` returns
+`findings`, a list of dicts, and `complete`, which is false if a check could not run.
 
-The current release, 0.29.0.dev1, is a bridge: it pins the engine releases that agree with
-each other (holosdb 0.27.0, shacl 0.3.9, tarka-rdf 0.3.1), so a project needs one pin
-instead of three. It does not yet include the check registry or the changes made in this
-workspace. A native wheel built from the workspace will replace it under the same name.
+There are wheels for Linux (x86_64 and aarch64), macOS (Apple Silicon and Intel) and
+Windows (x64). Elsewhere pip builds from the source distribution, which needs Rust, a C++
+compiler and libclang. 0.29.0 is the first native release. The 0.29.0.dev1 release before
+it was a bridge to the separately released engines, and code written against it keeps
+working.
 
 The engines are also on PyPI separately: `pip install holosdb`, `pip install shacl`,
 `pip install tarka-rdf`.

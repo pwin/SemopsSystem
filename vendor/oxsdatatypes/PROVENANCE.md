@@ -15,7 +15,9 @@ the one change below. The workspace `Cargo.toml` puts it in place of the registr
 The package on crates.io carries no licence files, so `LICENSE-MIT` and `LICENSE-APACHE`
 here were taken from the root of the Oxigraph repository. `Cargo.toml` is the normalised
 manifest cargo publishes; `Cargo.toml.orig` is the one it was normalised from and is not
-read by cargo.
+read by cargo. The manifest's `exclude = ["Cargo.toml.orig"]` leaves that copy out of
+packaging: the `semops-system` sdist packages this crate, and `cargo package` refuses a
+package that contains a file named `Cargo.toml.orig`.
 
 The manifest has three changes. Its `[lints.clippy]` table is removed. That table is
 Oxigraph's workspace lint policy, about 200 lints set to warn, written for the clippy of its

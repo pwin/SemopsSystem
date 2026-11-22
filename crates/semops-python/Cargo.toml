@@ -1,0 +1,35 @@
+[package]
+name = "semops-python"
+description = "The native module of the semops-system Python wheel: HOLOS, the SHACL engine, tarka and the ontology quality checks in one extension"
+version.workspace = true
+edition.workspace = true
+# tarka-python, for `semops_system.tarka`, needs 1.95 (Polars).
+rust-version = "1.95"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+# Built by maturin from python/semops-system, not published to crates.io.
+publish = false
+
+[lib]
+name = "_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+# The engines' Python modules, linked in whole and added as submodules: their classes and
+# functions are the ones the holosdb, shacl and tarka-rdf wheels have.
+holosdb = { package = "holos-python", path = "../../holos/crates/holos-python" }
+shacl-py = { package = "shacl-python", path = "../../shacl/crates/shacl-python" }
+tarka-py = { package = "tarka-python", path = "../../tarka/crates/tarka-python" }
+semops-checks.workspace = true
+oxrdf.workspace = true
+oxrdfio.workspace = true
+# Not used here directly. The workspace patches these two crates from vendor/ ([patch] in
+# the root Cargo.toml), and maturin copies a crate's path dependencies into the sdist but
+# not [patch] paths. Naming them as path dependencies is what puts them in the sdist, so
+# that building from it resolves the patch.
+oxsdatatypes = { path = "../../vendor/oxsdatatypes", version = "0.2" }
+spareval = { path = "../../vendor/spareval", version = "0.2" }
+# The stable ABI, as each engine's wheel uses it: one wheel per platform for every CPython
+# the package supports.
+pyo3 = { version = "0.29", features = ["abi3-py311", "extension-module"] }

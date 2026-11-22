@@ -4009,6 +4009,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "semops-python"
+version = "0.29.0"
+dependencies = [
+ "holos-python",
+ "oxrdf",
+ "oxrdfio",
+ "oxsdatatypes",
+ "pyo3",
+ "semops-checks",
+ "shacl-python",
+ "spareval",
+ "tarka-python",
+]
+
+[[package]]
 name = "semops-wasm"
 version = "0.29.0"
 dependencies = [

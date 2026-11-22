@@ -13,7 +13,8 @@ publish = false
 
 [lib]
 name = "tarka_py"
-crate-type = ["cdylib"]
+# rlib as well, so that the semops-system wheel can link it.
+crate-type = ["cdylib", "rlib"]
 # documented for Python, as the `tarka` module; tested with pytest
 doc = false
 test = false
