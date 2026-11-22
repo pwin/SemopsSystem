@@ -2,11 +2,23 @@
 
 ## The commands
 
+`semops` is the one command. Each of the other four is also a `semops` subcommand, run by
+the same code with the same arguments, and `semops` copied or linked under one of their
+names is that command.
+
+| `semops` | Is | Its own help |
+|---|---|---|
+| `semops serve` | `holos-server` | `semops serve --help` |
+| `semops load`, `query`, `update`, `stats`, `dump`, `backup`, `compact`, `entail`, `rules` | `holos load`, `holos query` and the rest | `semops query --help` |
+| `semops validate` | `shacl` | `semops validate --help` |
+| `semops map` | `tarka` | `semops map --help`, `semops map run --help` |
+| `semops check` | The ontology quality checks, `semops` only | `semops check --help` |
+
 | Command | From | What it is for | Its own help |
 |---|---|---|---|
-| `semops` | `crates/semops` | `semops check`: the ontology quality checks | `semops check --help` |
+| `semops` | `crates/semops` | All of the below, and `semops check`: the ontology quality checks | `semops --help` |
 | `holos-server` | `holos/crates/holos-server` | The SPARQL endpoint | `holos-server --help`, below |
-| `holos` | `holos/crates/holos-cli` | Queries, updates, validation, backups and maintenance on a store, without a server | `holos --help` |
+| `holos` | `holos/crates/holos-cli` | Loading, queries, updates, validation, backups and maintenance on a store, without a server | `holos --help` |
 | `shacl` | `shacl/crates/shacl-cli` | SHACL validation of files | `shacl --help` |
 | `tarka` | `tarka/crates/tarka-cli` | Mapping tables to RDF | `tarka --help`, `tarka run --help` |
 

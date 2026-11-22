@@ -6,8 +6,9 @@
 # neither, so it does not carry them.
 
 # ---- build ----------------------------------------------------------------
-# The workspace's rust-version. A newer image builds it too; this one proves the floor.
-FROM rust:1.90-bookworm AS build
+# The `semops` command's rust-version: it links tarka for `semops map`, and tarka's Polars
+# input needs 1.95. A newer image builds it too; this one proves the floor.
+FROM rust:1.95-bookworm AS build
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         clang libclang-dev cmake \
@@ -17,16 +18,17 @@ WORKDIR /src
 
 # The whole workspace, less what the root .dockerignore leaves out. Cargo reads every
 # member's manifest before it builds anything, so the SHACL_Engine and tarka crates and the
-# shared vendor/ patches must be present even though only two HOLOS binaries are built.
+# shared vendor/ patches must be present.
 #
 # This used to copy `crates` and `testsuites` from HOLOS's own root. `testsuites/` is the
 # fetched W3C suites, which only the tests read and which a fresh clone does not have, so
 # that COPY failed; and `vendor/`, which the [patch] section needs, was never copied at all.
 COPY . .
 
-# `release-abort` is the release profile with `panic = "abort"`, the setting these two
-# binaries have always shipped with (see the workspace Cargo.toml).
-RUN cargo build --locked --profile release-abort -p holos-cli -p holos-server -p semops
+# One binary: `semops` links the engines' commands, and is each of them when run under
+# its name. `release-abort` is the release profile with `panic = "abort"`, the setting the
+# HOLOS binaries have always shipped with (see the workspace Cargo.toml).
+RUN cargo build --locked --profile release-abort -p semops
 
 # ---- runtime --------------------------------------------------------------
 FROM debian:bookworm-slim
@@ -38,13 +40,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir -p /var/lib/holos/store \
     && chown -R holos:holos /var/lib/holos
 
-COPY --from=build /src/target/release-abort/holos        /usr/local/bin/holos
-COPY --from=build /src/target/release-abort/holos-server /usr/local/bin/holos-server
-COPY --from=build /src/target/release-abort/semops       /usr/local/bin/semops
+COPY --from=build /src/target/release-abort/semops /usr/local/bin/semops
 COPY holos/deploy/smoke.sh /usr/local/bin/holos-smoke
 COPY holos/examples /opt/holos/examples
 
-RUN chmod +x /usr/local/bin/holos-smoke
+# The old command names, as links to the one binary, which runs as whichever it is called.
+RUN chmod +x /usr/local/bin/holos-smoke \
+    && for name in holos-server holos shacl tarka; do \
+           ln -s semops "/usr/local/bin/$name"; \
+       done
 
 USER holos
 WORKDIR /var/lib/holos

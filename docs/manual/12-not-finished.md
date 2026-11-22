@@ -12,7 +12,7 @@ gap from a mistake, and says what to use meanwhile.
 | A native Python wheel built from this workspace | `pip install semops-system`, the bridge to the separately released engines: it lacks `semops check` and the changes of this version |
 | One WebAssembly package for the whole toolchain | `holos-wasm` and `shacl-wasm`, separately |
 | SemOps System's own release binaries, and installers (winget, Homebrew, `.deb`, `.rpm`) | Build from source, or the engines' own release binaries |
-| `semops serve`, `semops load`, `semops query`, `semops validate`, `semops map` | The engines' commands: `holos-server`, `holos`, `shacl`, `tarka` |
+| `semops diff` and `semops repair` | The Ontology Quality Suite's version comparison and repairs |
 
 ## Checks and validation
 

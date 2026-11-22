@@ -155,6 +155,10 @@ holos-shacl = { path = "holos/crates/holos-shacl", version = "0.29.0" }
 holos-shacl-engine = { path = "holos/crates/holos-shacl-engine", version = "0.29.0" }
 holos-holon = { path = "holos/crates/holos-holon", version = "0.29.0" }
 holos-stats = { path = "holos/crates/holos-stats", version = "0.29.0" }
+holos-cli = { path = "holos/crates/holos-cli", version = "0.29.0" }
+holos-server = { path = "holos/crates/holos-server", version = "0.29.0" }
+shacl-cli = { path = "shacl/crates/shacl-cli", version = "0.29.0" }
+tarka-cli = { path = "tarka/crates/tarka-cli", version = "0.29.0" }
 
 # --- internal: SHACL_Engine. tarka took it by git tag with `rdf-12` on and `parallel` off;
 # the same choice, now by path. The crates.io crate called `shacl` is another project.
