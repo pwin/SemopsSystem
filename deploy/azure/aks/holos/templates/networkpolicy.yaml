@@ -1,0 +1,27 @@
+{{- if .Values.networkPolicy.enabled }}
+# With forwarded identity, whoever can reach the server's port can claim any role; this is
+# what limits that to the edge that strips and sets the identity headers, and to this
+# release's own backup job.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "holos.fullname" . }}
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: {{ .Values.server.port }}
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: backup
+        {{- with .Values.networkPolicy.from }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

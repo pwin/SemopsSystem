@@ -1,0 +1,126 @@
+# HOLOS on AKS. deploy/azure/README.md explains each storage option and when to pick it.
+
+image:
+  repository: ghcr.io/pwin/semops
+  # Defaults to the chart's appVersion. Pin a digest in production.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# The writer: one pod, a StatefulSet, the only process that opens the store writable.
+# RocksDB admits one writer per store, so this is never scaled past 1; read scaling is
+# `replicas` below.
+writer:
+  enabled: true
+  resources:
+    requests: { cpu: "1", memory: 4Gi }
+    limits: { memory: 16Gi }
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# The store's volume.
+#
+#   managed-csi-premium (default)  Premium SSD managed disk, ReadWriteOnce. The store the
+#                                  proposal's reference deployment uses: local-latency
+#                                  block storage for one writer.
+#   an Azure NetApp Files class    NFS 4.1 or NFS 3 with NLM, sub-millisecond latency; the
+#                                  NFS option for a writable store, and one that survives
+#                                  a node or zone failure without a disk detach.
+#   azurefile-csi-nfs (below)      Azure Files premium NFS 4.1. Locks reach the server, so a
+#                                  second writer is refused, but every synchronous write is
+#                                  a network round trip: small or read-mostly stores only.
+#
+# Never a Blob NFS 3.0 class for the store: that endpoint requires `nolock`, so the store's
+# lock would keep out nobody, and HOLOS refuses to open a writable store there.
+store:
+  storageClassName: managed-csi-premium
+  accessMode: ReadWriteOnce
+  size: 128Gi
+
+# A ReadWriteMany NFS volume shared by the writer, the replicas and the backup job:
+# checkpoints are written here (POST /backup) and replicas open the newest one read-only.
+shared:
+  enabled: false
+  # Create the Azure Files premium NFS StorageClass this chart refers to. Set false to use
+  # an existing class (Azure NetApp Files, or Blob NFS, which is fine for checkpoints:
+  # nothing opens them writable).
+  createStorageClass: true
+  storageClassName: azurefile-csi-nfs
+  size: 256Gi
+  mountPath: /shared
+
+# Read replicas: N pods that open the newest checkpoint under `shared` read-only, with no
+# lock and no writes, and serve queries from it. Each looks for a newer checkpoint every
+# `refreshSeconds` and, when one appears, restarts onto it after a random delay of up to
+# `staggerSeconds`, so the replicas do not all restart at once. 0 turns the check off.
+replicas:
+  enabled: false
+  count: 2
+  refreshSeconds: 300
+  staggerSeconds: 300
+  resources:
+    requests: { cpu: "500m", memory: 2Gi }
+    limits: { memory: 8Gi }
+
+# Scheduled checkpoints, through the writer's POST /backup, onto `shared`. Needs
+# `shared.enabled` and an identity mode that can carry the backup role (forwarded).
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  role: backup
+  # Checkpoints kept; older ones are removed by the job.
+  keep: 7
+
+# Where a request's identity comes from. HOLOS authenticates nobody: the edge does.
+#   none       Every request is anonymous.
+#   forwarded  X-Holos-Principal/-Roles/-Clearance, set by the ingress or API Management
+#              after validating the Entra ID token (deploy/azure/apim/holos-identity.xml).
+#              The edge must strip whatever the client sent under those names.
+identity:
+  mode: none
+
+server:
+  port: 7878
+  # Abandon a query after this many seconds; 0 for no limit.
+  timeout: 300
+  # The largest request body accepted, in MiB.
+  maxBody: 256
+  # Refuse reads once the process has grown this many GiB past its resting set: a third of
+  # the memory limit at most (holos-server --help explains why).
+  maxQueryMemory: 4
+  # Serve the YASGUI console at /. Off by default on a server: it loads scripts from a CDN.
+  ui: false
+  # Serve the placetime URI sets under https://<Host>/ (or `placetimeBase` if set).
+  placetime: false
+  placetimeBase: ""
+  extraArgs: []
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Only the listed sources may reach the server's port. Empty `from` means only pods in
+# this release (replicas reach nothing; the backup job reaches the writer).
+networkPolicy:
+  enabled: true
+  from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]

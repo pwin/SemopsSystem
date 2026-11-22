@@ -23,6 +23,10 @@ semops-placetime.workspace = true
 oxrdf.workspace = true
 oxrdfio.workspace = true
 sparesults.workspace = true
+spargebra.workspace = true
+# X-MS-CLIENT-PRINCIPAL, Azure built-in authentication's identity document. Already in the
+# tree (geojson), so no new supply chain.
+serde_json = "1"
 spareval.workspace = true
 anyhow.workspace = true
 fs4.workspace = true

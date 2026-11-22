@@ -285,6 +285,18 @@ them opens the hole.
 `run.sh` and `run.ps1` warn if `--trust-forwarded-identity` is combined with a non-loopback
 bind address, which is the shape that mistake takes.
 
+### Azure built-in authentication
+
+On Azure Container Apps and App Service the platform can be the edge: it validates the
+Entra ID token and passes the verified claims in `X-MS-CLIENT-PRINCIPAL`, a base64 JSON
+document. `--trust-azure-easy-auth` reads that instead of the three headers above. The
+object id becomes the principal's subject, app roles and the `groups` claim become roles,
+and every other claim becomes an attribute (`Principal::from_verified_claims`). A header the
+server cannot read grants nothing. The contract is the same as the front door's: require
+authentication, so nothing unauthenticated reaches the container, and give it no way in that
+bypasses the platform. Behind API Management instead, the policy in
+`deploy/azure/apim/holos-identity.xml` sets the three headers above from the token.
+
 ### Mapping an IdP onto this model
 
 | Enterprise concept | Here |

@@ -67,6 +67,10 @@ if ((Cfg HOLOS_READ_ONLY 'off') -eq 'on') { $a += '--read-only' }
 if ((Cfg HOLOS_REORDER 'off') -eq 'on')   { $a += '--reorder' }
 if (Cfg HOLOS_TIMEOUT)          { $a += @('--timeout', (Cfg HOLOS_TIMEOUT)) }
 if (Cfg HOLOS_MAX_QUERY_MEMORY) { $a += @('--max-query-memory', (Cfg HOLOS_MAX_QUERY_MEMORY)) }
+if (Cfg HOLOS_MAX_BODY)         { $a += @('--max-body', (Cfg HOLOS_MAX_BODY)) }
+if (Cfg HOLOS_LOAD_DIR)         { $a += @('--load-dir', (Cfg HOLOS_LOAD_DIR)) }
+if ((Cfg HOLOS_STORE_READ_ONLY 'off') -eq 'on') { $a += '--store-read-only' }
+if ((Cfg HOLOS_TRUST_AZURE_EASY_AUTH 'off') -eq 'on') { $a += '--trust-azure-easy-auth' }
 if (Cfg HOLOS_BACKUP_DIR) {
     New-Item -ItemType Directory -Force -Path (Cfg HOLOS_BACKUP_DIR) | Out-Null
     $a += @('--backup-dir', (Cfg HOLOS_BACKUP_DIR))

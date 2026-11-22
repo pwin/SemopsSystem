@@ -271,6 +271,24 @@ does. Anything with an IRI subject deduplicates normally.
 
 ---
 
+## Network filesystems
+
+A store can live on NFS where the filesystem's locks reach the server (NFS 4.1, or NFS 3 with
+NLM: Azure NetApp Files, Azure Files premium NFS), because RocksDB's lock on the store then
+keeps a second writer out from any machine. Every synchronous write is a network round trip
+there, and the server says at start-up that the store is on a network filesystem.
+
+On Linux the server refuses to open a writable store on an NFS mount whose locks stay on the
+client (`nolock`, shown as `local_lock=all` or `local_lock=posix`, as Azure Blob Storage's NFS
+3.0 endpoint requires), since there two machines could each believe they are the only writer.
+`HOLOS_ALLOW_LOCAL_LOCKS=1` overrides that for a deployment that guarantees one writer some
+other way.
+
+`--store-read-only` opens a store with no lock and no writes, so several servers can share
+one: a checkpoint (`POST /backup`) on a shared volume, served by read replicas. Never use it on
+a store a writer is still changing. `deploy/azure/README.md`, at the workspace root, has the
+Azure patterns.
+
 ## Backup and restore
 
 **The service keeps running.** RocksDB checkpoints flush the log and hard-link the SST files
@@ -455,6 +473,19 @@ Relative IRIs in a query or update resolve against a **service base URI** built 
 `CONSTRUCT { <s> <p> 1 } WHERE {}` parses and its IRIs come back absolute and addressable by
 the client that sent them. The scheme is `https` even when the request arrived over plain
 HTTP, as it does from a front door that ends TLS.
+
+### What a request cannot make the server read
+
+These guard the server against its own clients, and each is on by default:
+
+| Request | Answer |
+|---|---|
+| A body larger than `--max-body` (256 MiB) | **413**, whether the body declares its length or arrives chunked. A load larger than that belongs to `--data` or `holos load`, which stream |
+| `LOAD <file:…>` with no `--load-dir` | **400**. With `--load-dir DIR`, only regular files inside DIR, after resolving symbolic links. Without this, any client allowed to update could read any file the server can |
+| RDF/XML with more than 256 attributes on one element, or more than 4,096 namespace declarations | **400**, before the parser runs: the XML parser underneath has two denial-of-service defects with exactly those shapes (RUSTSEC-2026-0194, -0195) |
+
+A request that makes the server panic loses its connection and nothing else: the worker that
+was answering it carries on.
 
 ## Graph Store Protocol
 

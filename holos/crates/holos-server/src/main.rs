@@ -19,8 +19,10 @@
 //! failure-atomicity also behave as isolation in this deployment.
 
 mod alloc;
+mod easyauth;
 mod gsp;
 mod http;
+mod inputs;
 mod placetime;
 mod problem;
 mod ui;
@@ -48,6 +50,9 @@ use tiny_http::{Header, Request, Response, Server};
 /// What this binary was built from, for `--version`, the banner, the `Server` header and
 /// `/stats`. See `holos_build`.
 const BUILD: holos_build::Build = holos_build::build!();
+
+/// The default ceiling on a request body: 256 MiB.
+const DEFAULT_MAX_BODY: usize = 256 * 1024 * 1024;
 
 const USAGE: &str = "\
 holos-server — SPARQL 1.2 over HTTP, with a YASGUI console
@@ -90,6 +95,13 @@ SERVER
     --data <FILE>            Load a file at start-up. Repeatable. Also reads .gz, streamed.
     --store <DIR>            Use a persistent RocksDB store at DIR.
     --threads <N>            Worker threads. Default 8.
+    --load-dir <DIR>         Let SPARQL Update's LOAD read regular files inside DIR, and
+                             nothing else. Without it every LOAD is refused: a client that
+                             may update could otherwise read any file the server can.
+    --max-body <MiB>         The largest request body accepted, answered 413 beyond it.
+                             Default 256; 0 removes the ceiling. Bodies are read into memory
+                             before the query memory ceiling starts counting, so this is what
+                             stops one request from exhausting the process.
     --timeout <SECONDS>      Abandon a query after this long. Default 0 (no limit).
                              Enforced while a query reads or streams rows; a query blocked
                              inside one in-memory step is not interruptible. See
@@ -139,6 +151,12 @@ SERVER
     --read-only              Answer 403 to /update and to every writing Graph Store
                              Protocol verb. The store is still opened writable, so a loader
                              can use it; this refuses writes over HTTP only.
+    --store-read-only        Open the --store read-only, which implies --read-only: RocksDB
+                             takes no lock and nothing is written to the directory, so any
+                             number of servers can open the same store at once. For a
+                             checkpoint (POST /backup) on a shared volume, such as an Azure
+                             Files or NetApp Files NFS share, served by several replicas;
+                             never for a store a writer is still changing.
     --gsp-path <PATH>        Where the Graph Store Protocol is served. Default /graph.
     --gsp-base <IRI>         Enable *direct* graph identification, treating the request path
                              under this base as the graph name. Off by default: a server
@@ -187,6 +205,13 @@ IDENTITY  (see DESIGN.md §14.5)
                              Read the principal from X-Holos-Principal, X-Holos-Roles and
                              X-Holos-Clearance. Only safe behind a front door that sets
                              them and strips whatever a client sent. Off by default.
+    --trust-azure-easy-auth
+                             Read the principal from X-MS-CLIENT-PRINCIPAL, which Azure
+                             Container Apps and App Service built-in authentication set on
+                             a request they have authenticated (Entra ID or another
+                             provider): the object id is the subject, app roles and groups
+                             are roles. Only safe where that authentication is required and
+                             nothing reaches the server except through it. Off by default.
     --role <NAME>            Give every request this role. Repeatable. For development.
     --clearance <N>          Give every request this clearance level.
 
@@ -210,9 +235,15 @@ struct Config {
     /// Scratch one query may write while spilling. `None` keeps the engine's own default.
     max_spill_disk: Option<usize>,
     read_only: bool,
+    /// Open the store itself read-only: no lock, no writes, shareable by several servers.
+    store_read_only: bool,
     reorder: bool,
     gsp_base: Option<String>,
     gsp_path: String,
+    /// The largest request body accepted, in bytes. `None` accepts any size.
+    max_body: Option<usize>,
+    /// The directory `LOAD <file:…>` may read from. `None` refuses every `LOAD`.
+    load_dir: Option<std::path::PathBuf>,
     data: Vec<String>,
     store: Option<String>,
     /// Where `POST /backup` writes checkpoints. `None` disables the endpoint entirely.
@@ -227,6 +258,8 @@ struct Config {
     /// The console map's tile template; `None` draws over a blank background. See `ui`.
     ui_tiles: Option<String>,
     trust_forwarded: bool,
+    /// Read the principal from Azure built-in authentication's `X-MS-CLIENT-PRINCIPAL`.
+    trust_easy_auth: bool,
     /// Where the placetime URI sets' base comes from; `None` serves none of them.
     placetime: Option<placetime::Mode>,
     roles: Vec<String>,
@@ -258,9 +291,17 @@ impl Default for Config {
             spill_bytes: Some(holos_engine::spill::SPILL_BYTES),
             max_spill_disk: None,
             read_only: false,
+            store_read_only: false,
             reorder: false,
             gsp_base: None,
             gsp_path: "/graph".to_owned(),
+            // A body is read into memory before anything looks at it, and the query memory
+            // ceiling only starts counting once evaluation does, so without this one request
+            // streaming gigabytes at an open port exhausts the process. Generous for a query,
+            // an update or a graph; a load larger than this belongs to `--data` or `holos
+            // load`, which stream.
+            max_body: Some(DEFAULT_MAX_BODY),
+            load_dir: None,
             data: Vec::new(),
             store: None,
             backup_dir: None,
@@ -270,6 +311,7 @@ impl Default for Config {
             ui: true,
             ui_tiles: Some(ui::DEFAULT_TILES.to_owned()),
             trust_forwarded: false,
+            trust_easy_auth: false,
             placetime: None,
             roles: Vec::new(),
             clearance: None,
@@ -326,7 +368,8 @@ impl State {
         };
         match built {
             Ok((stats, fresh)) => {
-                if fresh {
+                // A read-only store keeps nothing, so the snapshot lives in memory only.
+                if fresh && !self.config.store_read_only {
                     // The write lock, briefly, and only to save. `save` re-checks the
                     // generation, so a write that slipped in between the read lock going
                     // and this one coming leaves the snapshot unsaved rather than wrong.
@@ -426,6 +469,22 @@ surprise, check that this is the directory the load wrote to."
             } else {
                 eprintln!("  store    {path} — {quads} quads");
             }
+            if config.store_read_only {
+                eprintln!("           opened read-only: no lock, no writes");
+            }
+            // A network filesystem is a supported place for a store, and a slower one: every
+            // synchronous write is a round trip, and only the lock keeps a second writer out.
+            if let holos_store::fscheck::Locking::Shared { fstype, mount_point } =
+                holos_store::fscheck::inspect(std::path::Path::new(path))
+            {
+                if is_network_fs(&fstype) {
+                    eprintln!(
+                        "           on {fstype} at {}, a network filesystem: one writer only, \
+                         and writes cost a round trip each (see deploy/azure/README.md)",
+                        mount_point.display()
+                    );
+                }
+            }
         }
         None => eprintln!("  store    in memory (no --store); nothing persists past exit"),
     }
@@ -501,10 +560,12 @@ surprise, check that this is the directory the load wrote to."
             "  memory   NO ceiling; one query can exhaust the machine and abort the server"
         ),
     }
-    if !state.config.trust_forwarded {
+    if state.config.trust_easy_auth {
+        eprintln!("  identity from Azure built-in authentication (X-MS-CLIENT-PRINCIPAL)");
+    } else if !state.config.trust_forwarded {
         eprintln!(
             "  identity forwarded headers are NOT trusted; every request is anonymous \
-             (--trust-forwarded-identity to change)"
+             (--trust-forwarded-identity or --trust-azure-easy-auth to change)"
         );
     }
 
@@ -515,9 +576,19 @@ surprise, check that this is the directory the load wrote to."
         workers.push(std::thread::spawn(move || {
             // A worker that dies takes its thread with it, not the server; a panic while
             // answering one request must not close the port for everyone else.
+            //
+            // `catch_unwind` is what makes that true in an unwinding build: without it the
+            // panic ends the thread, and once every worker has met one the port still
+            // accepts connections that nothing answers. (The container image builds with
+            // `panic = "abort"`, where a panic restarts the process instead.)
             while let Ok(request) = server.recv() {
-                if let Err(e) = dispatch(&state, request) {
-                    eprintln!("request failed: {e:#}");
+                let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    dispatch(&state, request)
+                }));
+                match outcome {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => eprintln!("request failed: {e:#}"),
+                    Err(_) => eprintln!("a request panicked; its connection was dropped"),
                 }
             }
         }));
@@ -597,8 +668,10 @@ fn dispatch(state: &State, mut request: Request) -> Result<()> {
             if let Some(why) = unusable_body(content_type.as_deref()) {
                 return problem::bad_request(request, &why, accept.as_deref());
             }
-            let mut body = String::new();
-            request.as_reader().read_to_string(&mut body)?;
+            let body = match read_text_body(&mut request, state.config.max_body)? {
+                Ok(body) => body,
+                Err(refusal) => return refusal.send(request, accept.as_deref()),
+            };
             // Two POST encodings are allowed: the query directly, or form-encoded.
             let query = if content_type
                 .as_deref()
@@ -641,8 +714,10 @@ fn dispatch(state: &State, mut request: Request) -> Result<()> {
             if let Some(why) = unusable_body(content_type.as_deref()) {
                 return problem::bad_request(request, &why, accept.as_deref());
             }
-            let mut body = String::new();
-            request.as_reader().read_to_string(&mut body)?;
+            let body = match read_text_body(&mut request, state.config.max_body)? {
+                Ok(body) => body,
+                Err(refusal) => return refusal.send(request, accept.as_deref()),
+            };
             let (update, form) = if content_type
                 .as_deref()
                 .is_some_and(|c| c.starts_with("application/sparql-update"))
@@ -1092,7 +1167,10 @@ fn graph_store(
     let content_type = header(&request, "content-type");
     let mut body = Vec::new();
     if writing {
-        request.as_reader().read_to_end(&mut body)?;
+        body = match read_body(&mut request, state.config.max_body)? {
+            Ok(body) => body,
+            Err(refusal) => return refusal.send(request, accept.as_deref()),
+        };
     }
 
     // What the body holds, worked out before any lock is taken so an unusable one costs
@@ -1116,6 +1194,15 @@ fn graph_store(
             Some(format) => documents.push((body, format)),
             None => unusable = true,
         },
+    }
+    // The RDF/XML parser has two denial-of-service defects (see `inputs`); a document that
+    // would trip them is refused before it reaches the parser.
+    for (document, format) in &documents {
+        if *format == RdfFormat::RdfXml {
+            if let Err(why) = inputs::check_rdf_xml(document) {
+                return problem::bad_request(request, &why, accept.as_deref());
+            }
+        }
     }
     let usable = !unusable && !documents.is_empty();
 
@@ -1463,6 +1550,8 @@ fn apply_update(
     // be told apart from one that does not — the protocol makes carrying both an error.
     let outcome = named_dataset(params).and_then(|(default_graphs, named_graphs)| {
         let mut parsed = sparql_update::parse(update, Some(&base))?;
+        inputs::check_loads(&parsed, state.config.load_dir.as_deref())
+            .map_err(holos_engine::EngineError::BadRequest)?;
         sparql_update::with_protocol_dataset(&mut parsed, default_graphs, named_graphs)?;
         sparql_update::apply(&mut guard, &mut session, &parsed)
     });
@@ -1548,7 +1637,19 @@ fn render(
 /// them by default would let any client on the port name its own roles and clearance,
 /// which is the opposite of what §14 is for.
 fn principal_for(state: &State, request: &Request) -> Principal {
-    let mut principal = if state.config.trust_forwarded {
+    let mut principal = if state.config.trust_easy_auth {
+        // A header that is missing or unreadable grants nothing: the request is anonymous.
+        match header(request, "x-ms-client-principal") {
+            Some(value) => {
+                let id = header(request, "x-ms-client-principal-id");
+                easyauth::principal(&value, id.as_deref()).unwrap_or_else(|e| {
+                    eprintln!("ignoring an unreadable identity: {e}");
+                    Principal::anonymous()
+                })
+            }
+            None => Principal::anonymous(),
+        }
+    } else if state.config.trust_forwarded {
         match header(request, "x-holos-principal") {
             Some(id) => Principal::new(NamedNode::new_unchecked(format!(
                 "urn:holos:principal:forwarded/{}",
@@ -1604,6 +1705,82 @@ fn stats(state: &State) -> String {
     )
 }
 
+/// Why a request body was not read.
+#[derive(Debug, PartialEq, Eq)]
+enum BodyRefusal {
+    /// Larger than the ceiling, which is carried.
+    TooLarge(usize),
+    /// Not UTF-8, where the protocol requires it.
+    NotUtf8,
+}
+
+impl BodyRefusal {
+    fn send(self, request: Request, accept: Option<&str>) -> Result<()> {
+        match self {
+            Self::TooLarge(limit) => problem::send(
+                request,
+                "too-large",
+                413,
+                &format!(
+                    "the request body is larger than this server accepts ({} MiB; --max-body)",
+                    limit / (1024 * 1024)
+                ),
+                &[],
+                accept,
+            ),
+            Self::NotUtf8 => problem::bad_request(
+                request,
+                "the request body is not UTF-8, which the protocol requires",
+                accept,
+            ),
+        }
+    }
+}
+
+/// Reads a request body, refusing one larger than `limit`: by its declared length before
+/// reading anything, and by counting for a chunked body that declares none, so the cap
+/// holds whatever the client says.
+fn read_body(
+    request: &mut Request,
+    limit: Option<usize>,
+) -> Result<std::result::Result<Vec<u8>, BodyRefusal>> {
+    let Some(limit) = limit else {
+        let mut body = Vec::new();
+        request.as_reader().read_to_end(&mut body)?;
+        return Ok(Ok(body));
+    };
+    if request.body_length().is_some_and(|declared| declared > limit) {
+        return Ok(Err(BodyRefusal::TooLarge(limit)));
+    }
+    Ok(capped(request.as_reader(), limit)?)
+}
+
+/// Reads at most `limit` bytes from `reader`, or reports that there were more.
+fn capped(
+    reader: impl std::io::Read,
+    limit: usize,
+) -> std::io::Result<std::result::Result<Vec<u8>, BodyRefusal>> {
+    use std::io::Read as _;
+    let mut body = Vec::new();
+    reader
+        .take(u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1))
+        .read_to_end(&mut body)?;
+    Ok(if body.len() > limit {
+        Err(BodyRefusal::TooLarge(limit))
+    } else {
+        Ok(body)
+    })
+}
+
+/// [`read_body`], for a body the protocol fixes at UTF-8.
+fn read_text_body(
+    request: &mut Request,
+    limit: Option<usize>,
+) -> Result<std::result::Result<String, BodyRefusal>> {
+    Ok(read_body(request, limit)?
+        .and_then(|bytes| String::from_utf8(bytes).map_err(|_| BodyRefusal::NotUtf8)))
+}
+
 fn respond(request: Request, status: u16, content_type: &str, body: Vec<u8>) -> Result<()> {
     respond_with(request, status, content_type, body, &[])
 }
@@ -1657,13 +1834,31 @@ fn header(request: &Request, name: &str) -> Option<String> {
         .map(|h| h.value.as_str().to_owned())
 }
 
+fn is_network_fs(fstype: &str) -> bool {
+    holos_store::fscheck::Locking::Shared {
+        fstype: fstype.to_owned(),
+        mount_point: std::path::PathBuf::new(),
+    }
+    .is_network()
+}
+
 fn open_engine(config: &Config) -> Result<Engine> {
+    if config.store_read_only && !config.data.is_empty() {
+        anyhow::bail!("--data cannot load into a store opened with --store-read-only");
+    }
+    if config.store_read_only && config.store.is_none() {
+        anyhow::bail!("--store-read-only needs a --store to open");
+    }
     match &config.store {
         None => Ok(Engine::new()),
         #[cfg(feature = "rocksdb")]
         Some(path) => {
-            let storage = holos_store::RocksStorage::open(path)
-                .with_context(|| format!("opening the store at {path}"))?;
+            let storage = if config.store_read_only {
+                holos_store::RocksStorage::open_read_only(path)
+            } else {
+                holos_store::RocksStorage::open(path)
+            }
+            .with_context(|| format!("opening the store at {path}"))?;
             Ok(Engine::with_store(holos_store::Store::with_storage(
                 storage,
             )))
@@ -1736,6 +1931,11 @@ fn parse_args(args: &[String]) -> Result<Config> {
             "--backup-role" => c.backup_role = Some(value(&mut i)?),
             "--purge-role" => c.purge_role = Some(value(&mut i)?),
             "--threads" => c.threads = value(&mut i)?.parse()?,
+            "--load-dir" => c.load_dir = Some(std::path::PathBuf::from(value(&mut i)?)),
+            "--max-body" => {
+                let mib: usize = value(&mut i)?.parse()?;
+                c.max_body = (mib > 0).then(|| mib.saturating_mul(1024 * 1024));
+            }
             "--timeout" => {
                 let seconds: f64 = value(&mut i)?.parse()?;
                 c.timeout = if seconds > 0.0 {
@@ -1785,6 +1985,10 @@ fn parse_args(args: &[String]) -> Result<Config> {
                 };
             }
             "--read-only" => c.read_only = true,
+            "--store-read-only" => {
+                c.store_read_only = true;
+                c.read_only = true;
+            }
             "--reorder" => c.reorder = true,
             "--gsp-base" => c.gsp_base = Some(value(&mut i)?),
             "--gsp-path" => c.gsp_path = value(&mut i)?,
@@ -1794,6 +1998,7 @@ fn parse_args(args: &[String]) -> Result<Config> {
                 c.ui_tiles = (template != "none").then_some(template);
             }
             "--trust-forwarded-identity" => c.trust_forwarded = true,
+            "--trust-azure-easy-auth" => c.trust_easy_auth = true,
             "--placetime" => {
                 if c.placetime.is_none() {
                     c.placetime = Some(placetime::Mode::Host);
@@ -1843,6 +2048,31 @@ mod tests {
         assert!(unusable_body(Some("application/sparql-query; charset=\"UTF-8\"")).is_none());
         // No charset at all is the default, which is UTF-8.
         assert!(unusable_body(Some("application/sparql-query")).is_none());
+    }
+
+    #[test]
+    fn a_body_over_the_ceiling_is_refused_however_it_arrives() {
+        assert_eq!(capped(&b"12345"[..], 5).unwrap(), Ok(b"12345".to_vec()));
+        assert_eq!(
+            capped(&b"123456"[..], 5).unwrap(),
+            Err(BodyRefusal::TooLarge(5))
+        );
+        // A body that never ends is read only as far as the ceiling and one byte more.
+        assert_eq!(
+            capped(std::io::repeat(b'x'), 1024).unwrap(),
+            Err(BodyRefusal::TooLarge(1024))
+        );
+    }
+
+    #[test]
+    fn the_body_ceiling_is_configurable_and_removable() {
+        let args = |a: &[&str]| a.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+        assert_eq!(parse_args(&[]).unwrap().max_body, Some(DEFAULT_MAX_BODY));
+        assert_eq!(
+            parse_args(&args(&["--max-body", "1"])).unwrap().max_body,
+            Some(1024 * 1024)
+        );
+        assert_eq!(parse_args(&args(&["--max-body", "0"])).unwrap().max_body, None);
     }
 
     #[test]

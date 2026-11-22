@@ -1,0 +1,13 @@
+apiVersion: v2
+name: holos
+description: >-
+  HOLOS (SemOps System's RDF 1.2 store and SPARQL 1.2 server) on AKS: one writer on a
+  managed disk or a locking NFS volume, optional read replicas sharing a checkpoint on an
+  RWX NFS volume, and scheduled checkpoints.
+type: application
+version: 0.1.0
+appVersion: "0.29.0"
+keywords: [rdf, sparql, shacl, triplestore, azure, aks, nfs]
+home: https://github.com/pwin/SemopsSystem
+sources:
+  - https://github.com/pwin/SemopsSystem

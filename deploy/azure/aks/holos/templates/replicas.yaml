@@ -1,0 +1,89 @@
+{{- if .Values.replicas.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "holos.fullname" . }}-replicas
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: replica
+spec:
+  replicas: {{ .Values.replicas.count }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: replica
+  template:
+    metadata:
+      labels:
+        {{- include "holos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: replica
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: holos
+          image: {{ include "holos.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Serves the newest finished checkpoint read-only. RocksDB builds a checkpoint
+          # under `<name>.tmp` and renames it when complete, so `.tmp` is skipped. When a
+          # newer one appears, the server is stopped after a random delay, so replicas do
+          # not all restart at once, and the container restarts on the newer one.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -u
+              dir={{ .Values.shared.mountPath | quote }}/checkpoints
+              newest() { ls -1d "$dir"/holos-* 2>/dev/null | grep -v '\.tmp$' | sort | tail -n 1; }
+              latest=$(newest || true)
+              if [ -z "$latest" ]; then
+                echo "no checkpoint under $dir yet; take one with POST /backup on the writer" >&2
+                exit 1
+              fi
+              echo "serving $latest read-only" >&2
+              holos-server "$@" --store "$latest" --store-read-only &
+              pid=$!
+              trap 'kill -TERM "$pid"' TERM INT
+              refresh={{ .Values.replicas.refreshSeconds | int }}
+              while [ "$refresh" -gt 0 ] && kill -0 "$pid" 2>/dev/null; do
+                sleep "$refresh"
+                candidate=$(newest || true)
+                if [ -n "$candidate" ] && [ "$candidate" != "$latest" ]; then
+                  sleep $(( $(od -An -N2 -tu2 /dev/urandom) % {{ .Values.replicas.staggerSeconds | int | add1 }} ))
+                  echo "newer checkpoint $candidate; restarting onto it" >&2
+                  kill -TERM "$pid"
+                  break
+                fi
+              done
+              wait "$pid"
+            - holos-server
+            {{- include "holos.serverArgs" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.port }}
+          {{- include "holos.probes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.replicas.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: TMPDIR
+              value: /tmp
+          volumeMounts:
+            - name: shared
+              mountPath: {{ .Values.shared.mountPath }}
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: shared
+          persistentVolumeClaim:
+            claimName: {{ include "holos.fullname" . }}-shared
+            readOnly: true
+{{- end }}

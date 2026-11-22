@@ -1,8 +1,10 @@
 # systemd unit for holos-server.
 #
 #   sudo useradd --system --home /var/lib/holos --shell /usr/sbin/nologin holos
-#   sudo mkdir -p /opt/holos /var/lib/holos/store
-#   sudo cp -r target/release/holos target/release/holos-server deploy /opt/holos/
+#   sudo mkdir -p /var/lib/holos/store
+#   sudo mkdir -p /opt/holos/target/release      # run.sh starts ./target/release/holos-server
+#   sudo cp target/release/holos target/release/holos-server /opt/holos/target/release/
+#   sudo cp -r deploy /opt/holos/                 # holos/deploy, in the SemOps System workspace
 #   sudo chown -R holos:holos /var/lib/holos
 #   sudo cp deploy/holos.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now holos

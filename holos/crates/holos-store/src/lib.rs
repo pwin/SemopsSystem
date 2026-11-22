@@ -22,6 +22,7 @@
 
 pub mod dictionary;
 pub mod error;
+pub mod fscheck;
 pub mod index;
 pub mod memory;
 #[cfg(feature = "rocksdb")]

@@ -1,0 +1,38 @@
+{{- if .Values.shared.enabled }}
+{{- if .Values.shared.createStorageClass }}
+# Azure Files premium, NFS 4.1. NFS 4.1 keeps byte-range locks on the server, which is what
+# lets RocksDB's lock mean something here. The share is reachable only inside the cluster's
+# virtual network; NFS traffic is not encrypted in transit unless the AKS Azure Files CSI
+# driver's encryption-in-transit option (aznfs) is enabled for it.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.shared.storageClassName }}
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+provisioner: file.csi.azure.com
+parameters:
+  protocol: nfs
+  skuName: Premium_LRS
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+mountOptions:
+  - nconnect=4
+  - noresvport
+  - actimeo=30
+---
+{{- end }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "holos.fullname" . }}-shared
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: {{ .Values.shared.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.shared.size }}
+{{- end }}

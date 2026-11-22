@@ -60,6 +60,10 @@ for l in ${HOLOS_LABEL_GRAPHS:-};     do ARGS+=(--label-graph "$l");     done
 [ "${HOLOS_REORDER:-off}" = "on" ]   && ARGS+=(--reorder)
 [ -n "${HOLOS_TIMEOUT:-}" ]          && ARGS+=(--timeout "$HOLOS_TIMEOUT")
 [ -n "${HOLOS_MAX_QUERY_MEMORY:-}" ] && ARGS+=(--max-query-memory "$HOLOS_MAX_QUERY_MEMORY")
+[ -n "${HOLOS_MAX_BODY:-}" ]         && ARGS+=(--max-body "$HOLOS_MAX_BODY")
+[ -n "${HOLOS_LOAD_DIR:-}" ]         && ARGS+=(--load-dir "$HOLOS_LOAD_DIR")
+[ "${HOLOS_STORE_READ_ONLY:-off}" = "on" ] && ARGS+=(--store-read-only)
+[ "${HOLOS_TRUST_AZURE_EASY_AUTH:-off}" = "on" ] && ARGS+=(--trust-azure-easy-auth)
 [ -n "${HOLOS_BACKUP_DIR:-}" ]       && { mkdir -p "$HOLOS_BACKUP_DIR"; ARGS+=(--backup-dir "$HOLOS_BACKUP_DIR"); }
 [ -n "${HOLOS_BACKUP_ROLE:-}" ]      && ARGS+=(--backup-role "$HOLOS_BACKUP_ROLE")
 
