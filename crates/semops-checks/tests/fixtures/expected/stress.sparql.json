@@ -1,0 +1,3868 @@
+[
+ {
+  "check_id": "DAT-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/boolItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/isActive",
+  "value": "false",
+  "message": "A literal on https://example.org/stress/boolItemOne (via https://example.org/stress/isActive) is not a valid http://www.w3.org/2001/XMLSchema#boolean. rdflib normalizes an invalid xsd:boolean to 'false', so the lexical form as authored is no longer present in the parsed graph.",
+  "sources": [
+   "literal-typing"
+  ]
+ },
+ {
+  "check_id": "DAT-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/countItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasCount",
+  "value": "12x",
+  "message": "Literal '12x' on https://example.org/stress/countItemOne (via https://example.org/stress/hasCount) does not match the lexical pattern expected for datatype http://www.w3.org/2001/XMLSchema#integer.",
+  "sources": [
+   "literal-typing",
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/dateItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasDate",
+  "value": "31-13-2020",
+  "message": "Literal '31-13-2020' on https://example.org/stress/dateItemOne (via https://example.org/stress/hasDate) does not match the lexical pattern expected for datatype http://www.w3.org/2001/XMLSchema#date.",
+  "sources": [
+   "literal-typing",
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/ContraA",
+  "focus_is_blank": false,
+  "path": "(http://www.w3.org/2000/01/rdf-schema#subClassOf)+",
+  "value": "https://example.org/stress/BaseA",
+  "message": "Class https://example.org/stress/ContraA is asserted disjoint with its own (transitive) superclass https://example.org/stress/BaseA, which makes https://example.org/stress/ContraA logically unsatisfiable.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/ContraB",
+  "focus_is_blank": false,
+  "path": "(http://www.w3.org/2000/01/rdf-schema#subClassOf)+",
+  "value": "https://example.org/stress/BaseB",
+  "message": "Class https://example.org/stress/ContraB is asserted disjoint with its own (transitive) superclass https://example.org/stress/BaseB, which makes https://example.org/stress/ContraB logically unsatisfiable.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/ContraC",
+  "focus_is_blank": false,
+  "path": "(http://www.w3.org/2000/01/rdf-schema#subClassOf)+",
+  "value": "https://example.org/stress/BaseC",
+  "message": "Class https://example.org/stress/ContraC is asserted disjoint with its own (transitive) superclass https://example.org/stress/BaseC, which makes https://example.org/stress/ContraC logically unsatisfiable.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-002",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/funcItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasSingleValueA",
+  "value": "https://example.org/stress/funcItemOne",
+  "message": "Subject https://example.org/stress/funcItemOne has more than one distinct value for functional property https://example.org/stress/hasSingleValueA, violating its functional-property axiom.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-002",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/funcItemThree",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasSingleValueB",
+  "value": "https://example.org/stress/funcItemThree",
+  "message": "Subject https://example.org/stress/funcItemThree has more than one distinct value for functional property https://example.org/stress/hasSingleValueB, violating its functional-property axiom.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-002",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/funcItemTwo",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasSingleValueA",
+  "value": "https://example.org/stress/funcItemTwo",
+  "message": "Subject https://example.org/stress/funcItemTwo has more than one distinct value for functional property https://example.org/stress/hasSingleValueA, violating its functional-property axiom.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredTypeItemOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/UndeclaredTypeOne",
+  "message": "Instance https://example.org/stress/undeclaredTypeItemOne is typed with https://example.org/stress/UndeclaredTypeOne which is never declared as a class in this graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredTypeItemThree",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/UndeclaredTypeThree",
+  "message": "Instance https://example.org/stress/undeclaredTypeItemThree is typed with https://example.org/stress/UndeclaredTypeThree which is never declared as a class in this graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredTypeItemTwo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/UndeclaredTypeTwo",
+  "message": "Instance https://example.org/stress/undeclaredTypeItemTwo is typed with https://example.org/stress/UndeclaredTypeTwo which is never declared as a class in this graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-002",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredPredItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/undeclaredPredicateOne",
+  "value": "https://example.org/stress/undeclaredPredItemOne",
+  "message": "Property https://example.org/stress/undeclaredPredicateOne is used on https://example.org/stress/undeclaredPredItemOne but is never declared as rdf:Property/owl:ObjectProperty/owl:DatatypeProperty/owl:AnnotationProperty.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-002",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredPredItemThree",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/undeclaredPredicateThree",
+  "value": "https://example.org/stress/undeclaredPredItemThree",
+  "message": "Property https://example.org/stress/undeclaredPredicateThree is used on https://example.org/stress/undeclaredPredItemThree but is never declared as rdf:Property/owl:ObjectProperty/owl:DatatypeProperty/owl:AnnotationProperty.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-002",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredPredItemTwo",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/undeclaredPredicateTwo",
+  "value": "https://example.org/stress/undeclaredPredItemTwo",
+  "message": "Property https://example.org/stress/undeclaredPredicateTwo is used on https://example.org/stress/undeclaredPredItemTwo but is never declared as rdf:Property/owl:ObjectProperty/owl:DatatypeProperty/owl:AnnotationProperty.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-006",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/danglingItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/relatesToExternal",
+  "value": "https://example.org/stress/GhostOne",
+  "message": "Object https://example.org/stress/GhostOne of triple (https://example.org/stress/danglingItemOne https://example.org/stress/relatesToExternal) is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-006",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/danglingItemThree",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/relatesToExternal",
+  "value": "https://example.org/stress/GhostThree",
+  "message": "Object https://example.org/stress/GhostThree of triple (https://example.org/stress/danglingItemThree https://example.org/stress/relatesToExternal) is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-006",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/danglingItemTwo",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/relatesToExternal",
+  "value": "https://example.org/stress/GhostTwo",
+  "message": "Object https://example.org/stress/GhostTwo of triple (https://example.org/stress/danglingItemTwo https://example.org/stress/relatesToExternal) is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-007",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredPredicateOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/undeclaredPredItemOne, x",
+  "message": "Predicate https://example.org/stress/undeclaredPredicateOne is used (e.g. on https://example.org/stress/undeclaredPredItemOne) but is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-007",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredPredicateThree",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/undeclaredPredItemThree, z",
+  "message": "Predicate https://example.org/stress/undeclaredPredicateThree is used (e.g. on https://example.org/stress/undeclaredPredItemThree) but is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-007",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/undeclaredPredicateTwo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/undeclaredPredItemTwo, y",
+  "message": "Predicate https://example.org/stress/undeclaredPredicateTwo is used (e.g. on https://example.org/stress/undeclaredPredItemTwo) but is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-008",
+  "severity": "Violation",
+  "focus_node": "https://example.org/stress/hasComponent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#range",
+  "value": "http://www.w3.org/2002/07/owl#Thing",
+  "message": "Object property https://example.org/stress/hasComponent declares rdfs:range http://www.w3.org/2002/07/owl#Thing which is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/danglingItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/relatesToExternal",
+  "value": "https://example.org/stress/GhostOne",
+  "message": "Reference target https://example.org/stress/GhostOne (object of https://example.org/stress/danglingItemOne https://example.org/stress/relatesToExternal) is never used as a subject nor as a class, suggesting a dangling/unresolved reference.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/danglingItemThree",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/relatesToExternal",
+  "value": "https://example.org/stress/GhostThree",
+  "message": "Reference target https://example.org/stress/GhostThree (object of https://example.org/stress/danglingItemThree https://example.org/stress/relatesToExternal) is never used as a subject nor as a class, suggesting a dangling/unresolved reference.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/danglingItemTwo",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/relatesToExternal",
+  "value": "https://example.org/stress/GhostTwo",
+  "message": "Reference target https://example.org/stress/GhostTwo (object of https://example.org/stress/danglingItemTwo https://example.org/stress/relatesToExternal) is never used as a subject nor as a class, suggesting a dangling/unresolved reference.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA6",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/ChainARoot",
+  "message": "Class https://example.org/stress/ChainA6 has a subClassOf chain at least 6 hops deep (reaching https://example.org/stress/ChainARoot), increasing reasoning/traversal cost.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA7",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/ChainA1",
+  "message": "Class https://example.org/stress/ChainA7 has a subClassOf chain at least 6 hops deep (reaching https://example.org/stress/ChainA1), increasing reasoning/traversal cost.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB6",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/ChainBRoot",
+  "message": "Class https://example.org/stress/ChainB6 has a subClassOf chain at least 6 hops deep (reaching https://example.org/stress/ChainBRoot), increasing reasoning/traversal cost.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB7",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/ChainB1",
+  "message": "Class https://example.org/stress/ChainB7 has a subClassOf chain at least 6 hops deep (reaching https://example.org/stress/ChainB1), increasing reasoning/traversal cost.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-002",
+  "severity": "Warning",
+  "focus_node": "https://semantechs.co.uk/ontology-quality/Graph",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://semantechs.co.uk/ontology-quality/Graph",
+  "message": "Blank nodes make up 29.3% of all graph nodes (> 20%), which can hinder linkability and stable identity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2002/07/owl#equivalentClass",
+  "value": "https://example.org/stress/EqBaseA",
+  "message": "Class https://example.org/stress/EqA is declared both owl:equivalentClass and rdfs:subClassOf of https://example.org/stress/EqBaseA -- redundant, and may mask an unintended equivalence cycle.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2002/07/owl#equivalentClass",
+  "value": "https://example.org/stress/EqBaseB",
+  "message": "Class https://example.org/stress/EqB is declared both owl:equivalentClass and rdfs:subClassOf of https://example.org/stress/EqBaseB -- redundant, and may mask an unintended equivalence cycle.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2002/07/owl#equivalentClass",
+  "value": "https://example.org/stress/EqBaseC",
+  "message": "Class https://example.org/stress/EqC is declared both owl:equivalentClass and rdfs:subClassOf of https://example.org/stress/EqBaseC -- redundant, and may mask an unintended equivalence cycle.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/NoLabelClassOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/NoLabelClassOne",
+  "message": "Term https://example.org/stress/NoLabelClassOne has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/noLabelPropOne",
+  "message": "Term https://example.org/stress/noLabelPropOne has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropTwo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/noLabelPropTwo",
+  "message": "Term https://example.org/stress/noLabelPropTwo has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedUseItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/deprecatedPropOne",
+  "value": "https://example.org/stress/deprecatedUseItemOne",
+  "message": "Deprecated term https://example.org/stress/deprecatedPropOne is still actively used on https://example.org/stress/deprecatedUseItemOne; deprecated terms should not appear in current data/ontology usage.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedUseItemThree",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/deprecatedPropThree",
+  "value": "https://example.org/stress/deprecatedUseItemThree",
+  "message": "Deprecated term https://example.org/stress/deprecatedPropThree is still actively used on https://example.org/stress/deprecatedUseItemThree; deprecated terms should not appear in current data/ontology usage.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedUseItemTwo",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/deprecatedPropTwo",
+  "value": "https://example.org/stress/deprecatedUseItemTwo",
+  "message": "Deprecated term https://example.org/stress/deprecatedPropTwo is still actively used on https://example.org/stress/deprecatedUseItemTwo; deprecated terms should not appear in current data/ontology usage.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/GhostOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/GhostOne",
+  "message": "Resource https://example.org/stress/GhostOne has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/GhostThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/GhostThree",
+  "message": "Resource https://example.org/stress/GhostThree has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/GhostTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/GhostTwo",
+  "message": "Resource https://example.org/stress/GhostTwo has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/NoLabelClassOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/NoLabelClassOne",
+  "message": "Resource https://example.org/stress/NoLabelClassOne has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/StressOntology",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/StressOntology",
+  "message": "Resource https://example.org/stress/StressOntology has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/UndeclaredTypeOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/UndeclaredTypeOne",
+  "message": "Resource https://example.org/stress/UndeclaredTypeOne has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/UndeclaredTypeThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/UndeclaredTypeThree",
+  "message": "Resource https://example.org/stress/UndeclaredTypeThree has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/UndeclaredTypeTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/UndeclaredTypeTwo",
+  "message": "Resource https://example.org/stress/UndeclaredTypeTwo has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier01",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier01",
+  "message": "Resource https://example.org/stress/bnodeCarrier01 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier02",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier02",
+  "message": "Resource https://example.org/stress/bnodeCarrier02 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier03",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier03",
+  "message": "Resource https://example.org/stress/bnodeCarrier03 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier04",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier04",
+  "message": "Resource https://example.org/stress/bnodeCarrier04 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier05",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier05",
+  "message": "Resource https://example.org/stress/bnodeCarrier05 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier06",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier06",
+  "message": "Resource https://example.org/stress/bnodeCarrier06 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier07",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier07",
+  "message": "Resource https://example.org/stress/bnodeCarrier07 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier08",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier08",
+  "message": "Resource https://example.org/stress/bnodeCarrier08 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier09",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier09",
+  "message": "Resource https://example.org/stress/bnodeCarrier09 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier10",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier10",
+  "message": "Resource https://example.org/stress/bnodeCarrier10 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier11",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier11",
+  "message": "Resource https://example.org/stress/bnodeCarrier11 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier12",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier12",
+  "message": "Resource https://example.org/stress/bnodeCarrier12 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier13",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier13",
+  "message": "Resource https://example.org/stress/bnodeCarrier13 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier14",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier14",
+  "message": "Resource https://example.org/stress/bnodeCarrier14 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier15",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier15",
+  "message": "Resource https://example.org/stress/bnodeCarrier15 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier16",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier16",
+  "message": "Resource https://example.org/stress/bnodeCarrier16 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier17",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier17",
+  "message": "Resource https://example.org/stress/bnodeCarrier17 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier18",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier18",
+  "message": "Resource https://example.org/stress/bnodeCarrier18 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier19",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier19",
+  "message": "Resource https://example.org/stress/bnodeCarrier19 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier20",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier20",
+  "message": "Resource https://example.org/stress/bnodeCarrier20 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier21",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier21",
+  "message": "Resource https://example.org/stress/bnodeCarrier21 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier22",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier22",
+  "message": "Resource https://example.org/stress/bnodeCarrier22 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier23",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier23",
+  "message": "Resource https://example.org/stress/bnodeCarrier23 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier24",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier24",
+  "message": "Resource https://example.org/stress/bnodeCarrier24 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier25",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier25",
+  "message": "Resource https://example.org/stress/bnodeCarrier25 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier26",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier26",
+  "message": "Resource https://example.org/stress/bnodeCarrier26 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier27",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier27",
+  "message": "Resource https://example.org/stress/bnodeCarrier27 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier28",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier28",
+  "message": "Resource https://example.org/stress/bnodeCarrier28 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier29",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier29",
+  "message": "Resource https://example.org/stress/bnodeCarrier29 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier30",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier30",
+  "message": "Resource https://example.org/stress/bnodeCarrier30 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier31",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier31",
+  "message": "Resource https://example.org/stress/bnodeCarrier31 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier32",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier32",
+  "message": "Resource https://example.org/stress/bnodeCarrier32 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier33",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier33",
+  "message": "Resource https://example.org/stress/bnodeCarrier33 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier34",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier34",
+  "message": "Resource https://example.org/stress/bnodeCarrier34 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier35",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier35",
+  "message": "Resource https://example.org/stress/bnodeCarrier35 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier36",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier36",
+  "message": "Resource https://example.org/stress/bnodeCarrier36 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier37",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier37",
+  "message": "Resource https://example.org/stress/bnodeCarrier37 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier38",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier38",
+  "message": "Resource https://example.org/stress/bnodeCarrier38 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier39",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier39",
+  "message": "Resource https://example.org/stress/bnodeCarrier39 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier40",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier40",
+  "message": "Resource https://example.org/stress/bnodeCarrier40 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier41",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier41",
+  "message": "Resource https://example.org/stress/bnodeCarrier41 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier42",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier42",
+  "message": "Resource https://example.org/stress/bnodeCarrier42 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier43",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier43",
+  "message": "Resource https://example.org/stress/bnodeCarrier43 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier44",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier44",
+  "message": "Resource https://example.org/stress/bnodeCarrier44 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier45",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier45",
+  "message": "Resource https://example.org/stress/bnodeCarrier45 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier46",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier46",
+  "message": "Resource https://example.org/stress/bnodeCarrier46 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier47",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier47",
+  "message": "Resource https://example.org/stress/bnodeCarrier47 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier48",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier48",
+  "message": "Resource https://example.org/stress/bnodeCarrier48 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier49",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier49",
+  "message": "Resource https://example.org/stress/bnodeCarrier49 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier50",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier50",
+  "message": "Resource https://example.org/stress/bnodeCarrier50 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier51",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier51",
+  "message": "Resource https://example.org/stress/bnodeCarrier51 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier52",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier52",
+  "message": "Resource https://example.org/stress/bnodeCarrier52 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier53",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier53",
+  "message": "Resource https://example.org/stress/bnodeCarrier53 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier54",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier54",
+  "message": "Resource https://example.org/stress/bnodeCarrier54 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier55",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier55",
+  "message": "Resource https://example.org/stress/bnodeCarrier55 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier56",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier56",
+  "message": "Resource https://example.org/stress/bnodeCarrier56 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier57",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier57",
+  "message": "Resource https://example.org/stress/bnodeCarrier57 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier58",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier58",
+  "message": "Resource https://example.org/stress/bnodeCarrier58 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier59",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier59",
+  "message": "Resource https://example.org/stress/bnodeCarrier59 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bnodeCarrier60",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bnodeCarrier60",
+  "message": "Resource https://example.org/stress/bnodeCarrier60 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLabelPropOne",
+  "message": "Resource https://example.org/stress/noLabelPropOne has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLabelPropTwo",
+  "message": "Resource https://example.org/stress/noLabelPropTwo has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/undeclaredPredicateOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/undeclaredPredicateOne",
+  "message": "Resource https://example.org/stress/undeclaredPredicateOne has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/undeclaredPredicateThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/undeclaredPredicateThree",
+  "message": "Resource https://example.org/stress/undeclaredPredicateThree has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/undeclaredPredicateTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/undeclaredPredicateTwo",
+  "message": "Resource https://example.org/stress/undeclaredPredicateTwo has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BAD_PROP_TWO",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/BAD_PROP_TWO",
+  "message": "Term https://example.org/stress/BAD_PROP_TWO has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Bad_Prop_One",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/Bad_Prop_One",
+  "message": "Term https://example.org/stress/Bad_Prop_One has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Bad_Prop_Three",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/Bad_Prop_Three",
+  "message": "Term https://example.org/stress/Bad_Prop_Three has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BaseA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/BaseA",
+  "message": "Term https://example.org/stress/BaseA has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BaseB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/BaseB",
+  "message": "Term https://example.org/stress/BaseB has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BaseC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/BaseC",
+  "message": "Term https://example.org/stress/BaseC has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA1",
+  "message": "Term https://example.org/stress/ChainA1 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA2",
+  "message": "Term https://example.org/stress/ChainA2 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA3",
+  "message": "Term https://example.org/stress/ChainA3 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA4",
+  "message": "Term https://example.org/stress/ChainA4 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA5",
+  "message": "Term https://example.org/stress/ChainA5 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA6",
+  "message": "Term https://example.org/stress/ChainA6 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainA7",
+  "message": "Term https://example.org/stress/ChainA7 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainARoot",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainARoot",
+  "message": "Term https://example.org/stress/ChainARoot has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB1",
+  "message": "Term https://example.org/stress/ChainB1 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB2",
+  "message": "Term https://example.org/stress/ChainB2 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB3",
+  "message": "Term https://example.org/stress/ChainB3 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB4",
+  "message": "Term https://example.org/stress/ChainB4 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB5",
+  "message": "Term https://example.org/stress/ChainB5 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB6",
+  "message": "Term https://example.org/stress/ChainB6 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainB7",
+  "message": "Term https://example.org/stress/ChainB7 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainBRoot",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ChainBRoot",
+  "message": "Term https://example.org/stress/ChainBRoot has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ContraA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ContraA",
+  "message": "Term https://example.org/stress/ContraA has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ContraB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ContraB",
+  "message": "Term https://example.org/stress/ContraB has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ContraC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/ContraC",
+  "message": "Term https://example.org/stress/ContraC has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/EqA",
+  "message": "Term https://example.org/stress/EqA has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/EqB",
+  "message": "Term https://example.org/stress/EqB has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/EqBaseA",
+  "message": "Term https://example.org/stress/EqBaseA has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/EqBaseB",
+  "message": "Term https://example.org/stress/EqBaseB has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/EqBaseC",
+  "message": "Term https://example.org/stress/EqBaseC has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/EqC",
+  "message": "Term https://example.org/stress/EqC has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Item",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/Item",
+  "message": "Term https://example.org/stress/Item has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/NoLabelClassOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/NoLabelClassOne",
+  "message": "Term https://example.org/stress/NoLabelClassOne has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_alpha",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bad_class_alpha",
+  "message": "Term https://example.org/stress/bad_class_alpha has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_beta",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bad_class_beta",
+  "message": "Term https://example.org/stress/bad_class_beta has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_gamma",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/bad_class_gamma",
+  "message": "Term https://example.org/stress/bad_class_gamma has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/deprecatedPropOne",
+  "message": "Term https://example.org/stress/deprecatedPropOne has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/deprecatedPropThree",
+  "message": "Term https://example.org/stress/deprecatedPropThree has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/deprecatedPropTwo",
+  "message": "Term https://example.org/stress/deprecatedPropTwo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasComponent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasComponent",
+  "message": "Term https://example.org/stress/hasComponent has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasCount",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasCount",
+  "message": "Term https://example.org/stress/hasCount has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasDate",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasDate",
+  "message": "Term https://example.org/stress/hasDate has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasManyTagsOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasManyTagsOne",
+  "message": "Term https://example.org/stress/hasManyTagsOne has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasManyTagsTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasManyTagsTwo",
+  "message": "Term https://example.org/stress/hasManyTagsTwo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasSingleValueA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasSingleValueA",
+  "message": "Term https://example.org/stress/hasSingleValueA has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasSingleValueB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/hasSingleValueB",
+  "message": "Term https://example.org/stress/hasSingleValueB has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/isActive",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/isActive",
+  "message": "Term https://example.org/stress/isActive has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noDomRangeOne",
+  "message": "Term https://example.org/stress/noDomRangeOne has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noDomRangeThree",
+  "message": "Term https://example.org/stress/noDomRangeThree has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noDomRangeTwo",
+  "message": "Term https://example.org/stress/noDomRangeTwo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLabelPropOne",
+  "message": "Term https://example.org/stress/noLabelPropOne has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLabelPropTwo",
+  "message": "Term https://example.org/stress/noLabelPropTwo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropFive",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLangPropFive",
+  "message": "Term https://example.org/stress/noLangPropFive has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropFour",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLangPropFour",
+  "message": "Term https://example.org/stress/noLangPropFour has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLangPropOne",
+  "message": "Term https://example.org/stress/noLangPropOne has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLangPropThree",
+  "message": "Term https://example.org/stress/noLangPropThree has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/noLangPropTwo",
+  "message": "Term https://example.org/stress/noLangPropTwo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/relatesToExternal",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/stress/relatesToExternal",
+  "message": "Term https://example.org/stress/relatesToExternal has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BAD_PROP_TWO",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/BAD_PROP_TWO",
+  "message": "Term https://example.org/stress/BAD_PROP_TWO has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Bad_Prop_One",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/Bad_Prop_One",
+  "message": "Term https://example.org/stress/Bad_Prop_One has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Bad_Prop_Three",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/Bad_Prop_Three",
+  "message": "Term https://example.org/stress/Bad_Prop_Three has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BaseA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/BaseA",
+  "message": "Term https://example.org/stress/BaseA has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BaseB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/BaseB",
+  "message": "Term https://example.org/stress/BaseB has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BaseC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/BaseC",
+  "message": "Term https://example.org/stress/BaseC has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA1",
+  "message": "Term https://example.org/stress/ChainA1 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA2",
+  "message": "Term https://example.org/stress/ChainA2 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA3",
+  "message": "Term https://example.org/stress/ChainA3 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA4",
+  "message": "Term https://example.org/stress/ChainA4 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA5",
+  "message": "Term https://example.org/stress/ChainA5 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA6",
+  "message": "Term https://example.org/stress/ChainA6 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainA7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainA7",
+  "message": "Term https://example.org/stress/ChainA7 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainARoot",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainARoot",
+  "message": "Term https://example.org/stress/ChainARoot has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB1",
+  "message": "Term https://example.org/stress/ChainB1 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB2",
+  "message": "Term https://example.org/stress/ChainB2 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB3",
+  "message": "Term https://example.org/stress/ChainB3 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB4",
+  "message": "Term https://example.org/stress/ChainB4 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB5",
+  "message": "Term https://example.org/stress/ChainB5 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB6",
+  "message": "Term https://example.org/stress/ChainB6 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainB7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainB7",
+  "message": "Term https://example.org/stress/ChainB7 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainBRoot",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ChainBRoot",
+  "message": "Term https://example.org/stress/ChainBRoot has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ContraA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ContraA",
+  "message": "Term https://example.org/stress/ContraA has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ContraB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ContraB",
+  "message": "Term https://example.org/stress/ContraB has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ContraC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/ContraC",
+  "message": "Term https://example.org/stress/ContraC has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/EqA",
+  "message": "Term https://example.org/stress/EqA has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/EqB",
+  "message": "Term https://example.org/stress/EqB has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/EqBaseA",
+  "message": "Term https://example.org/stress/EqBaseA has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/EqBaseB",
+  "message": "Term https://example.org/stress/EqBaseB has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/EqBaseC",
+  "message": "Term https://example.org/stress/EqBaseC has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqC",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/EqC",
+  "message": "Term https://example.org/stress/EqC has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Item",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/Item",
+  "message": "Term https://example.org/stress/Item has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/NoLabelClassOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/NoLabelClassOne",
+  "message": "Term https://example.org/stress/NoLabelClassOne has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_alpha",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/bad_class_alpha",
+  "message": "Term https://example.org/stress/bad_class_alpha has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_beta",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/bad_class_beta",
+  "message": "Term https://example.org/stress/bad_class_beta has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_gamma",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/bad_class_gamma",
+  "message": "Term https://example.org/stress/bad_class_gamma has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/deprecatedPropOne",
+  "message": "Term https://example.org/stress/deprecatedPropOne has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/deprecatedPropThree",
+  "message": "Term https://example.org/stress/deprecatedPropThree has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/deprecatedPropTwo",
+  "message": "Term https://example.org/stress/deprecatedPropTwo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasComponent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasComponent",
+  "message": "Term https://example.org/stress/hasComponent has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasCount",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasCount",
+  "message": "Term https://example.org/stress/hasCount has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasDate",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasDate",
+  "message": "Term https://example.org/stress/hasDate has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasManyTagsOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasManyTagsOne",
+  "message": "Term https://example.org/stress/hasManyTagsOne has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasManyTagsTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasManyTagsTwo",
+  "message": "Term https://example.org/stress/hasManyTagsTwo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasSingleValueA",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasSingleValueA",
+  "message": "Term https://example.org/stress/hasSingleValueA has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/hasSingleValueB",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/hasSingleValueB",
+  "message": "Term https://example.org/stress/hasSingleValueB has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/isActive",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/isActive",
+  "message": "Term https://example.org/stress/isActive has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noDomRangeOne",
+  "message": "Term https://example.org/stress/noDomRangeOne has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noDomRangeThree",
+  "message": "Term https://example.org/stress/noDomRangeThree has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noDomRangeTwo",
+  "message": "Term https://example.org/stress/noDomRangeTwo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLabelPropOne",
+  "message": "Term https://example.org/stress/noLabelPropOne has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLabelPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLabelPropTwo",
+  "message": "Term https://example.org/stress/noLabelPropTwo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropFive",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLangPropFive",
+  "message": "Term https://example.org/stress/noLangPropFive has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropFour",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLangPropFour",
+  "message": "Term https://example.org/stress/noLangPropFour has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLangPropOne",
+  "message": "Term https://example.org/stress/noLangPropOne has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLangPropThree",
+  "message": "Term https://example.org/stress/noLangPropThree has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noLangPropTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/noLangPropTwo",
+  "message": "Term https://example.org/stress/noLangPropTwo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/relatesToExternal",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/stress/relatesToExternal",
+  "message": "Term https://example.org/stress/relatesToExternal has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/deprecatedPropOne",
+  "message": "Property https://example.org/stress/deprecatedPropOne declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropThree",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/deprecatedPropThree",
+  "message": "Property https://example.org/stress/deprecatedPropThree declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/deprecatedPropTwo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/deprecatedPropTwo",
+  "message": "Property https://example.org/stress/deprecatedPropTwo declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/noDomRangeOne",
+  "message": "Property https://example.org/stress/noDomRangeOne declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeThree",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/noDomRangeThree",
+  "message": "Property https://example.org/stress/noDomRangeThree declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/noDomRangeTwo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/noDomRangeTwo",
+  "message": "Property https://example.org/stress/noDomRangeTwo declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainARoot",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/ChainARoot",
+  "message": "Class https://example.org/stress/ChainARoot has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/ChainBRoot",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/ChainBRoot",
+  "message": "Class https://example.org/stress/ChainBRoot has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseA",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/EqBaseA",
+  "message": "Class https://example.org/stress/EqBaseA has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseB",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/EqBaseB",
+  "message": "Class https://example.org/stress/EqBaseB has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/EqBaseC",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/EqBaseC",
+  "message": "Class https://example.org/stress/EqBaseC has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Item",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/Item",
+  "message": "Class https://example.org/stress/Item has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/NoLabelClassOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/NoLabelClassOne",
+  "message": "Class https://example.org/stress/NoLabelClassOne has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_alpha",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/bad_class_alpha",
+  "message": "Class https://example.org/stress/bad_class_alpha has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_beta",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/bad_class_beta",
+  "message": "Class https://example.org/stress/bad_class_beta has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_gamma",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/bad_class_gamma",
+  "message": "Class https://example.org/stress/bad_class_gamma has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_alpha",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/bad_class_alpha",
+  "message": "Class local name 'bad_class_alpha' does not follow UpperCamelCase (PascalCase) naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_beta",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/bad_class_beta",
+  "message": "Class local name 'bad_class_beta' does not follow UpperCamelCase (PascalCase) naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/bad_class_gamma",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/bad_class_gamma",
+  "message": "Class local name 'bad_class_gamma' does not follow UpperCamelCase (PascalCase) naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/BAD_PROP_TWO",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/BAD_PROP_TWO",
+  "message": "Property local name 'BAD_PROP_TWO' does not follow lowerCamelCase naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Bad_Prop_One",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/Bad_Prop_One",
+  "message": "Property local name 'Bad_Prop_One' does not follow lowerCamelCase naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/stress/Bad_Prop_Three",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/Bad_Prop_Three",
+  "message": "Property local name 'Bad_Prop_Three' does not follow lowerCamelCase naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/dupItemOne",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#comment",
+  "value": "https://example.org/stress/dupItemOne",
+  "message": "Subject https://example.org/stress/dupItemOne has 2 duplicate literal values ('Duplicate text one.') for property http://www.w3.org/2000/01/rdf-schema#comment; consider de-duplication.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/dupItemThree",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#comment",
+  "value": "https://example.org/stress/dupItemThree",
+  "message": "Subject https://example.org/stress/dupItemThree has 2 duplicate literal values ('Duplicate text three.') for property http://www.w3.org/2000/01/rdf-schema#comment; consider de-duplication.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/dupItemTwo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#comment",
+  "value": "https://example.org/stress/dupItemTwo",
+  "message": "Subject https://example.org/stress/dupItemTwo has 2 duplicate literal values ('Duplicate text two.') for property http://www.w3.org/2000/01/rdf-schema#comment; consider de-duplication.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/fanOutItemOne",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasManyTagsOne",
+  "value": "https://example.org/stress/fanOutItemOne",
+  "message": "Subject https://example.org/stress/fanOutItemOne has 55 values for property https://example.org/stress/hasManyTagsOne (> 50), which may indicate a list/collection anti-pattern hurting query efficiency.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/fanOutItemTwo",
+  "focus_is_blank": false,
+  "path": "https://example.org/stress/hasManyTagsTwo",
+  "value": "https://example.org/stress/fanOutItemTwo",
+  "message": "Subject https://example.org/stress/fanOutItemTwo has 55 values for property https://example.org/stress/hasManyTagsTwo (> 50), which may indicate a list/collection anti-pattern hurting query efficiency.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-002",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/StressOntology",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/StressOntology",
+  "message": "Ontology https://example.org/stress/StressOntology lacks versioning/title metadata (owl:versionInfo, dcterms:title or rdfs:label/skos:prefLabel), harming provenance and effectiveness.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-007",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/StressOntology",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/stress/StressOntology",
+  "message": "Ontology https://example.org/stress/StressOntology has no owl:versionIRI, making it harder for consumers/tools to pin, cache-bust, or detect exactly which version of the ontology they're using.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N07496ac82bca40929a6096307915e4a5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 22",
+  "message": "Label 'component 22' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N09344184d1ad43ddbe0f8a79ea11bd6c",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 56",
+  "message": "Label 'component 56' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N0a18647a5b21458885922135f2a9a38e",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 51",
+  "message": "Label 'component 51' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N0f60729d6bd84865a4ce2ad8638a9a78",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 27",
+  "message": "Label 'component 27' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N10a6baa26c8f4d30970b208b30928c90",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 16",
+  "message": "Label 'component 16' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N12144b1710b64afebfd7630685d7d753",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 59",
+  "message": "Label 'component 59' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1514b2c4a12e48809a890f67a392584c",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 49",
+  "message": "Label 'component 49' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1b81be50145f4d748eddb866d48f6053",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 41",
+  "message": "Label 'component 41' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1ba7c87fb9d0487f96bc2131b7f0928a",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 50",
+  "message": "Label 'component 50' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1e1b2874cc6847d78e950597db387d8b",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 09",
+  "message": "Label 'component 09' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N2cc09f9f80e54751ac9a977de3ea8c13",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 14",
+  "message": "Label 'component 14' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3581e753a45d40bab35a5e53e8c903e5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 21",
+  "message": "Label 'component 21' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3aac52840a904f5e9f3416e0b8892010",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 01",
+  "message": "Label 'component 01' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3c03e3d3217944928c55152ed977cbb6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 04",
+  "message": "Label 'component 04' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3dd9c94ef0d446b4913e0dfb81549486",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 08",
+  "message": "Label 'component 08' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N462b7f6810184fd08d6bfdb383f2a9ef",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 55",
+  "message": "Label 'component 55' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N49094f10228f46d3af825697b3222faa",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 33",
+  "message": "Label 'component 33' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N4adb25cf30d5442bb20f253cc83ca96d",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 30",
+  "message": "Label 'component 30' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N4b6bb8f155b34d8b81185cdae40afd24",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 26",
+  "message": "Label 'component 26' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N537d58e14c7848648e4bffd0d9ef4638",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 19",
+  "message": "Label 'component 19' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N55a952bdbc774daea6aaa692c9e4376c",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 32",
+  "message": "Label 'component 32' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N5a089ab1c9c14eb199ccee7dbbe76082",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 06",
+  "message": "Label 'component 06' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N6111719342814a6bbcb458891b5bc9bb",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 12",
+  "message": "Label 'component 12' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N67a1b62650594ed3a4fb3f000e2a2809",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 05",
+  "message": "Label 'component 05' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N7edaef7909cb45eea24c94515fa6a9df",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 44",
+  "message": "Label 'component 44' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N80a91960043541dd82917a8d2ff9ff15",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 53",
+  "message": "Label 'component 53' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8b0677629dae4bd9a3655d4196221759",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 54",
+  "message": "Label 'component 54' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8d435d4d962043b2adf7bcf995386572",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 28",
+  "message": "Label 'component 28' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8dd542278e0641c4ae654e4e794cb893",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 34",
+  "message": "Label 'component 34' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8f58fe261f424e448ad77aae10df7ba6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 39",
+  "message": "Label 'component 39' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8f73dc0870aa4dbe8b340cc25366e6ff",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 48",
+  "message": "Label 'component 48' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N93e856744c2d43c8876cb61d4cda1003",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 37",
+  "message": "Label 'component 37' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9440d63f1f024dc2b7bda7d3cdbe6733",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 07",
+  "message": "Label 'component 07' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9614d9d57e1f4921aeeb4bbb4fef50ff",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 24",
+  "message": "Label 'component 24' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9775fe98f01d48b8851e0b3cdf1fa1b5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 15",
+  "message": "Label 'component 15' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N99c98a8d254e4bbfb4e6fa11c797e2cf",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 02",
+  "message": "Label 'component 02' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9d892c320816417594783430ae4a1d00",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 57",
+  "message": "Label 'component 57' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Na65baef8fb7e4bdf96fd5b01583e065d",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 40",
+  "message": "Label 'component 40' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Na79000fba46840c1bbe3c2ac56576596",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 31",
+  "message": "Label 'component 31' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Na952c99a62a94a628dacf0ea7daa151b",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 18",
+  "message": "Label 'component 18' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nb07da8f7da3c415ab5c121519ea25cf9",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 60",
+  "message": "Label 'component 60' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nb771e8d494904298815c37178e5ea85e",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 38",
+  "message": "Label 'component 38' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nbf92d4b5df8e4c69a0a6bde4a088d1c6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 43",
+  "message": "Label 'component 43' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc001cab6e83c4b9ebadf3b47d1eba3d3",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 46",
+  "message": "Label 'component 46' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc1edb4cd9adb4761a49554fc2d4937be",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 58",
+  "message": "Label 'component 58' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc27f1d0e9a1d4c0a9a7c2748a7bf2a4a",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 45",
+  "message": "Label 'component 45' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc3e12875774f419d93136ccacc0691e8",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 17",
+  "message": "Label 'component 17' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc71bd0bb642b41d1944fbf7d3c7ee658",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 42",
+  "message": "Label 'component 42' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc8fc93500a224b868024067ed0a6ddb2",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 03",
+  "message": "Label 'component 03' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Ncb477917cf3a4efba621541d69e5cb74",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 36",
+  "message": "Label 'component 36' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nce321b802a5743c2b58045f42bf1a503",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 13",
+  "message": "Label 'component 13' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Ncf9039750f874bcab9bb8481ad20eb62",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 23",
+  "message": "Label 'component 23' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd5b2b45ed34d433bb54a68e27b5231b7",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 35",
+  "message": "Label 'component 35' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd6737d3a5ef14919ad4ccf5e46a30cf6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 25",
+  "message": "Label 'component 25' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd79f415b0f2443eda50ce93da3330ab4",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 10",
+  "message": "Label 'component 10' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd9ea6e027e7e479e9e853f120b7affa5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 11",
+  "message": "Label 'component 11' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Neada241112a84ab8993ec502553dea52",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 29",
+  "message": "Label 'component 29' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nf667c683b79a4b4e80d8d5e01f6b5a27",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 20",
+  "message": "Label 'component 20' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nfc6b3564fdab48dba4d05836d47eed55",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 52",
+  "message": "Label 'component 52' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nfe6e81a77e2a485eb0898d22bf0fa258",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 47",
+  "message": "Label 'component 47' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/noLangPropFive",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "label five",
+  "message": "Label 'label five' on https://example.org/stress/noLangPropFive has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/noLangPropFour",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "label four",
+  "message": "Label 'label four' on https://example.org/stress/noLangPropFour has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/noLangPropOne",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "label one",
+  "message": "Label 'label one' on https://example.org/stress/noLangPropOne has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/noLangPropThree",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "label three",
+  "message": "Label 'label three' on https://example.org/stress/noLangPropThree has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/stress/noLangPropTwo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "label two",
+  "message": "Label 'label two' on https://example.org/stress/noLangPropTwo has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ }
+]

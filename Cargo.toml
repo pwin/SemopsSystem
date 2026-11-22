@@ -41,6 +41,8 @@ members = [
     "tarka/crates/tarka-shacl",
     "tarka/crates/tarka-tarql",
     # --- SemOps System
+    "crates/semops",
+    "crates/semops-checks",
     "crates/semops-functions",
     "crates/semops-placetime",
     # --- shared
@@ -83,6 +85,8 @@ default-members = [
     "tarka/crates/tarka-polars",
     "tarka/crates/tarka-shacl",
     "tarka/crates/tarka-tarql",
+    "crates/semops",
+    "crates/semops-checks",
     "crates/semops-functions",
     "crates/semops-placetime",
     "vendor/oxsdatatypes",
@@ -160,6 +164,7 @@ shacl = { path = "shacl/crates/shacl", version = "0.29.0", default-features = fa
 tarka-core = { path = "tarka/crates/tarka-core", version = "0.29.0" }
 tarka-io = { path = "tarka/crates/tarka-io", version = "0.29.0" }
 tarka-tarql = { path = "tarka/crates/tarka-tarql", version = "0.29.0" }
+semops-checks = { path = "crates/semops-checks", version = "0.29.0" }
 semops-functions = { path = "crates/semops-functions", version = "0.29.0" }
 semops-placetime = { path = "crates/semops-placetime", version = "0.29.0" }
 tarka-ottr = { path = "tarka/crates/tarka-ottr", version = "0.29.0" }

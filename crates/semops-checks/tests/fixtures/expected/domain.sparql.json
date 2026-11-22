@@ -1,0 +1,770 @@
+[
+ {
+  "check_id": "LOG-001",
+  "severity": "Violation",
+  "focus_node": "https://example.org/demo/Reptile",
+  "focus_is_blank": false,
+  "path": "(http://www.w3.org/2000/01/rdf-schema#subClassOf)+",
+  "value": "https://example.org/demo/Animal",
+  "message": "Class https://example.org/demo/Reptile is asserted disjoint with its own (transitive) superclass https://example.org/demo/Animal, which makes https://example.org/demo/Reptile logically unsatisfiable.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L6",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/Animal",
+  "message": "Class https://example.org/demo/L6 has a subClassOf chain at least 6 hops deep (reaching https://example.org/demo/Animal), increasing reasoning/traversal cost.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "EFF-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L7",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L1",
+  "message": "Class https://example.org/demo/L7 has a subClassOf chain at least 6 hops deep (reaching https://example.org/demo/L1), increasing reasoning/traversal cost.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Feline",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2002/07/owl#equivalentClass",
+  "value": "https://example.org/demo/Mammal",
+  "message": "Class https://example.org/demo/Feline is declared both owl:equivalentClass and rdfs:subClassOf of https://example.org/demo/Mammal -- redundant, and may mask an unintended equivalence cycle.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L1",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L1",
+  "message": "Term https://example.org/demo/L1 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L2",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L2",
+  "message": "Term https://example.org/demo/L2 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L3",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L3",
+  "message": "Term https://example.org/demo/L3 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L4",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L4",
+  "message": "Term https://example.org/demo/L4 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L5",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L5",
+  "message": "Term https://example.org/demo/L5 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L6",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L6",
+  "message": "Term https://example.org/demo/L6 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L7",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/L7",
+  "message": "Term https://example.org/demo/L7 has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/dog_breed",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/dog_breed",
+  "message": "Term https://example.org/demo/dog_breed has no rdfs:label or skos:prefLabel, reducing human readability and documentation quality.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/DemoOntology",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/DemoOntology",
+  "message": "Resource https://example.org/demo/DemoOntology has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L1",
+  "message": "Resource https://example.org/demo/L1 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L2",
+  "message": "Resource https://example.org/demo/L2 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L3",
+  "message": "Resource https://example.org/demo/L3 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L4",
+  "message": "Resource https://example.org/demo/L4 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L5",
+  "message": "Resource https://example.org/demo/L5 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L6",
+  "message": "Resource https://example.org/demo/L6 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L7",
+  "message": "Resource https://example.org/demo/L7 has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/dog_breed",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/dog_breed",
+  "message": "Resource https://example.org/demo/dog_breed has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Animal",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/Animal",
+  "message": "Term https://example.org/demo/Animal has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Feline",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/Feline",
+  "message": "Term https://example.org/demo/Feline has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Has_Nickname",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/Has_Nickname",
+  "message": "Term https://example.org/demo/Has_Nickname has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L1",
+  "message": "Term https://example.org/demo/L1 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L2",
+  "message": "Term https://example.org/demo/L2 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L3",
+  "message": "Term https://example.org/demo/L3 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L4",
+  "message": "Term https://example.org/demo/L4 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L5",
+  "message": "Term https://example.org/demo/L5 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L6",
+  "message": "Term https://example.org/demo/L6 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/L7",
+  "message": "Term https://example.org/demo/L7 has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Mammal",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/Mammal",
+  "message": "Term https://example.org/demo/Mammal has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Reptile",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/Reptile",
+  "message": "Term https://example.org/demo/Reptile has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/dog_breed",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/dog_breed",
+  "message": "Term https://example.org/demo/dog_breed has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/hasBirthDate",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/hasBirthDate",
+  "message": "Term https://example.org/demo/hasBirthDate has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/hasOwner",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/hasOwner",
+  "message": "Term https://example.org/demo/hasOwner has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/hasTag",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/hasTag",
+  "message": "Term https://example.org/demo/hasTag has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/legacyStatus",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/legacyStatus",
+  "message": "Term https://example.org/demo/legacyStatus has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/relatesTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/demo/relatesTo",
+  "message": "Term https://example.org/demo/relatesTo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Animal",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/Animal",
+  "message": "Term https://example.org/demo/Animal has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Feline",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/Feline",
+  "message": "Term https://example.org/demo/Feline has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Has_Nickname",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/Has_Nickname",
+  "message": "Term https://example.org/demo/Has_Nickname has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L1",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L1",
+  "message": "Term https://example.org/demo/L1 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L2",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L2",
+  "message": "Term https://example.org/demo/L2 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L3",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L3",
+  "message": "Term https://example.org/demo/L3 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L4",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L4",
+  "message": "Term https://example.org/demo/L4 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L5",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L5",
+  "message": "Term https://example.org/demo/L5 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L6",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L6",
+  "message": "Term https://example.org/demo/L6 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/L7",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/L7",
+  "message": "Term https://example.org/demo/L7 has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Mammal",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/Mammal",
+  "message": "Term https://example.org/demo/Mammal has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Reptile",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/Reptile",
+  "message": "Term https://example.org/demo/Reptile has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/dog_breed",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/dog_breed",
+  "message": "Term https://example.org/demo/dog_breed has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/hasBirthDate",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/hasBirthDate",
+  "message": "Term https://example.org/demo/hasBirthDate has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/hasOwner",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/hasOwner",
+  "message": "Term https://example.org/demo/hasOwner has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/hasTag",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/hasTag",
+  "message": "Term https://example.org/demo/hasTag has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/legacyStatus",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/legacyStatus",
+  "message": "Term https://example.org/demo/legacyStatus has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/relatesTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/demo/relatesTo",
+  "message": "Term https://example.org/demo/relatesTo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/legacyStatus",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/legacyStatus",
+  "message": "Property https://example.org/demo/legacyStatus declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/relatesTo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/relatesTo",
+  "message": "Property https://example.org/demo/relatesTo declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/dog_breed",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/dog_breed",
+  "message": "Class local name 'dog_breed' does not follow UpperCamelCase (PascalCase) naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/demo/Has_Nickname",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/Has_Nickname",
+  "message": "Property local name 'Has_Nickname' does not follow lowerCamelCase naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-002",
+  "severity": "Info",
+  "focus_node": "https://example.org/demo/DemoOntology",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/DemoOntology",
+  "message": "Ontology https://example.org/demo/DemoOntology lacks versioning/title metadata (owl:versionInfo, dcterms:title or rdfs:label/skos:prefLabel), harming provenance and effectiveness.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-007",
+  "severity": "Info",
+  "focus_node": "https://example.org/demo/DemoOntology",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/demo/DemoOntology",
+  "message": "Ontology https://example.org/demo/DemoOntology has no owl:versionIRI, making it harder for consumers/tools to pin, cache-bust, or detect exactly which version of the ontology they're using.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "https://example.org/demo/relatesTo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "relates to",
+  "message": "Label 'relates to' on https://example.org/demo/relatesTo has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ }
+]

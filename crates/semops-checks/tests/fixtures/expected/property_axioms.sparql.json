@@ -1,0 +1,554 @@
+[
+ {
+  "check_id": "LOG-004",
+  "severity": "Violation",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2002/07/owl#inverseOf",
+  "value": "https://example.org/axioms/hasChild, https://example.org/axioms/parentOf",
+  "message": "Property https://example.org/axioms/hasParent has two distinct declared inverses (https://example.org/axioms/hasChild and https://example.org/axioms/parentOf), which is contradictory since an owl:inverseOf pairing must be unique.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-005",
+  "severity": "Violation",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2002/07/owl#inverseOf",
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Property https://example.org/axioms/marriedTo is declared owl:inverseOf itself, a degenerate/contradictory inverse axiom.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-006",
+  "severity": "Violation",
+  "focus_node": "https://example.org/axioms/sibling",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#domain, http://www.w3.org/2000/01/rdf-schema#range",
+  "value": "https://example.org/axioms/Person, https://example.org/axioms/Place",
+  "message": "Symmetric property https://example.org/axioms/sibling has domain https://example.org/axioms/Person different from range https://example.org/axioms/Place, which is inconsistent for a symmetric relation.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "LOG-007",
+  "severity": "Violation",
+  "focus_node": "https://example.org/axioms/partOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#domain, http://www.w3.org/2000/01/rdf-schema#range",
+  "value": "https://example.org/axioms/Person, https://example.org/axioms/Place",
+  "message": "Transitive property https://example.org/axioms/partOf has domain https://example.org/axioms/Person different from range https://example.org/axioms/Place, which is inconsistent for a transitive relation.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-005",
+  "severity": "Violation",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#domain",
+  "value": "https://example.org/axioms/NeverDeclared",
+  "message": "Property https://example.org/axioms/worksAt declares rdfs:domain https://example.org/axioms/NeverDeclared which is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-009",
+  "severity": "Violation",
+  "focus_node": "https://example.org/axioms/looseSubject",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#comment",
+  "value": "used as a subject, never typed",
+  "message": "Subject https://example.org/axioms/looseSubject is used with predicate http://www.w3.org/2000/01/rdf-schema#comment but is never given an rdf:type anywhere in the graph.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#domain",
+  "value": "https://example.org/axioms/NeverDeclared",
+  "message": "Reference target https://example.org/axioms/NeverDeclared (object of https://example.org/axioms/worksAt http://www.w3.org/2000/01/rdf-schema#domain) is never used as a subject nor as a class, suggesting a dangling/unresolved reference.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/NeverDeclared",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/NeverDeclared",
+  "message": "Resource https://example.org/axioms/NeverDeclared has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/looseSubject",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/looseSubject",
+  "message": "Resource https://example.org/axioms/looseSubject has no skos:prefLabel or rdfs:label.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Person",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/Person",
+  "message": "Term https://example.org/axioms/Person has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Place",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/Place",
+  "message": "Term https://example.org/axioms/Place has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasChild",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/hasChild",
+  "message": "Term https://example.org/axioms/hasChild has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/hasParent",
+  "message": "Term https://example.org/axioms/hasParent has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "Term https://example.org/axioms/hyphen-ated has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Term https://example.org/axioms/marriedTo has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/parentOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/parentOf",
+  "message": "Term https://example.org/axioms/parentOf has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/partOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/partOf",
+  "message": "Term https://example.org/axioms/partOf has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/sibling",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/sibling",
+  "message": "Term https://example.org/axioms/sibling has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/snake_case",
+  "message": "Term https://example.org/axioms/snake_case has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/worksAt",
+  "message": "Term https://example.org/axioms/worksAt has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Person",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/Person",
+  "message": "Term https://example.org/axioms/Person has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Place",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/Place",
+  "message": "Term https://example.org/axioms/Place has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Vehicle",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/Vehicle",
+  "message": "Term https://example.org/axioms/Vehicle has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasChild",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/hasChild",
+  "message": "Term https://example.org/axioms/hasChild has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/hasParent",
+  "message": "Term https://example.org/axioms/hasParent has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "Term https://example.org/axioms/hyphen-ated has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Term https://example.org/axioms/marriedTo has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/parentOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/parentOf",
+  "message": "Term https://example.org/axioms/parentOf has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/partOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/partOf",
+  "message": "Term https://example.org/axioms/partOf has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/sibling",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/sibling",
+  "message": "Term https://example.org/axioms/sibling has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/snake_case",
+  "message": "Term https://example.org/axioms/snake_case has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/worksAt",
+  "message": "Term https://example.org/axioms/worksAt has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasChild",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hasChild",
+  "message": "Property https://example.org/axioms/hasChild declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hasParent",
+  "message": "Property https://example.org/axioms/hasParent declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Property https://example.org/axioms/marriedTo declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/parentOf",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/parentOf",
+  "message": "Property https://example.org/axioms/parentOf declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Person",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/Person",
+  "message": "Class https://example.org/axioms/Person has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Place",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/Place",
+  "message": "Class https://example.org/axioms/Place has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Vehicle",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/Vehicle",
+  "message": "Class https://example.org/axioms/Vehicle has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "Class https://example.org/axioms/hyphen-ated has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/snake_case",
+  "message": "Class https://example.org/axioms/snake_case has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "Class local name 'hyphen-ated' does not follow UpperCamelCase (PascalCase) naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/snake_case",
+  "message": "Class local name 'snake_case' does not follow UpperCamelCase (PascalCase) naming style.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Vehicle",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "Completely Different",
+  "message": "Term https://example.org/axioms/Vehicle has skos:prefLabel 'Completely Different' which does not match its local name, suggesting the label and IRI have drifted apart.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-005",
+  "severity": "Warning",
+  "focus_node": "https://semantechs.co.uk/ontology-quality/Graph",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "-|_",
+  "message": "The ontology mixes 2 different local-name separator styles (-|_); pick a single separator convention (e.g. hyphens or underscores) consistently.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-007",
+  "severity": "Info",
+  "focus_node": "https://example.org/axioms",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms",
+  "message": "Ontology https://example.org/axioms has no owl:versionIRI, making it harder for consumers/tools to pin, cache-bust, or detect exactly which version of the ontology they're using.",
+  "sources": [
+   "sparql"
+  ]
+ }
+]

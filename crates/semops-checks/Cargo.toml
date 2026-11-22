@@ -1,0 +1,32 @@
+[package]
+name = "semops-checks"
+description = "The ontology quality check registry (registry.json, SHACL shapes, SPARQL checks, repair templates) compiled in, and a native runner for it on HOLOS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+build = "build.rs"
+
+[features]
+default = ["run"]
+# The runner: loads RDF, runs the checks (the portable queries on HOLOS's engine, the shapes
+# on the SHACL engine, or both), checks literals, and merges the findings as the Python
+# suite does. Without it the crate is the embedded data
+# and a typed registry, for a build (WASM, a Python wheel) that brings its own engine.
+run = ["dep:holos-engine", "dep:holos-store", "dep:holos-security", "dep:oxrdfio", "dep:spareval", "dep:oxsdatatypes", "dep:shacl"]
+
+[dependencies]
+# Both already in the tree (geojson, the WASM crates), so no new supply chain.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+oxrdf.workspace = true
+holos-engine = { workspace = true, optional = true }
+holos-store = { workspace = true, optional = true }
+holos-security = { workspace = true, optional = true }
+oxrdfio = { workspace = true, optional = true }
+spareval = { workspace = true, optional = true }
+oxsdatatypes = { workspace = true, optional = true }
+# The SHACL arm, SHACL_Engine, as the suite runs it.
+shacl = { workspace = true, optional = true }

@@ -1,0 +1,74 @@
+[
+ {
+  "check_id": "DAT-004",
+  "severity": "Violation",
+  "focus_node": "https://example.org/gistpatterns/data/MagnitudeGradient",
+  "focus_is_blank": false,
+  "path": "https://w3id.org/semanticarts/ns/ontology/gist/hasUnitOfMeasure",
+  "value": "https://example.org/gistpatterns/data/AspectLaneCount",
+  "message": "A gist:Magnitude must have a gist:hasUnitOfMeasure value typed gist:UnitOfMeasure.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "DAT-004",
+  "severity": "Violation",
+  "focus_node": "https://example.org/gistpatterns/data/MagnitudeLaneCount",
+  "focus_is_blank": false,
+  "path": "https://w3id.org/semanticarts/ns/ontology/gist/hasUnitOfMeasure",
+  "value": "https://example.org/gistpatterns/data/MagnitudeLaneCount",
+  "message": "A gist:Magnitude must have a gist:hasUnitOfMeasure value typed gist:UnitOfMeasure.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Carriageway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/gistpatterns/Carriageway",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Verge",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/gistpatterns/Verge",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/hasCarriageway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/gistpatterns/hasCarriageway",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Motorway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/gistpatterns/Motorway",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ }
+]

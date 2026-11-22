@@ -80,7 +80,8 @@ which had locked HOLOS's dependency tree independently).
 
 ## Not yet done in this phase
 
-- The registry as a crate (`semops-checks`), and the old names re-exporting new ones.
+- The old names re-exporting new ones. (The registry became a crate, `semops-checks`, on
+  22 November 2026: see [0005](0005-check-registry.md).)
 - One SHACL validator. HOLOS still carries `holos-shacl` and `holos-shacl-engine`, and
   SHACL_Engine ships on its own.
 - rustfmt and clippy over `holos/`. HOLOS was never gated on either: it has 74 rustfmt

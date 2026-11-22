@@ -1,0 +1,43 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX sh: <http://www.w3.org/ns/shacl#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX oq: <https://semantechs.co.uk/ontology-quality/>
+
+# STY-003: Label missing a language tag
+CONSTRUCT {
+  _:r a sh:ValidationResult ;
+    sh:resultSeverity sh:Info ;
+    sh:focusNode ?e ;
+    # The offending label itself. The SHACL twin (shapes/style.ttl) selects
+    # it as `?value`, so omitting it here left the same finding with two
+    # different dedup keys in checks/merge.py -- value=<the label> from the
+    # shape, value=<the focus node> from this query via the None->focus
+    # normalization -- and both survived as separate rows.
+    sh:value ?l ;
+    sh:sourceConstraintComponent oq:STY-003 ;
+    sh:resultMessage ?msg .
+}
+WHERE {
+  ?e rdfs:label ?l .
+  FILTER(LANG(?l) = "")
+  # A focus node here is very often a blank node -- an anonymous restriction or
+  # axiom carrying an rdfs:label -- and STR() is defined for literals and IRIs
+  # only (SPARQL 1.1 17.4.2.5). STR() of a blank node is therefore a type error:
+  # CONCAT errors, BIND leaves ?msg unbound, and the template drops the message.
+  # Measured on examples/checks_stress_test: 60 of 65 results affected, and the
+  # extension ships this query to oxigraph, so the message went missing there in
+  # the field.
+  #
+  # IF() rather than COALESCE(STR(?e), ...), which was the first fix and is the
+  # weaker one. COALESCE catches the error, so it only helps where STR() *does*
+  # error -- rdflib returns the internal blank node id instead of raising, so
+  # under rdflib the message stayed present and named something meaningless that
+  # differs on every run. IF() evaluates only the branch it takes, so STR() is
+  # never called on a blank node at all, and both engines produce the same text.
+  BIND(IF(isBlank(?e), "[a blank node]", STR(?e)) AS ?focusText)
+  BIND(CONCAT("Label '", STR(?l), "' on ", ?focusText,
+              " has no language tag; add e.g. @en for internationalisation clarity.") AS ?msg)
+}
