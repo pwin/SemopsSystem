@@ -38,6 +38,13 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- else if .Values.server.placetime }}
 - --placetime
 {{- end }}
+{{- if or .Values.server.placetimeBase .Values.server.placetime }}
+{{- if not (has .Values.server.placetimeVocabulary (list "data.gov.uk" "gist")) }}
+{{- fail (printf "server.placetimeVocabulary must be data.gov.uk or gist, not %q" .Values.server.placetimeVocabulary) }}
+{{- end }}
+- --placetime-vocabulary
+- {{ .Values.server.placetimeVocabulary | quote }}
+{{- end }}
 {{- range .Values.server.extraArgs }}
 - {{ . | quote }}
 {{- end }}

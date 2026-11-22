@@ -14,3 +14,7 @@
 *.pdf           binary
 
 Cargo.lock      linguist-generated=true
+
+# gist, bundled unchanged: kept byte for byte, mixed line endings included, so its checksum
+# is the release's.
+crates/semops-placetime/ontology/gist/*.ttl -text

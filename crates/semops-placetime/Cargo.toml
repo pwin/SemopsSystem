@@ -1,6 +1,6 @@
 [package]
 name = "semops-placetime"
-description = "Calendar interval, instant and WGS84 point URI sets in the reference.data.gov.uk patterns, each described in RDF from its URI alone"
+description = "Calendar interval, instant and WGS84 point URI sets in the reference.data.gov.uk patterns, each described in RDF from its URI alone, in reference.data.gov.uk's vocabulary or in gist"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,7 +10,7 @@ rust-version.workspace = true
 license = "Apache-2.0"
 repository.workspace = true
 authors.workspace = true
-include = ["src/**", "tests/**", "Cargo.toml", "NOTICE", "README.md"]
+include = ["src/**", "ontology/**", "tests/**", "Cargo.toml", "NOTICE", "README.md"]
 
 [dependencies]
 # Plain oxrdf, not the workspace spec, which turns RDF 1.2 on: nothing here needs it, and a
@@ -19,3 +19,5 @@ oxrdf = "0.3"
 
 [dev-dependencies]
 oxrdfio = "0.2"
+# The gist tests validate descriptions against the placetime shapes with the SHACL engine.
+shacl.workspace = true

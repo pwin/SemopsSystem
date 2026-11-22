@@ -34,3 +34,17 @@ Changes from IntervalServer:
 The reference.data.gov.uk ontology files bundled in IntervalServer (intervals.n3/.ttl/.rdf,
 reference.n3, uri-set.n3) and its copy of the VoID vocabulary are not included. Only the
 vocabularies' IRIs are used.
+
+The placetime ontology (ontology/placetime.ttl) and its SHACL shapes
+(ontology/placetime-shapes.ttl) are new in this crate and do not derive from IntervalServer.
+The ontology extends gist, Semantic Arts' upper ontology, a copy of which is bundled:
+
+    ontology/gist/gistCore14.1.0.ttl
+    gist 14.1.0, released 17 April 2026, unchanged
+    https://github.com/semanticarts/gist
+    By Semantic Arts, licensed under the Creative Commons Attribution 4.0 International
+    licence: https://creativecommons.org/licenses/by/4.0/
+    SHA-256 7476f1d2ad7cd7117009dd8b5dc8a1b88a4c38cfbd6346ea8be3bc4dd1fffee0
+
+It is bundled so that the ontology's owl:imports resolves without a network, and so that the
+tests can check every term a gist description uses against the release it names.

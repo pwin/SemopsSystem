@@ -1,0 +1,205 @@
+@prefix gist: <https://w3id.org/semanticarts/ns/ontology/gist/> .
+@prefix gistd: <https://w3id.org/semanticarts/ns/data/gist/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pt: <https://www.semantechs.co.uk/ns/ontology/placetime/> .
+@prefix ptsh: <https://www.semantechs.co.uk/ns/shapes/placetime/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Shapes for intervals and points described in gist and the placetime ontology. They
+# target classes, and placetime's documents type each interval with the ontology's most
+# specific class, so validate a document together with the ontology (placetime.ttl), whose
+# rdfs:subClassOf statements carry each class up to gist:TimeInterval.
+
+<https://www.semantechs.co.uk/shapes/placetime>
+	a owl:Ontology ;
+	skos:prefLabel "placetime shapes"^^xsd:string ;
+	skos:definition "SHACL shapes for time intervals and points described in gist and the placetime ontology."^^xsd:string ;
+	sh:declare
+		[
+			sh:prefix "gist"^^xsd:string ;
+			sh:namespace "https://w3id.org/semanticarts/ns/ontology/gist/"^^xsd:anyURI ;
+		] ,
+		[
+			sh:prefix "gistd"^^xsd:string ;
+			sh:namespace "https://w3id.org/semanticarts/ns/data/gist/"^^xsd:anyURI ;
+		] ,
+		[
+			sh:prefix "xsd"^^xsd:string ;
+			sh:namespace "http://www.w3.org/2001/XMLSchema#"^^xsd:anyURI ;
+		]
+		;
+	.
+
+ptsh:TimeIntervalShape
+	a sh:NodeShape ;
+	sh:targetClass gist:TimeInterval ;
+	sh:property
+		[
+			sh:path gist:startDateTime ;
+			sh:minCount 1 ;
+			sh:maxCount 1 ;
+			sh:datatype xsd:dateTime ;
+			sh:lessThanOrEquals gist:endDateTime ;
+			sh:message "A time interval has one start date time, an xsd:dateTime no later than its end."^^xsd:string ;
+		] ,
+		[
+			sh:path gist:endDateTime ;
+			sh:minCount 1 ;
+			sh:maxCount 1 ;
+			sh:datatype xsd:dateTime ;
+			sh:message "A time interval has one end date time, an xsd:dateTime."^^xsd:string ;
+		] ,
+		[
+			sh:path gist:hasMagnitude ;
+			sh:qualifiedValueShape ptsh:DurationShape ;
+			sh:qualifiedMinCount 1 ;
+			sh:qualifiedMaxCount 1 ;
+			sh:message "A time interval has one duration, a whole number of seconds."^^xsd:string ;
+		]
+		;
+	sh:sparql [
+		a sh:SPARQLConstraint ;
+		sh:prefixes <https://www.semantechs.co.uk/shapes/placetime> ;
+		sh:message "The duration, {?seconds} seconds, is not the end less the start."^^xsd:string ;
+		sh:select """
+			SELECT $this ?seconds WHERE {
+				$this gist:startDateTime ?start ;
+					gist:endDateTime ?end ;
+					gist:hasMagnitude ?duration .
+				?duration gist:hasAspect gistd:_Aspect_duration ;
+					gist:numericValue ?seconds .
+				FILTER (?end - ?start != xsd:dayTimeDuration(CONCAT("PT", STR(?seconds), "S")))
+			}
+		"""^^xsd:string ;
+	] ;
+	.
+
+ptsh:DurationShape
+	a sh:NodeShape ;
+	sh:property
+		[
+			sh:path gist:hasAspect ;
+			sh:hasValue gistd:_Aspect_duration ;
+			sh:maxCount 1 ;
+		] ,
+		[
+			sh:path gist:hasUnitOfMeasure ;
+			sh:hasValue gistd:_UnitOfMeasure_second ;
+			sh:maxCount 1 ;
+		] ,
+		[
+			sh:path gist:numericValue ;
+			sh:minCount 1 ;
+			sh:maxCount 1 ;
+			sh:datatype xsd:integer ;
+			sh:minInclusive 0 ;
+		]
+		;
+	.
+
+ptsh:CalendarIntervalShape
+	a sh:NodeShape ;
+	sh:targetClass pt:CalendarInterval ;
+	sh:property [
+		sh:path gist:conformsTo ;
+		sh:qualifiedValueShape [
+			sh:class pt:Calendar ;
+		] ;
+		sh:qualifiedMinCount 1 ;
+		sh:qualifiedMaxCount 1 ;
+		sh:message "A calendar interval conforms to one calendar."^^xsd:string ;
+	] ;
+	.
+
+ptsh:CalendarHalfYearShape
+	a sh:NodeShape ;
+	sh:targetClass pt:CalendarHalfYear ;
+	sh:property [
+		sh:path gist:isCategorizedBy ;
+		sh:qualifiedValueShape [
+			sh:class pt:HalfOfYear ;
+		] ;
+		sh:qualifiedMinCount 1 ;
+		sh:qualifiedMaxCount 1 ;
+		sh:message "A half year is categorised by which half of the year it is."^^xsd:string ;
+	] ;
+	.
+
+ptsh:CalendarQuarterShape
+	a sh:NodeShape ;
+	sh:targetClass pt:CalendarQuarter ;
+	sh:property [
+		sh:path gist:isCategorizedBy ;
+		sh:qualifiedValueShape [
+			sh:class pt:QuarterOfYear ;
+		] ;
+		sh:qualifiedMinCount 1 ;
+		sh:qualifiedMaxCount 1 ;
+		sh:message "A quarter is categorised by which quarter of the year it is."^^xsd:string ;
+	] ;
+	.
+
+ptsh:CalendarMonthShape
+	a sh:NodeShape ;
+	sh:targetClass pt:CalendarMonth ;
+	sh:property [
+		sh:path gist:isCategorizedBy ;
+		sh:qualifiedValueShape [
+			sh:class pt:MonthOfYear ;
+		] ;
+		sh:qualifiedMinCount 1 ;
+		sh:qualifiedMaxCount 1 ;
+		sh:message "A month is categorised by which month of the year it is."^^xsd:string ;
+	] ;
+	.
+
+ptsh:CalendarDayShape
+	a sh:NodeShape ;
+	sh:targetClass pt:CalendarDay ;
+	sh:property [
+		sh:path gist:isCategorizedBy ;
+		sh:qualifiedValueShape [
+			sh:class pt:DayOfWeek ;
+		] ;
+		sh:qualifiedMinCount 1 ;
+		sh:qualifiedMaxCount 1 ;
+		sh:message "A day is categorised by its day of the week."^^xsd:string ;
+	] ;
+	.
+
+ptsh:InstantShape
+	a sh:NodeShape ;
+	sh:targetClass pt:Instant ;
+	sh:property [
+		sh:path gist:startDateTime ;
+		sh:equals gist:endDateTime ;
+		sh:message "An instant starts and ends at the same moment."^^xsd:string ;
+	] ;
+	.
+
+ptsh:GeoPointShape
+	a sh:NodeShape ;
+	sh:targetClass gist:GeoPoint ;
+	sh:property
+		[
+			sh:path gist:latitude ;
+			sh:minCount 1 ;
+			sh:maxCount 1 ;
+			sh:datatype xsd:double ;
+			sh:minInclusive "-90"^^xsd:double ;
+			sh:maxInclusive "90"^^xsd:double ;
+			sh:message "A point has one latitude, an xsd:double from -90 to 90."^^xsd:string ;
+		] ,
+		[
+			sh:path gist:longitude ;
+			sh:minCount 1 ;
+			sh:maxCount 1 ;
+			sh:datatype xsd:double ;
+			sh:minInclusive "-180"^^xsd:double ;
+			sh:maxInclusive "180"^^xsd:double ;
+			sh:message "A point has one longitude, an xsd:double from -180 to 180."^^xsd:string ;
+		]
+		;
+	.

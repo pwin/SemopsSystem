@@ -95,6 +95,9 @@ server:
   # Serve the placetime URI sets under https://<Host>/ (or `placetimeBase` if set).
   placetime: false
   placetimeBase: ""
+  # How placetime documents describe the URIs: data.gov.uk, or gist (gist 14.1.0 and the
+  # placetime ontology).
+  placetimeVocabulary: data.gov.uk
   extraArgs: []
 
 service:

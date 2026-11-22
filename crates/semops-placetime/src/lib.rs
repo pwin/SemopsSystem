@@ -23,6 +23,11 @@
 //! The base is the service's choice: `https://{host}/` by default ([`Base::for_host`]), or
 //! any configured URL ([`Base::new`]). The vocabularies keep their own namespaces, which are
 //! names rather than addresses: `http://reference.data.gov.uk/def/intervals/` and the rest.
+//!
+//! The descriptions come in two vocabularies ([`Vocabulary`]). The default is the one
+//! reference.data.gov.uk published, so a document reads as it always did. The other is
+//! gist 14.1.0, with the placetime ontology ([`ONTOLOGY`]) supplying the calendar classes,
+//! the calendars and the categories; [`SHAPES`] checks a description in it.
 
 pub mod calendar;
 mod describe;
@@ -36,7 +41,60 @@ use std::fmt;
 pub use calendar::{Calendar, Duration, Moment};
 pub use path::{Aligned, Set, Thing, Unit};
 pub use place::Point;
-pub use vocab::PREFIXES;
+pub use vocab::{GIST_PREFIXES, PREFIXES};
+
+/// The placetime ontology, built on gist 14.1.0, in Turtle: the classes, calendars and
+/// categories gist descriptions use.
+pub const ONTOLOGY: &str = include_str!("../ontology/placetime.ttl");
+
+/// SHACL shapes for gist descriptions of intervals and points, in Turtle. They target the
+/// ontology's classes through `rdfs:subClassOf`, so validate a description together with
+/// [`ONTOLOGY`].
+pub const SHAPES: &str = include_str!("../ontology/placetime-shapes.ttl");
+
+/// The vocabulary a description is written in.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum Vocabulary {
+    /// reference.data.gov.uk's interval vocabulary, with OWL-Time, SCOVO, WGS84 and
+    /// GeoSPARQL, as IntervalServer wrote it.
+    #[default]
+    DataGovUk,
+    /// gist 14.1.0 and the placetime ontology.
+    Gist,
+}
+
+impl Vocabulary {
+    pub const ALL: [Self; 2] = [Self::DataGovUk, Self::Gist];
+
+    /// The vocabulary a configuration names: `data.gov.uk` or `gist`.
+    #[must_use]
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|v| v.name() == name)
+    }
+
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::DataGovUk => "data.gov.uk",
+            Self::Gist => "gist",
+        }
+    }
+
+    /// The prefixes a serialisation of a description in this vocabulary declares.
+    #[must_use]
+    pub fn prefixes(self) -> &'static [(&'static str, &'static str)] {
+        match self {
+            Self::DataGovUk => PREFIXES,
+            Self::Gist => GIST_PREFIXES,
+        }
+    }
+}
+
+impl fmt::Display for Vocabulary {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name())
+    }
+}
 
 /// The URI everything here is named under, ending in `/`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -272,9 +330,16 @@ pub fn claims(relative: &str) -> bool {
 
 /// Answers a request for `relative`, the request path with the base's path taken off:
 /// `id/quarter/2006-Q1`, `doc/quarter/2006-Q1.ttl`. Percent-encoded characters are decoded
-/// first, so `%3A` serves as well as `:`.
+/// first, so `%3A` serves as well as `:`. Documents are in reference.data.gov.uk's
+/// vocabulary; [`resolve_with`] chooses.
 #[must_use]
 pub fn resolve(base: &Base, relative: &str) -> Outcome {
+    resolve_with(base, relative, Vocabulary::DataGovUk)
+}
+
+/// [`resolve`], with documents in `vocabulary`.
+#[must_use]
+pub fn resolve_with(base: &Base, relative: &str, vocabulary: Vocabulary) -> Outcome {
     let Some(relative) = decode(relative) else {
         return Outcome::NotFound;
     };
@@ -301,7 +366,7 @@ pub fn resolve(base: &Base, relative: &str) -> Outcome {
     if !document {
         return Outcome::SeeOther(format!("{base}doc/{canonical}{suffix}"));
     }
-    let mut builder = describe::Builder::new(base.as_str());
+    let mut builder = describe::Builder::new(base.as_str(), vocabulary);
     let (topic, label) = builder.thing(&thing);
     builder.document(&canonical, &topic, &label);
     Outcome::Document(Box::new(Document {
@@ -314,11 +379,18 @@ pub fn resolve(base: &Base, relative: &str) -> Outcome {
 }
 
 /// The description of whatever `path` names (`quarter/2006-Q1`, with no `id/`), or `None`.
-/// The graph a document at that path serves, without the statements about the document.
+/// The graph a document at that path serves, without the statements about the document, in
+/// reference.data.gov.uk's vocabulary; [`describe_with`] chooses.
 #[must_use]
 pub fn describe(base: &Base, path: &str) -> Option<Graph> {
+    describe_with(base, path, Vocabulary::DataGovUk)
+}
+
+/// [`describe`], in `vocabulary`.
+#[must_use]
+pub fn describe_with(base: &Base, path: &str, vocabulary: Vocabulary) -> Option<Graph> {
     let thing = Thing::parse(path)?;
-    let mut builder = describe::Builder::new(base.as_str());
+    let mut builder = describe::Builder::new(base.as_str(), vocabulary);
     builder.thing(&thing);
     Some(builder.graph)
 }

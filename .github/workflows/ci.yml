@@ -245,7 +245,8 @@ jobs:
               "" \
               "--set shared.enabled=true --set replicas.enabled=true" \
               "--set shared.enabled=true --set replicas.enabled=true --set backup.enabled=true --set identity.mode=forwarded --set server.placetime=true" \
-              "--set store.storageClassName=azure-netapp-files --set networkPolicy.enabled=false"; do
+              "--set store.storageClassName=azure-netapp-files --set networkPolicy.enabled=false" \
+              "--set server.placetimeBase=https://data.example/ref/ --set server.placetimeVocabulary=gist"; do
             # Word splitting of $values is intended: it is a list of flags.
             # shellcheck disable=SC2086
             helm template t "$chart" $values > rendered.yaml
@@ -254,7 +255,8 @@ jobs:
           done
           # The combinations the chart refuses must stay refused. (Not `! helm …`: errexit
           # ignores a negated command, so that form could never fail the step.)
-          for refused in "backup.enabled=true" "replicas.enabled=true" "identity.mode=anything"; do
+          for refused in "backup.enabled=true" "replicas.enabled=true" "identity.mode=anything" \
+              "server.placetime=true,server.placetimeVocabulary=owl-time"; do
             if helm template t "$chart" --set "$refused" > /dev/null 2>&1; then
               echo "::error::the chart accepted --set $refused, which it must refuse"
               exit 1
