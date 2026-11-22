@@ -12,6 +12,7 @@ together from separate projects, and each part still does one job.
 | **SHACL engine** | `shacl` | Validates RDF against SHACL 1.0 and 1.2 shapes, including SHACL-SPARQL, node expressions and SHACL-AF rules |
 | **tarka** | `tarka` | Maps CSV, Parquet and Polars data frames to RDF 1.1 through TARQL queries or OTTR templates |
 | **The check registry** | `semops check` | Runs the 61 ontology quality checks of the Ontology Quality Suite natively, and gates a build on what they find |
+| **The `semops` command** | `semops` | All of the above in one binary: `semops serve`, `query`, `validate`, `map`, `check` and the rest. Copied or linked under an engine command's name, it is that command |
 | **The function library** | (inside every engine) | 140 SPARQL extension functions: XPath `fn:` and `math:`, Jena `afn:` and property functions, SPIN `spif:` |
 | **Placetime** | (inside `holos-server`) | URIs for calendar intervals, instants and points, each described in RDF from the URI alone |
 

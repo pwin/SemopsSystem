@@ -7,7 +7,7 @@ install worked.
 | Option | What you get | Choose it for |
 |---|---|---|
 | [From source](#from-source) | All five commands: `holos`, `holos-server`, `semops`, `shacl`, `tarka` | A workstation or build server with Rust, and the newest version |
-| [A container image](#container) | `holos-server`, `holos` and `semops` in one image | Servers, Kubernetes, Azure |
+| [A container image](#container) | `semops`, with `holos-server`, `holos`, `shacl` and `tarka` as links to it | Servers, Kubernetes, Azure |
 | [Python](#python) | The store, the validator and the mapper as Python modules | Notebooks, scripts, data platforms |
 | [JavaScript and WebAssembly](#javascript) | The store and the validator for Node and the browser | Web applications, editors |
 | [Release binaries](#release-binaries) | Each engine's commands, prebuilt | A machine with no Rust toolchain |
@@ -93,9 +93,9 @@ shacl 0.29.0
 
 ## A container image {#container}
 
-The image holds `holos-server`, `holos` and `semops`, runs the server as a non-root user
-(uid 10001), and keeps its store in the volume `/var/lib/holos`. Build it from the
-workspace root:
+The image holds the one `semops` binary, with `holos-server`, `holos`, `shacl` and `tarka`
+as links to it. It runs the server as a non-root user (uid 10001), and keeps its store in
+the volume `/var/lib/holos`. Build it from the workspace root:
 
 ```sh
 docker build -f holos/deploy/Dockerfile -t semops:0.29.0 .

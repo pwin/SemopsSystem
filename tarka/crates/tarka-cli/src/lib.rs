@@ -1,0 +1,739 @@
+//! The `tarka` command.
+
+use holos_engine::{oxrdf, oxrdfio};
+#[cfg(feature = "gsp")]
+mod gsp;
+
+use std::collections::{HashMap, HashSet};
+use std::ffi::OsString;
+use std::fmt;
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+use anyhow::{Context, Result, bail};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use oxrdf::{NamedNode, Triple};
+use tarka::core::PrefixMap;
+use tarka::io::{CsvOptions, CsvSource, OutputFormat, OutputOptions, RdfWriter, Split, TripleSink};
+use tarka::ottr::{CompileOptions, Library};
+use tarka::{Plan, RunOptions, RunStats};
+
+#[derive(Parser)]
+#[command(name = "tarka", version, about = "Turn CSV into RDF with TARQL queries or OTTR templates")]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)] // parsed once per run
+enum Command {
+    /// Map a CSV file to RDF with a TARQL query (-q) or an OTTR template (-l … -T …)
+    Run(RunArgs),
+    /// Expand OTTR instances (stOTTR files) to RDF, as Lutra does
+    Expand(ExpandArgs),
+    /// Write SHACL shapes for the RDF a mapping makes
+    Shapes(ShapesArgs),
+    /// Check OTTR template libraries: undefined templates, arity, types, cycles …
+    Lint(LintArgs),
+    /// Run bOTTR instance maps: OTTR templates over CSV (H2's CSVREAD) and RDF files
+    Bottr(BottrArgs),
+}
+
+/// The mapping: a TARQL query, or OTTR templates.
+#[derive(Args)]
+struct MappingArgs {
+    /// A TARQL query (SPARQL CONSTRUCT)
+    #[arg(short, long, conflicts_with_all = ["library", "template"])]
+    query: Option<PathBuf>,
+    /// An OTTR template file or directory (repeat for more)
+    #[arg(short, long, requires = "template", action = clap::ArgAction::Append)]
+    library: Vec<PathBuf>,
+    /// A root template, by IRI or prefixed name; its parameters are CSV columns.
+    /// Repeat it to instantiate several templates for every row.
+    #[arg(short = 'T', long, requires = "library", action = clap::ArgAction::Append)]
+    template: Vec<String>,
+    /// The cells of a list-typed parameter are split on SEPARATOR
+    #[arg(long, num_args = 2, value_names = ["COLUMN", "SEPARATOR"], action = clap::ArgAction::Append)]
+    list: Vec<String>,
+    /// The cells of a parameter are strings in language TAG (needed for rdf:langString)
+    #[arg(long, num_args = 2, value_names = ["COLUMN", "TAG"], requires = "template", action = clap::ArgAction::Append)]
+    lang: Vec<String>,
+}
+
+#[derive(Args)]
+struct RunArgs {
+    #[command(flatten)]
+    mapping: MappingArgs,
+    #[command(flatten)]
+    csv: CsvArgs,
+    #[command(flatten)]
+    output: OutputArgs,
+    #[command(flatten)]
+    load: LoadArgs,
+    #[cfg(feature = "shacl")]
+    #[command(flatten)]
+    check: CheckArgs,
+    /// Records to evaluate together
+    #[arg(long, default_value_t = 512)]
+    batch_size: usize,
+    /// Batches to work on at once (0: one per CPU)
+    #[arg(long, default_value_t = 0)]
+    jobs: usize,
+    /// Print what was read and made to standard error
+    #[arg(long)]
+    stats: bool,
+}
+
+/// CSV options, as oxi-gen names them.
+#[derive(Args)]
+struct CsvArgs {
+    /// The input: a CSV file, or a Parquet or Arrow IPC file (default: the file the query names with FROM, else standard input)
+    #[arg(short, long)]
+    input: Option<PathBuf>,
+    /// The field delimiter
+    #[arg(short, long, default_value = ",", conflicts_with = "tab")]
+    delimiter: String,
+    /// Fields are tab-separated
+    #[arg(short, long)]
+    tab: bool,
+    /// The escape character inside quoted fields
+    #[arg(short = 'p', long, alias = "escape_char", default_value = "\\")]
+    escape_char: String,
+    /// The quote character
+    #[arg(long, alias = "quote_char", default_value = "\"")]
+    quote_char: String,
+    /// Upper-case the column names
+    #[arg(short, long)]
+    normalize: bool,
+    /// The file has no header row: columns are a…z, A…Z
+    #[arg(short = 'H', long)]
+    no_header_row: bool,
+    /// Repeat each row once per part of column ORIGINAL split on DELIMITER, with the part in column SPLIT
+    #[arg(long, num_args = 3, value_names = ["ORIGINAL", "SPLIT", "DELIMITER"], action = clap::ArgAction::Append)]
+    split: Vec<String>,
+    /// Bind empty cells as empty strings instead of leaving them unbound
+    #[arg(long, alias = "bind_empty_strings")]
+    bind_empty_strings: bool,
+    /// Read only the first N rows, to try a mapping on a small sample (5 when N is not given)
+    #[arg(long, value_name = "N", num_args = 0..=1, default_missing_value = "5")]
+    test: Option<u64>,
+}
+
+#[derive(Args)]
+struct OutputArgs {
+    /// The output file (default: standard output)
+    #[arg(short, long)]
+    output: Option<PathBuf>,
+    /// The output format
+    #[arg(long, value_enum)]
+    format: Option<Format>,
+    /// Write N-Triples (the same as --format ntriples)
+    #[arg(long)]
+    ntriples: bool,
+    /// Put every triple in this named graph (N-Quads output; with --post, the graph to load into)
+    #[arg(long)]
+    graph: Option<String>,
+    /// Compress the output file with gzip
+    #[arg(short, long)]
+    gzip: bool,
+    /// Remove duplicate triples across rows, within a window of N distinct triples (1000 when N
+    /// is not given). Without --dedup, duplicates are removed within each row only
+    #[arg(long, value_name = "N", num_args = 0..=1, default_missing_value = "1000")]
+    dedup: Option<usize>,
+}
+
+/// Loading the output into a store with the SPARQL Graph Store Protocol, instead of
+/// writing it.
+#[derive(Args)]
+struct LoadArgs {
+    /// Load the output into a store: POST it to this Graph Store Protocol endpoint (HOLOS:
+    /// http://127.0.0.1:7878/graph). --graph names the graph, else the default graph.
+    #[cfg(feature = "gsp")]
+    #[arg(long, value_name = "ENDPOINT", conflicts_with_all = ["output", "format", "ntriples", "gzip"])]
+    post: Option<String>,
+    /// Replace the graph (PUT) instead of adding to it (POST)
+    #[cfg(feature = "gsp")]
+    #[arg(long, requires = "post")]
+    replace: bool,
+    /// Send this HTTP header with the request, as "Name: value" (repeat for more)
+    #[cfg(feature = "gsp")]
+    #[arg(long, value_name = "HEADER", requires = "post", action = clap::ArgAction::Append)]
+    header: Vec<String>,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Format {
+    Turtle,
+    Ntriples,
+    Nquads,
+}
+
+/// Validation of the output with SHACL. The output is written either way; if it does
+/// not conform, tarka exits with status 3.
+#[cfg(feature = "shacl")]
+#[derive(Args)]
+struct CheckArgs {
+    /// Validate the output against the shapes made from the mapping (as `tarka shapes` writes them)
+    #[arg(long)]
+    validate: bool,
+    /// Validate the output against the SHACL shapes in FILE (repeat for more; with --validate, as well)
+    #[arg(long, value_name = "FILE", action = clap::ArgAction::Append)]
+    shapes: Vec<PathBuf>,
+    /// Write the SHACL validation report to FILE, in Turtle
+    #[arg(long, value_name = "FILE")]
+    report: Option<PathBuf>,
+    /// Validate against a --shapes file that declares no shapes, instead of refusing to
+    #[arg(long)]
+    allow_no_shapes: bool,
+}
+
+#[derive(Args)]
+struct ExpandArgs {
+    /// An OTTR template file or directory (repeat for more)
+    #[arg(short, long, required = true, action = clap::ArgAction::Append)]
+    library: Vec<PathBuf>,
+    /// stOTTR files with instances
+    #[arg(required = true)]
+    instances: Vec<PathBuf>,
+    #[command(flatten)]
+    output: OutputArgs,
+    #[command(flatten)]
+    load: LoadArgs,
+}
+
+#[derive(Args)]
+struct ShapesArgs {
+    #[command(flatten)]
+    mapping: MappingArgs,
+    /// The output file (default: standard output)
+    #[arg(short, long)]
+    output: Option<PathBuf>,
+    /// The namespace of the shapes' IRIs
+    #[arg(long, default_value = "urn:tarka:shapes:")]
+    base: String,
+}
+
+#[derive(Args)]
+struct BottrArgs {
+    /// An OTTR template file or directory (repeat for more)
+    #[arg(short, long, required = true, action = clap::ArgAction::Append)]
+    library: Vec<PathBuf>,
+    /// bOTTR files (Turtle) with instance maps
+    #[arg(required = true)]
+    maps: Vec<PathBuf>,
+    #[command(flatten)]
+    output: OutputArgs,
+    #[command(flatten)]
+    load: LoadArgs,
+    /// Print what was read and made to standard error
+    #[arg(long)]
+    stats: bool,
+}
+
+#[derive(Args)]
+struct LintArgs {
+    /// An OTTR template file or directory (repeat for more)
+    #[arg(short, long, required = true, action = clap::ArgAction::Append)]
+    library: Vec<PathBuf>,
+    /// Report errors only
+    #[arg(long)]
+    errors_only: bool,
+    /// Fail on warnings too
+    #[arg(long, conflicts_with = "errors_only")]
+    deny_warnings: bool,
+}
+
+/// The output was written, but does not conform to the shapes.
+#[derive(Debug)]
+struct NotConforming(usize);
+
+impl fmt::Display for NotConforming {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = if self.0 == 1 { "" } else { "s" };
+        write!(f, "the output does not conform to the shapes ({} result{s})", self.0)
+    }
+}
+
+impl std::error::Error for NotConforming {}
+
+/// The `tarka` command, given its arguments as the operating system passed them, program
+/// name first. `tarka`'s own binary calls this, and so does `semops map`.
+pub fn main_with(args: impl IntoIterator<Item = OsString>) -> ExitCode {
+    match Cli::parse_from(optional_values_last(args.into_iter().collect())).command.run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("tarka: {e:#}");
+            if e.downcast_ref::<NotConforming>().is_some() { ExitCode::from(3) } else { ExitCode::FAILURE }
+        }
+    }
+}
+
+/// Moves an option whose value may be left out (`--dedup`, `--test`) to the end of the
+/// command line when the word after it is not its value, so that options and file names can
+/// come in any order: clap would read the file name in `expand --dedup instances.stottr` as
+/// the number, where at the end the option takes its default. (Each such option takes a
+/// count, so a word of digits is its value.)
+fn optional_values_last(args: Vec<OsString>) -> Vec<OsString> {
+    use clap::CommandFactory;
+    let cli = Cli::command();
+    let Some(sub) = args.get(1).and_then(|a| a.to_str()).and_then(|s| cli.find_subcommand(s)) else { return args };
+    // after `--` every word is a file name
+    if args.iter().any(|a| a == "--") {
+        return args;
+    }
+    let optional: Vec<&str> = sub
+        .get_arguments()
+        .filter(|a| a.get_num_args().is_some_and(|n| n.min_values() == 0 && n.max_values() == 1))
+        .filter_map(|a| a.get_long())
+        .collect();
+    let count = |w: &OsString| w.to_str().is_some_and(|w| !w.is_empty() && w.bytes().all(|b| b.is_ascii_digit()));
+    let (mut out, mut last) = (Vec::with_capacity(args.len()), Vec::new());
+    let mut words = args.into_iter().peekable();
+    while let Some(word) = words.next() {
+        let optional = word.to_str().and_then(|w| w.strip_prefix("--")).is_some_and(|name| optional.contains(&name));
+        let before_a_word = words.peek().is_some_and(|next| !next.to_string_lossy().starts_with('-') && !count(next));
+        if optional && before_a_word { last.push(word) } else { out.push(word) }
+    }
+    out.extend(last);
+    out
+}
+
+impl Command {
+    fn run(self) -> Result<()> {
+        match self {
+            Self::Run(args) => run(args),
+            Self::Expand(args) => expand(args),
+            Self::Shapes(args) => shapes(args),
+            Self::Lint(args) => lint(args),
+            Self::Bottr(args) => bottr(args),
+        }
+    }
+}
+
+fn run(args: RunArgs) -> Result<()> {
+    let plan = mapping(&args.mapping)?;
+    let input = args.csv.input.clone().or_else(|| plan.default_input.as_ref().map(PathBuf::from));
+    #[cfg(feature = "polars")]
+    if let Some(path) = input.as_deref().filter(|p| tarka_polars::is_frame_file(p)) {
+        return run_frame(&args, &plan, path);
+    }
+    let reader: Box<dyn Read> = match &input {
+        Some(p) if p.as_os_str() != "-" => Box::new(File::open(p).with_context(|| format!("cannot open {}", p.display()))?),
+        _ => Box::new(io::stdin().lock()),
+    };
+    let source = CsvSource::new(io::BufReader::with_capacity(1 << 16, reader), csv_options(&args.csv)?)?;
+    let columns = source.columns().to_vec();
+    let options = RunOptions { batch_size: args.batch_size, jobs: args.jobs };
+    write_output(&args, &plan, |sink| Ok(tarka::run(&plan, &columns, source, sink, &options, &mut report_left_out)?))
+}
+
+/// A Parquet or Arrow IPC input, read with Polars.
+#[cfg(feature = "polars")]
+fn run_frame(args: &RunArgs, plan: &Plan, path: &Path) -> Result<()> {
+    if !args.csv.split.is_empty() {
+        bail!("--split applies to CSV input; in a data frame, use a list column");
+    }
+    let mut df = tarka_polars::read_frame(path).with_context(|| path.display().to_string())?;
+    if let Some(n) = args.csv.test {
+        df = df.head(Some(n as usize));
+    }
+    let options = RunOptions { batch_size: args.batch_size, jobs: args.jobs };
+    let frame = tarka_polars::FrameOptions { bind_empty_strings: args.csv.bind_empty_strings };
+    write_output(args, plan, |sink| Ok(tarka_polars::run_frame(plan, &df, &frame, sink, &options, &mut report_left_out)?))
+}
+
+fn report_left_out(reason: String) {
+    eprintln!("tarka: left out: {reason}");
+}
+
+/// Runs `body` with the output as its sink, keeping a copy of the triples to validate
+/// when asked to. Rows left out make it fail once the output is written, as in bOTTR.
+fn write_output(args: &RunArgs, plan: &Plan, body: impl FnOnce(&mut dyn TripleSink) -> Result<RunStats>) -> Result<()> {
+    // the shapes are read first, so that a mistake in them is found before the run
+    #[cfg(feature = "shacl")]
+    let check = Check::new(&args.check, plan)?;
+    #[cfg(not(feature = "shacl"))]
+    let check: Option<Check> = None;
+    let mut out = Output::open(&args.output, &args.load, &plan.prefixes)?;
+    let mut tee = Tee { out: out.sink(), kept: check.is_some().then(HashSet::new) };
+    let result = body(&mut tee);
+    let kept = tee.kept.take();
+    let stats = match result {
+        Ok(stats) => stats,
+        Err(e) => return Err(out.abandon(e)),
+    };
+    let written = out.written();
+    let answer = out.complete()?;
+    if args.stats {
+        eprintln!("{} records, {} solutions, {} triples made, {written} written", stats.records, stats.solutions, stats.triples);
+        if let Some(answer) = answer {
+            eprintln!("{answer}");
+        }
+    }
+    let validated = match (check, kept) {
+        (Some(check), Some(kept)) => check.validate(plan, &kept),
+        _ => Ok(()),
+    };
+    if stats.left_out > 0 {
+        // an incomplete output is the first thing to fix, but the shapes' answer is still said
+        if let Err(e) = validated {
+            eprintln!("tarka: {e:#}");
+        }
+        bail!("{}", left_out_summary(stats.left_out, stats.records, "row"));
+    }
+    validated
+}
+
+/// What a run that left some out says last: `1 of 3 rows left out`.
+fn left_out_summary(left_out: u64, total: u64, what: &str) -> String {
+    let s = if total == 1 { "" } else { "s" };
+    let nothing = if left_out == total { "; nothing was made" } else { "" };
+    format!("{left_out} of {total} {what}{s} left out{nothing}")
+}
+
+/// Where the output goes: a file (or standard output), or a store.
+enum Output {
+    /// A file is written under another name beside its path, and moved there once the
+    /// run is complete: a run that fails leaves no part of a file, and an earlier file
+    /// as it was. (The writer is dropped first, closing the file.)
+    File(RdfWriter<Box<dyn Write>>, Option<Pending>),
+    #[cfg(feature = "gsp")]
+    Store(gsp::Upload),
+}
+
+/// A file being written under another name, and the path it goes to once complete.
+/// Dropped before then, it is removed.
+struct Pending {
+    temp: PathBuf,
+    path: PathBuf,
+}
+
+impl Pending {
+    fn new(path: &Path) -> Self {
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        Self { temp: path.with_file_name(format!(".{name}.tarka-{}.tmp", std::process::id())), path: path.to_owned() }
+    }
+
+    fn commit(self) -> Result<()> {
+        std::fs::rename(&self.temp, &self.path).with_context(|| format!("cannot write {}", self.path.display()))
+    }
+}
+
+impl Drop for Pending {
+    fn drop(&mut self) {
+        // after a commit there is nothing left to remove
+        let _ = std::fs::remove_file(&self.temp);
+    }
+}
+
+impl Output {
+    fn open(output: &OutputArgs, load: &LoadArgs, prefixes: &PrefixMap) -> Result<Self> {
+        #[cfg(feature = "gsp")]
+        if let Some(endpoint) = &load.post {
+            let url = gsp::graph_url(endpoint, output.graph.as_deref());
+            return Ok(Self::Store(gsp::Upload::start(url, load.replace, &load.header, output.dedup.unwrap_or(0))?));
+        }
+        #[cfg(not(feature = "gsp"))]
+        let _ = load;
+        let options = output_options(output)?;
+        let Some(path) = output.output.as_deref().filter(|p| p.as_os_str() != "-") else {
+            return Ok(Self::File(RdfWriter::create(None, prefixes, options)?, None));
+        };
+        let pending = Pending::new(path);
+        let writer =
+            RdfWriter::create(Some(&pending.temp), prefixes, options).with_context(|| format!("cannot write {}", path.display()))?;
+        Ok(Self::File(writer, Some(pending)))
+    }
+
+    fn sink(&mut self) -> &mut dyn TripleSink {
+        match self {
+            Self::File(w, _) => w,
+            #[cfg(feature = "gsp")]
+            Self::Store(u) => u,
+        }
+    }
+
+    fn written(&self) -> u64 {
+        match self {
+            Self::File(w, _) => w.written(),
+            #[cfg(feature = "gsp")]
+            Self::Store(u) => u.written(),
+        }
+    }
+
+    /// Finishes the file and moves it to its path, or waits for the store to take the
+    /// output; what the store answered.
+    fn complete(self) -> Result<Option<String>> {
+        match self {
+            Self::File(w, pending) => {
+                // closed before it is moved, which also ends a gzip stream
+                drop(w.into_inner()?);
+                pending.map(Pending::commit).transpose()?;
+                Ok(None)
+            }
+            #[cfg(feature = "gsp")]
+            Self::Store(u) => u.complete().map(Some),
+        }
+    }
+
+    /// After a failed run: the error to report (a store's refusal rather than a broken
+    /// pipe), with nothing loaded and no file written.
+    fn abandon(self, e: anyhow::Error) -> anyhow::Error {
+        match self {
+            Self::File(..) => e,
+            #[cfg(feature = "gsp")]
+            Self::Store(u) => u.abandon(e),
+        }
+    }
+}
+
+/// Writes rows to `out`, keeping the triples too when `kept` is set.
+struct Tee<'a> {
+    out: &'a mut dyn TripleSink,
+    kept: Option<HashSet<Triple>>,
+}
+
+impl TripleSink for Tee<'_> {
+    fn row(&mut self, triples: Vec<Triple>) -> io::Result<()> {
+        if let Some(kept) = &mut self.kept {
+            kept.extend(triples.iter().cloned());
+        }
+        self.out.row(triples)
+    }
+
+    fn finish(&mut self) -> io::Result<()> {
+        self.out.finish()
+    }
+}
+
+/// The shapes to validate the output against.
+#[cfg(feature = "shacl")]
+struct Check {
+    shapes: Vec<Triple>,
+    report: Option<PathBuf>,
+}
+
+/// Without SHACL_Engine there is nothing to validate with.
+#[cfg(not(feature = "shacl"))]
+enum Check {}
+
+#[cfg(not(feature = "shacl"))]
+impl Check {
+    fn validate(self, _: &Plan, _: &HashSet<Triple>) -> Result<()> {
+        match self {}
+    }
+}
+
+#[cfg(feature = "shacl")]
+impl Check {
+    fn new(args: &CheckArgs, plan: &Plan) -> Result<Option<Self>> {
+        if !args.validate && args.shapes.is_empty() && args.report.is_none() {
+            return Ok(None);
+        }
+        let mut shapes = Vec::new();
+        if args.validate || args.shapes.is_empty() {
+            shapes.extend(tarka_shacl::shapes(plan, &Default::default()).triples());
+        }
+        for path in &args.shapes {
+            let file = read_rdf(path).with_context(|| format!("cannot read the shapes in {}", path.display()))?;
+            // A file that declares no shapes checks nothing, and the output would be said to
+            // conform: most likely it is the wrong file. (One that cannot be compiled on its
+            // own, for want of another file, is left to the validation to judge.)
+            if !args.allow_no_shapes && matches!(tarka_shacl::count_shapes(&file), Ok(0)) {
+                bail!(
+                    "{} declares no shapes, so it would check nothing, and the output would be said to conform; \
+                     check that it is the file you meant, or pass --allow-no-shapes",
+                    path.display()
+                );
+            }
+            shapes.extend(file);
+        }
+        Ok(Some(Self { shapes, report: args.report.clone() }))
+    }
+
+    fn validate(self, plan: &Plan, data: &HashSet<Triple>) -> Result<()> {
+        let v = tarka_shacl::validate(data, &self.shapes)?;
+        if let Some(path) = &self.report {
+            let mut prefixes = plan.prefixes.clone();
+            prefixes.insert("sh", tarka_shacl::SH);
+            let options = OutputOptions { window: usize::MAX, ..OutputOptions::default() };
+            let mut out = RdfWriter::create(Some(path), &prefixes, options).with_context(|| path.display().to_string())?;
+            out.row(v.report.iter().map(|t| t.into_owned()).collect())?;
+            out.finish()?;
+        }
+        if v.conforms {
+            return Ok(());
+        }
+        let mut prefixes = plan.prefixes.clone();
+        prefixes.insert_if_absent("sh", tarka_shacl::SH);
+        prefixes.insert_if_absent("xsd", "http://www.w3.org/2001/XMLSchema#");
+        let iri = |iri: &str| prefixes.compact(iri).unwrap_or_else(|| format!("<{iri}>"));
+        // a term as in N-Triples, with its IRIs shortened
+        let short = |t: &str| match t.strip_prefix('<').and_then(|t| t.strip_suffix('>')) {
+            Some(i) => iri(i),
+            None => match t.rsplit_once("^^<") {
+                Some((lexical, dt)) if t.starts_with('"') => format!("{lexical}^^{}", iri(dt.trim_end_matches('>'))),
+                _ => t.to_owned(),
+            },
+        };
+        for f in v.findings.iter().take(10) {
+            let path = f.path.as_deref().map(|p| format!(" {}", short(p))).unwrap_or_default();
+            let value = f.value.as_deref().map(|v| format!(": {}", short(v))).unwrap_or_default();
+            eprintln!("  {}{path} {}{value}", short(&f.focus_node), short(&f.component));
+        }
+        if v.findings.len() > 10 {
+            eprintln!(
+                "  … and {} more{}",
+                v.findings.len() - 10,
+                if self.report.is_some() { " (see the report)" } else { " (see --report)" }
+            );
+        }
+        Err(NotConforming(v.findings.len()).into())
+    }
+}
+
+/// The triples in an RDF file, in the format its extension names (Turtle if none).
+#[cfg(feature = "shacl")]
+fn read_rdf(path: &Path) -> Result<Vec<Triple>> {
+    use oxrdfio::{RdfFormat, RdfParser};
+    let format = path.extension().and_then(|e| e.to_str()).and_then(RdfFormat::from_extension).unwrap_or(RdfFormat::Turtle);
+    let file = File::open(path)?;
+    let mut out = Vec::new();
+    for quad in RdfParser::from_format(format).for_reader(io::BufReader::new(file)) {
+        let quad = quad?;
+        out.push(Triple::new(quad.subject, quad.predicate, quad.object));
+    }
+    Ok(out)
+}
+
+fn mapping(args: &MappingArgs) -> Result<Plan> {
+    if let Some(q) = &args.query {
+        let text = std::fs::read_to_string(q).with_context(|| format!("cannot read {}", q.display()))?;
+        return tarka::tarql::parse_tarql(&text, &stem(q)).with_context(|| q.display().to_string());
+    }
+    if args.template.is_empty() {
+        bail!("give a TARQL query (-q) or a library and a template (-l … -T …)");
+    }
+    let lib = Library::load(&args.library)?;
+    let lists: HashMap<String, String> = args.list.chunks(2).map(|c| (c[0].clone(), c[1].clone())).collect();
+    let languages: HashMap<String, String> = args.lang.chunks(2).map(|c| (c[0].clone(), c[1].clone())).collect();
+    let roots: Vec<&str> = args.template.iter().map(String::as_str).collect();
+    Ok(tarka::ottr::compile_many(&lib, &roots, &CompileOptions { given: false, lists, languages })?)
+}
+
+fn expand(args: ExpandArgs) -> Result<()> {
+    let mut lib = Library::load(&args.library)?;
+    let mut instances = Vec::new();
+    for path in &args.instances {
+        let text = std::fs::read_to_string(path).with_context(|| format!("cannot read {}", path.display()))?;
+        let doc = tarka::ottr::parse_stottr(&text, &path.display().to_string())?;
+        for (p, ns) in doc.prefixes.iter() {
+            lib.prefixes.insert_if_absent(p, ns);
+        }
+        instances.extend(doc.instances);
+    }
+    let mut out = Output::open(&args.output, &args.load, &lib.prefixes)?;
+    if let Err(e) = tarka::expand_instances(&lib, &instances, out.sink()) {
+        return Err(out.abandon(e.into()));
+    }
+    out.complete()?;
+    Ok(())
+}
+
+fn shapes(args: ShapesArgs) -> Result<()> {
+    NamedNode::new(args.base.as_str()).with_context(|| format!("--base {}", args.base))?;
+    let plan = mapping(&args.mapping)?;
+    let text = tarka_shacl::shapes(&plan, &tarka_shacl::ShapeOptions { base: args.base }).to_turtle();
+    match &args.output {
+        Some(p) if p.as_os_str() != "-" => std::fs::write(p, text).with_context(|| format!("cannot write {}", p.display()))?,
+        _ => io::stdout().lock().write_all(text.as_bytes())?,
+    }
+    Ok(())
+}
+
+fn bottr(args: BottrArgs) -> Result<()> {
+    let lib = Library::load(&args.library)?;
+    let maps = tarka_bottr::load_all(&args.maps)?;
+    let mut prefixes = lib.prefixes.clone();
+    for m in &maps {
+        for (p, ns) in m.prefixes.iter() {
+            prefixes.insert_if_absent(p, ns);
+        }
+    }
+    let mut out = Output::open(&args.output, &args.load, &prefixes)?;
+    let result = tarka_bottr::run(&lib, &maps, out.sink(), &mut |reason| eprintln!("tarka: left out: {reason}"));
+    let stats = match result {
+        Ok(stats) => stats,
+        Err(e) => return Err(out.abandon(e.into())),
+    };
+    let answer = out.complete()?;
+    if args.stats {
+        eprintln!("{} rows, {} instances made, {} left out, {} triples made", stats.rows, stats.instances, stats.dropped, stats.triples);
+        if let Some(answer) = answer {
+            eprintln!("{answer}");
+        }
+    }
+    if stats.dropped > 0 {
+        bail!("{}", left_out_summary(stats.dropped, stats.dropped + stats.instances, "instance"));
+    }
+    Ok(())
+}
+
+fn lint(args: LintArgs) -> Result<()> {
+    use tarka::ottr::lint::Severity;
+    let lib = Library::load(&args.library)?;
+    let findings = tarka::ottr::lint::lint(&lib);
+    let mut out = io::stdout().lock();
+    for f in findings.iter().filter(|f| !args.errors_only || f.severity == Severity::Error) {
+        writeln!(out, "{f}")?;
+    }
+    let errors = findings.iter().filter(|f| f.severity == Severity::Error).count();
+    let warnings = findings.len() - errors;
+    let templates = lib.templates().filter(|t| !Library::is_triple(&t.iri)).count();
+    let plural = |n: usize, what: &str| format!("{n} {what}{}", if n == 1 { "" } else { "s" });
+    eprintln!("{}: {}, {}", plural(templates, "template"), plural(errors, "error"), plural(warnings, "warning"));
+    if errors > 0 || (args.deny_warnings && warnings > 0) {
+        bail!("the library has {}", if errors > 0 { plural(errors, "error") } else { plural(warnings, "warning") });
+    }
+    Ok(())
+}
+
+fn csv_options(a: &CsvArgs) -> Result<CsvOptions> {
+    let byte = |s: &str, what: &str| -> Result<u8> {
+        match s.as_bytes() {
+            [b] => Ok(*b),
+            _ => bail!("the {what} must be a single ASCII character"),
+        }
+    };
+    Ok(CsvOptions {
+        delimiter: if a.tab { b'\t' } else { byte(&a.delimiter, "delimiter")? },
+        quote: byte(&a.quote_char, "quote character")?,
+        escape: Some(byte(&a.escape_char, "escape character")?),
+        has_headers: !a.no_header_row,
+        normalize_headers: a.normalize,
+        bind_empty_strings: a.bind_empty_strings,
+        splits: a.split.chunks(3).map(|c| Split { column: c[0].clone(), name: c[1].clone(), separator: c[2].clone() }).collect(),
+        limit: a.test,
+    })
+}
+
+fn output_options(a: &OutputArgs) -> Result<OutputOptions> {
+    let graph = a.graph.as_ref().map(|g| NamedNode::new(g.as_str())).transpose().context("--graph")?;
+    let format = match (a.format, a.ntriples, &graph) {
+        (Some(Format::Turtle), _, _) => OutputFormat::Turtle,
+        (Some(Format::Ntriples), _, _) | (None, true, None) => OutputFormat::NTriples,
+        (Some(Format::Nquads), _, _) | (None, _, Some(_)) => OutputFormat::NQuads,
+        (None, false, None) => OutputFormat::Turtle,
+    };
+    if format == OutputFormat::NQuads && graph.is_none() {
+        bail!("N-Quads output needs --graph");
+    }
+    Ok(OutputOptions { format, window: a.dedup.unwrap_or(0), gzip: a.gzip, graph })
+}
+
+fn stem(p: &Path) -> String {
+    p.file_stem().map_or_else(|| "query".into(), |s| s.to_string_lossy().into_owned())
+}

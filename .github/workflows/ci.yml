@@ -128,8 +128,9 @@ jobs:
 
   # The rust-version every crate declares. A dependency update that needs a newer compiler
   # fails here rather than in someone's build. There are two floors: 1.90 for the workspace,
-  # and 1.95 for tarka's Polars input and the two crates built on it, because polars 0.55
-  # needs sysinfo 0.39 and every sysinfo 0.39 release needs Rust 1.95.
+  # and 1.95 for tarka's Polars input and the crates built on it (tarka-cli, tarka-python,
+  # and semops, which links tarka-cli for `semops map`), because polars 0.55 needs
+  # sysinfo 0.39 and every sysinfo 0.39 release needs Rust 1.95.
   msrv:
     name: msrv (${{ matrix.toolchain }})
     strategy:
@@ -137,7 +138,7 @@ jobs:
       matrix:
         include:
           - toolchain: "1.90"
-            args: --workspace --exclude tarka-polars --exclude tarka-cli --exclude tarka-python --exclude holos-python --exclude shacl-python
+            args: --workspace --exclude tarka-polars --exclude tarka-cli --exclude semops --exclude tarka-python --exclude holos-python --exclude shacl-python
           - toolchain: "1.95"
             args: ""
     runs-on: ubuntu-latest

@@ -3,7 +3,8 @@ name = "semops"
 description = "The SemOps System command"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+# tarka-cli, for `semops map`, needs 1.95 (Polars), and the command links it.
+rust-version = "1.95"
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
@@ -14,6 +15,15 @@ path = "src/main.rs"
 
 [dependencies]
 semops-checks.workspace = true
+# The engines' commands, as libraries: `semops serve`, `query`, `validate`, `map` and the
+# rest run the same code as holos-server, holos, shacl and tarka.
+holos-cli.workspace = true
+holos-server.workspace = true
+shacl-cli.workspace = true
+tarka-cli.workspace = true
+# `src/alloc.rs` of holos-server, compiled in here, counts through holos_engine::memory.
+holos-engine.workspace = true
+mimalloc = { version = "0.1", default-features = false }
 anyhow.workspace = true
 clap.workspace = true
 csv.workspace = true

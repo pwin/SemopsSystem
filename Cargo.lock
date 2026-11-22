@@ -3959,8 +3959,14 @@ dependencies = [
  "anyhow",
  "clap",
  "csv",
+ "holos-cli",
+ "holos-engine",
+ "holos-server",
+ "mimalloc",
  "semops-checks",
  "serde_json",
+ "shacl-cli",
+ "tarka-cli",
 ]
 
 [[package]]
