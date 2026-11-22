@@ -88,6 +88,18 @@ def browser() -> str:
     sys.exit("printing the PDF needs Microsoft Edge or Chromium; set BROWSER to one")
 
 
+def headless(exe: str, profile: Path, *args: str, timeout: int) -> None:
+    """Run the browser headless on a page this script wrote. On Linux the browser's sandbox
+    needs unprivileged user namespaces, which Ubuntu's AppArmor policy refuses it, so it runs
+    without one there: it only ever opens these local pages."""
+    cmd = [exe, "--headless", "--disable-gpu", "--no-first-run", f"--user-data-dir={profile}"]
+    if sys.platform.startswith("linux"):
+        cmd.append("--no-sandbox")
+    run = subprocess.run([*cmd, *args], capture_output=True, text=True, timeout=timeout)
+    if run.returncode != 0:
+        sys.exit(f"{Path(exe).name} failed ({run.returncode}): {run.stderr.strip()[-2000:]}")
+
+
 def no_highlighting() -> str:
     """pandoc 3.8 renamed `--no-highlight`; older ones know only the old name."""
     out = subprocess.run([pandoc(), "--version"], capture_output=True, text=True).stdout
@@ -247,11 +259,8 @@ def build_cover(out: Path, ver: str) -> Path | None:
         page_.write_text(COVER.format(
             logo=(HERE / "assets" / "semantechs-logo.png").as_uri(),
             subtitle=html.escape(SUBTITLE), ver=ver), encoding="utf-8")
-        subprocess.run(
-            [exe, "--headless", "--disable-gpu", "--no-first-run", f"--user-data-dir={Path(tmp) / 'p'}",
-             "--hide-scrollbars", "--window-size=1600,2400", f"--screenshot={target}", page_.as_uri()],
-            check=True, capture_output=True, timeout=120,
-        )
+        headless(exe, Path(tmp) / "p", "--hide-scrollbars", "--window-size=1600,2400",
+                 f"--screenshot={target}", page_.as_uri(), timeout=120)
     return target if target.exists() else None
 
 
@@ -322,13 +331,8 @@ def build_pdf(chs: list[Chapter], out: Path, ver: str) -> Path:
             body=body, css=(HERE / "assets" / "print.css").as_uri(),
             logo=(HERE / "assets" / "semantechs-logo.png").as_uri(),
         ), encoding="utf-8", newline="\n")
-        profile = Path(tmp) / "profile"
-        subprocess.run(
-            [browser(), "--headless", "--disable-gpu", "--no-first-run",
-             f"--user-data-dir={profile}", "--no-pdf-header-footer",
-             f"--print-to-pdf={target}", doc.as_uri()],
-            check=True, capture_output=True, timeout=300,
-        )
+        headless(browser(), Path(tmp) / "profile", "--no-pdf-header-footer",
+                 f"--print-to-pdf={target}", doc.as_uri(), timeout=300)
     if not target.exists() or target.stat().st_size < 10_000:
         sys.exit("the browser did not write the PDF")
     print(f"PDF: {target}")
