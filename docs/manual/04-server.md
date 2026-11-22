@@ -121,6 +121,44 @@ RDF/XML or JSON-LD by the `Accept` header or an extension (`.ttl`, `.nt`, `.rdf`
 The URIs are minted under `https://` and the host the client named.
 `--placetime-base https://data.example/ref/` mints them under a fixed base instead.
 
+### In gist
+
+The documents describe the URIs as reference.data.gov.uk did, in its intervals vocabulary
+with OWL-Time and SCOVO. `--placetime-vocabulary gist` describes the same URIs in gist
+14.1.0 instead:
+
+```sh
+holos-server --placetime --placetime-vocabulary gist
+curl -s -H 'Host: time.example' http://127.0.0.1:7878/doc/day/1752-09-14.ttl
+```
+
+```{.output}
+<https://time.example/id/day/1752-09-14> a pt:CalendarDay ;
+	skos:prefLabel "British Day:1752-09-14" ;
+	foaf:isPrimaryTopicOf <https://time.example/doc/day/1752-09-14> ;
+	gist:conformsTo ptd:_Calendar_British ;
+	gist:description "Thursday the 14th of September in the British calendar year 1752" ;
+	gist:endDateTime "1752-09-15T00:00:00"^^xsd:dateTime ;
+	gist:hasMagnitude _:a21cb73160ad78154c98aaea0ae1e92d ;
+	gist:isCategorizedBy ptx:_DayOfWeek_Thursday ;
+	gist:isDirectPartOf <https://time.example/id/month/1752-09> , <https://time.example/id/week/1752-W36> ;
+	gist:isMemberOf <https://time.example/id/day> ;
+	gist:isPartOf <https://time.example/id/half/1752-H2> , <https://time.example/id/quarter/1752-Q3> , <https://time.example/id/year/1752> ;
+	gist:precedesDirectly <https://time.example/id/day/1752-09-15> ;
+	gist:startDateTime "1752-09-14T00:00:00"^^xsd:dateTime .
+```
+
+The document starts with its prefixes, and goes on to the day's duration, its neighbours,
+containers and hours, and the document's own formats. Week 36 holds seven days across the
+calendar change, from Monday 31 August to Sunday 17 September.
+
+Every interval is a `gist:TimeInterval` with a start, an end and a duration in seconds.
+Containment is `gist:isDirectPartOf` and `gist:isPartOf`, order is `gist:precedesDirectly`,
+and a point is a `gist:GeoPoint`. The calendar classes, the calendars and the categories
+come from the placetime ontology, which extends gist and adds no properties. It ships in
+`crates/semops-placetime/ontology/` with SHACL shapes that check a description, and gist
+itself beside it. `docs/decisions/0007-placetime-in-gist.md` sets out the model.
+
 ## Running it for real
 
 Run it as a service ([Installing](02-installing.md#service)) or in a container, with

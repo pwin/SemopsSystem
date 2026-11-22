@@ -1,25 +1,34 @@
-//! The RDF each URI is described with: IntervalServer's, term for term, with its bugs fixed.
+//! The RDF each URI is described with: IntervalServer's, term for term, with its bugs fixed,
+//! or the same things in gist ([`gist`]).
 
-use crate::Format;
+mod gist;
+
 use crate::calendar::{Calendar, Duration, Moment, weekday};
 use crate::path::{Aligned, Set, Thing, Unit};
 use crate::place::Point;
 use crate::vocab::{dcterms, dgu, foaf, geo, interval, scv, sf, skos, time, void, wgs84};
+use crate::{Format, Vocabulary};
 use oxrdf::vocab::{rdf, rdfs, xsd};
 use oxrdf::{
     BlankNode, Graph, Literal, NamedNode, NamedNodeRef, NamedOrBlankNodeRef, TermRef, TripleRef,
 };
+use std::collections::HashMap;
 
 pub(crate) struct Builder<'a> {
     base: &'a str,
+    vocabulary: Vocabulary,
     pub(crate) graph: Graph,
+    /// gist durations already in the graph, by length in seconds: one node per length.
+    durations: HashMap<i64, BlankNode>,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(base: &'a str) -> Self {
+    pub(crate) fn new(base: &'a str, vocabulary: Vocabulary) -> Self {
         Self {
             base,
+            vocabulary,
             graph: Graph::new(),
+            durations: HashMap::new(),
         }
     }
 
@@ -29,6 +38,29 @@ impl<'a> Builder<'a> {
 
     fn doc(&self, path: &str) -> NamedNode {
         NamedNode::new_unchecked(format!("{}doc/{path}", self.base))
+    }
+
+    fn aligned_id(&self, a: &Aligned) -> NamedNode {
+        self.id(&format!("{}/{}", a.segment(), a.reference()))
+    }
+
+    fn instant_id(&self, at: Moment) -> NamedNode {
+        self.id(&format!(
+            "gregorian-instant/{}",
+            at.xsd_date_time().unwrap_or_default()
+        ))
+    }
+
+    fn interval_id(&self, start: Moment, duration: &Duration) -> NamedNode {
+        self.id(&format!(
+            "gregorian-interval/{}/{duration}",
+            start.xsd_date_time().unwrap_or_default()
+        ))
+    }
+
+    /// A set's path pattern below `id/`, anchored to the base: `^https://example\.org/id/…$`.
+    fn uri_regex(&self, pattern: &str) -> String {
+        format!("^{}id/{pattern}$", self.base.replace('.', "\\."))
     }
 
     fn add<'b>(
@@ -246,83 +278,135 @@ fn parts(unit: Unit) -> &'static [Unit] {
     }
 }
 
+/// A calendar-aligned interval's label and the sentence describing it, as IntervalServer
+/// worded them.
+fn aligned_text(a: &Aligned) -> (String, String) {
+    let d = a.calendar.date(a.start.day);
+    let cal = a.calendar.name();
+    let year = format!("{:04}", d.year);
+    let comment = match a.unit {
+        Unit::Year => format!("The {cal} calendar year of {year}"),
+        Unit::Half => {
+            let which = if d.month <= 6 { "first" } else { "second" };
+            format!("The {which} half of {cal} calendar year {year}")
+        }
+        Unit::Quarter => {
+            let which = match (d.month - 1) / 3 {
+                0 => "first",
+                1 => "second",
+                2 => "third",
+                _ => "fourth",
+            };
+            format!("The {which} quarter of the {cal} calendar year {year}")
+        }
+        Unit::Month => {
+            format!(
+                "The month of {} in the {cal} calendar year {year}",
+                month_name(d.month)
+            )
+        }
+        Unit::Week => {
+            let (week_year, week) = a.calendar.week_of(a.start.day);
+            format!("Week {week} of the {cal} calendar year {week_year:04}")
+        }
+        Unit::Day => format!(
+            "{} the {} of {} in the {cal} calendar year {year}",
+            weekday_name(a.start.day),
+            ordinal(d.day),
+            month_name(d.month)
+        ),
+        Unit::Hour => format!(
+            "The {} hour of {} the {} {} in the {cal} calendar year {year}",
+            ordinal(a.start.hour() + 1),
+            weekday_name(a.start.day),
+            ordinal(d.day),
+            month_name(d.month)
+        ),
+        Unit::Minute => format!(
+            "The {} minute of {} hour of {} the {} {} of the {cal} calendar year {year}",
+            ordinal(a.start.minute() + 1),
+            ordinal(a.start.hour() + 1),
+            weekday_name(a.start.day),
+            ordinal(d.day),
+            month_name(d.month)
+        ),
+        Unit::Second => format!(
+            "The {} of the {cal} calendar year {year}",
+            second_phrase(a.calendar, a.start)
+        ),
+    };
+    (
+        format!("{cal} {}:{}", a.unit.title(), a.reference()),
+        comment,
+    )
+}
+
+/// An instant's label and description.
+fn instant_text(at: Moment) -> (String, String) {
+    let lexical = at.xsd_date_time().unwrap_or_default();
+    let year = Calendar::Gregorian.date(at.day).year;
+    (
+        format!("Gregorian Instant:{lexical}"),
+        format!(
+            "The instant at start of the {} of the Gregorian calendar year {year:04}",
+            second_phrase(Calendar::Gregorian, at)
+        ),
+    )
+}
+
+/// An interval's label and description.
+fn interval_text(start: Moment, duration: &Duration) -> (String, String) {
+    let reference = format!("{}/{duration}", start.xsd_date_time().unwrap_or_default());
+    let year = Calendar::Gregorian.date(start.day).year;
+    (
+        format!("Gregorian Interval:{reference}"),
+        format!(
+            "An interval of {}beginning at the start of the {} {year:04} in the Gregorian Calendar",
+            duration.phrase(),
+            second_phrase(Calendar::Gregorian, start)
+        ),
+    )
+}
+
+fn point_text(point: &Point) -> String {
+    format!(
+        "The point at latitude {} and longitude {} in the WGS84 datum",
+        point.latitude.as_str(),
+        point.longitude.as_str()
+    )
+}
+
 impl Builder<'_> {
     /// A calendar-aligned interval's types, labels and comment, and nothing else: how an
     /// interval appears when another one's document mentions it.
     fn aligned_labels(&mut self, a: &Aligned) -> NamedNode {
-        let node = self.id(&format!("{}/{}", a.segment(), a.reference()));
+        let node = self.aligned_id(a);
         let (calendar_class, class) = classes(a.unit);
         self.kind(&node, calendar_class);
         self.kind(&node, class);
-        let d = a.calendar.date(a.start.day);
-        let cal = a.calendar.name();
-        let year = format!("{:04}", d.year);
-        let comment = match a.unit {
-            Unit::Year => format!("The {cal} calendar year of {year}"),
-            Unit::Half => {
-                let half = (d.month - 1) / 6 + 1;
-                self.kind(
-                    &node,
-                    if half == 1 {
-                        interval::H1
-                    } else {
-                        interval::H2
-                    },
-                );
-                let which = if half == 1 { "first" } else { "second" };
-                format!("The {which} half of {cal} calendar year {year}")
-            }
-            Unit::Quarter => {
-                let quarter = (d.month - 1) / 3 + 1;
-                let (class, which) = match quarter {
-                    1 => (interval::Q1, "first"),
-                    2 => (interval::Q2, "second"),
-                    3 => (interval::Q3, "third"),
-                    _ => (interval::Q4, "fourth"),
-                };
-                self.kind(&node, class);
-                format!("The {which} quarter of the {cal} calendar year {year}")
-            }
-            Unit::Month => {
-                format!(
-                    "The month of {} in the {cal} calendar year {year}",
-                    month_name(d.month)
-                )
-            }
-            Unit::Week => {
-                let (week_year, week) = a.calendar.week_of(a.start.day);
-                format!("Week {week} of the {cal} calendar year {week_year:04}")
-            }
-            Unit::Day => format!(
-                "{} the {} of {} in the {cal} calendar year {year}",
-                weekday_name(a.start.day),
-                ordinal(d.day),
-                month_name(d.month)
+        let month = a.calendar.date(a.start.day).month;
+        match a.unit {
+            Unit::Half => self.kind(
+                &node,
+                if month <= 6 {
+                    interval::H1
+                } else {
+                    interval::H2
+                },
             ),
-            Unit::Hour => format!(
-                "The {} hour of {} the {} {} in the {cal} calendar year {year}",
-                ordinal(a.start.hour() + 1),
-                weekday_name(a.start.day),
-                ordinal(d.day),
-                month_name(d.month)
+            Unit::Quarter => self.kind(
+                &node,
+                match (month - 1) / 3 {
+                    0 => interval::Q1,
+                    1 => interval::Q2,
+                    2 => interval::Q3,
+                    _ => interval::Q4,
+                },
             ),
-            Unit::Minute => format!(
-                "The {} minute of {} hour of {} the {} {} of the {cal} calendar year {year}",
-                ordinal(a.start.minute() + 1),
-                ordinal(a.start.hour() + 1),
-                weekday_name(a.start.day),
-                ordinal(d.day),
-                month_name(d.month)
-            ),
-            Unit::Second => format!(
-                "The {} of the {cal} calendar year {year}",
-                second_phrase(a.calendar, a.start)
-            ),
-        };
-        self.labels(
-            &node,
-            &format!("{cal} {}:{}", a.unit.title(), a.reference()),
-        );
+            _ => {}
+        }
+        let (label, comment) = aligned_text(a);
+        self.labels(&node, &label);
         self.comment(&node, &comment);
         node
     }
@@ -384,37 +468,23 @@ impl Builder<'_> {
 
     /// An instant on the Gregorian timeline, fully: every interval's beginning and end is one.
     fn instant(&mut self, at: Moment) -> NamedNode {
-        let lexical = at.xsd_date_time().unwrap_or_default();
-        let node = self.id(&format!("gregorian-instant/{lexical}"));
+        let node = self.instant_id(at);
         self.kind(&node, time::INSTANT);
         self.ordinals(&node, Calendar::Gregorian, Unit::Second, at);
-        let year = Calendar::Gregorian.date(at.day).year;
-        self.comment(
-            &node,
-            &format!(
-                "The instant at start of the {} of the Gregorian calendar year {year:04}",
-                second_phrase(Calendar::Gregorian, at)
-            ),
-        );
-        self.labels(&node, &format!("Gregorian Instant:{lexical}"));
+        let (label, comment) = instant_text(at);
+        self.comment(&node, &comment);
+        self.labels(&node, &label);
+        let lexical = at.xsd_date_time().unwrap_or_default();
         self.typed(&node, time::IN_XSD_DATE_TIME, &lexical, xsd::DATE_TIME);
         node
     }
 
     fn interval_labels(&mut self, start: Moment, duration: &Duration) -> NamedNode {
-        let reference = format!("{}/{duration}", start.xsd_date_time().unwrap_or_default());
-        let node = self.id(&format!("gregorian-interval/{reference}"));
+        let node = self.interval_id(start, duration);
         self.kind(&node, time::INTERVAL);
-        self.labels(&node, &format!("Gregorian Interval:{reference}"));
-        let year = Calendar::Gregorian.date(start.day).year;
-        self.comment(
-            &node,
-            &format!(
-                "An interval of {}beginning at the start of the {} {year:04} in the Gregorian Calendar",
-                duration.phrase(),
-                second_phrase(Calendar::Gregorian, start)
-            ),
-        );
+        let (label, comment) = interval_text(start, duration);
+        self.labels(&node, &label);
+        self.comment(&node, &comment);
         node
     }
 
@@ -552,14 +622,7 @@ impl Builder<'_> {
         self.kind(&node, sf::POINT);
         self.kind(&node, wgs84::POINT);
         self.labels(&node, &point.label());
-        self.comment(
-            &node,
-            &format!(
-                "The point at latitude {} and longitude {} in the WGS84 datum",
-                point.latitude.as_str(),
-                point.longitude.as_str()
-            ),
-        );
+        self.comment(&node, &point_text(point));
         self.typed(&node, wgs84::LAT, point.latitude.as_str(), xsd::DECIMAL);
         self.typed(&node, wgs84::LONG, point.longitude.as_str(), xsd::DECIMAL);
         self.typed(&node, geo::AS_WKT, &point.wkt(), geo::WKT_LITERAL);
@@ -595,119 +658,34 @@ impl Builder<'_> {
 
     fn set(&mut self, set: &Set) -> NamedNode {
         let node = self.set_labels(set);
-        let prefix = format!("^{}id/", self.base.replace('.', "\\."));
-        let pattern = |_: &Self, path: &str| format!("{prefix}{path}$");
-        match *set {
-            Set::All => {
-                self.comment(
-                    &node,
-                    "A dataset of unzoned calendar aligned intervals in the British, Gregorian \
-                     and Julian calendars, and of instants and intervals of any duration on the \
-                     Gregorian timeline.",
-                );
-                for calendar in Calendar::ALL {
-                    let subset = self.set_labels(&Set::Calendar(calendar));
-                    self.link(&node, void::SUBSET, &subset);
+        self.comment(&node, &set_comment(set));
+        for subset in subsets(set) {
+            let subset = self.set_labels(&subset);
+            self.link(&node, void::SUBSET, &subset);
+        }
+        if let Some(item) = item_type(set) {
+            self.add(&node, dgu::ITEM_TYPE, item);
+        }
+        if let Some(pattern) = pattern(set) {
+            let regex = self.uri_regex(&pattern);
+            self.typed(&node, void::URI_REGEX_PATTERN, &regex, xsd::STRING);
+        }
+        if let Some(example) = example(set) {
+            let example = match example {
+                Thing::Aligned(a) => self.aligned_labels(&a),
+                Thing::Instant(at) => self.instant(at),
+                Thing::Interval { start, duration } => self.interval_labels(start, &duration),
+                Thing::Point(point) => {
+                    let node = self.id(&Thing::Point(point.clone()).path());
+                    self.labels(&node, &point.label());
+                    node
                 }
-            }
-            Set::Calendar(calendar) => {
-                self.comment(
-                    &node,
-                    &format!(
-                        "A dataset of {} calendar aligned time intervals, from years to seconds.",
-                        calendar.name()
-                    ),
-                );
-                for unit in Unit::ALL {
-                    let subset = self.set_labels(&Set::Unit(calendar, unit));
-                    self.link(&node, void::SUBSET, &subset);
-                }
-                for other in [Set::Instants, Set::Intervals] {
-                    let subset = self.set_labels(&other);
-                    self.link(&node, void::SUBSET, &subset);
-                }
-                self.source(&node, calendar);
-            }
-            Set::Unit(calendar, unit) => {
-                let phrase = unit_phrase(unit);
-                self.comment(
-                    &node,
-                    &format!(
-                        "A dataset of {} calendar aligned time intervals of {phrase} duration.",
-                        calendar.name()
-                    ),
-                );
-                self.add(&node, dgu::ITEM_TYPE, classes(unit).0);
-                let regex = pattern(
-                    self,
-                    &format!("{}{}/{}", calendar.prefix(), unit.name(), unit_regex(unit)),
-                );
-                self.typed(&node, void::URI_REGEX_PATTERN, &regex, xsd::STRING);
-                if let Some(example) = Aligned::holding(
-                    calendar,
-                    unit,
-                    Moment::midnight(crate::calendar::gregorian_days(1752, 9, 14)),
-                ) {
-                    let example = self.aligned_labels(&example);
-                    self.link(&node, void::EXAMPLE_RESOURCE, &example);
-                }
-                self.source(&node, calendar);
-            }
-            Set::Instants => {
-                self.comment(
-                    &node,
-                    "A dataset of unzoned instants on the Gregorian timeline, to the second.",
-                );
-                self.add(&node, dgu::ITEM_TYPE, time::INSTANT);
-                let regex = pattern(
-                    self,
-                    &format!("gregorian-instant/{}", unit_regex(Unit::Second)),
-                );
-                self.typed(&node, void::URI_REGEX_PATTERN, &regex, xsd::STRING);
-                let example = self.instant(Moment::midnight(crate::calendar::gregorian_days(
-                    1752, 9, 14,
-                )));
-                self.link(&node, void::EXAMPLE_RESOURCE, &example);
-            }
-            Set::Intervals => {
-                self.comment(
-                    &node,
-                    "A dataset of unzoned intervals on the Gregorian timeline, each named by \
-                     its start and its duration.",
-                );
-                self.add(&node, dgu::ITEM_TYPE, time::INTERVAL);
-                let regex = pattern(
-                    self,
-                    &format!(
-                        "gregorian-interval/{}/P([0-9]+Y)?([0-9]+M)?([0-9]+D)?(T([0-9]+H)?([0-9]+M)?([0-9]+S)?)?",
-                        unit_regex(Unit::Second)
-                    ),
-                );
-                self.typed(&node, void::URI_REGEX_PATTERN, &regex, xsd::STRING);
-                let example = self.interval_labels(
-                    Moment::midnight(crate::calendar::gregorian_days(2016, 6, 30)),
-                    &Duration::months(3),
-                );
-                self.link(&node, void::EXAMPLE_RESOURCE, &example);
-            }
-            Set::Points => {
-                self.comment(
-                    &node,
-                    "A dataset of points on the WGS84 ellipsoid, each named by its longitude (X) \
-                     and latitude (Y) in decimal degrees.",
-                );
-                self.add(&node, dgu::ITEM_TYPE, sf::POINT);
-                let regex = pattern(
-                    self,
-                    "geopoint/wgs84/X-?[0-9]{1,3}(\\.[0-9]+)?Y-?[0-9]{1,2}(\\.[0-9]+)?",
-                );
-                self.typed(&node, void::URI_REGEX_PATTERN, &regex, xsd::STRING);
-                if let Some(london) = Point::parse("X-0.1276Y51.5072") {
-                    let example = self.id(&Thing::Point(london.clone()).path());
-                    self.labels(&example, &london.label());
-                    self.link(&node, void::EXAMPLE_RESOURCE, &example);
-                }
-            }
+                Thing::Set(other) => self.set_labels(&other),
+            };
+            self.link(&node, void::EXAMPLE_RESOURCE, &example);
+        }
+        if let Set::Calendar(calendar) | Set::Unit(calendar, _) = *set {
+            self.source(&node, calendar);
         }
         node
     }
@@ -718,11 +696,9 @@ impl Builder<'_> {
         self.kind(&doc, foaf::DOCUMENT);
         self.link(&doc, foaf::PRIMARY_TOPIC, topic);
         self.link(topic, foaf::IS_PRIMARY_TOPIC_OF, &doc);
-        self.add(
-            &doc,
-            rdfs::LABEL,
-            &english(&format!("Document about: {label}")),
-        );
+        let label_property = self.label_property();
+        let text = self.text(&format!("Document about: {label}"));
+        self.add(&doc, label_property, &text);
         for format in Format::OFFERED {
             let variant = self.doc(&format!("{path}.{}", format.extension()));
             self.kind(&variant, foaf::DOCUMENT);
@@ -731,18 +707,47 @@ impl Builder<'_> {
                 format.media_type()
             ));
             self.link(&variant, dcterms::FORMAT, &media);
-            self.add(
-                &variant,
-                rdfs::LABEL,
-                &english(&format!("{} document about: {label}", format.name())),
-            );
+            let text = self.text(&format!("{} document about: {label}", format.name()));
+            self.add(&variant, label_property, &text);
             self.link(&doc, dcterms::HAS_FORMAT, &variant);
+        }
+    }
+
+    /// How a document is labelled: `rdfs:label` in English, as IntervalServer wrote it, or
+    /// gist's `skos:prefLabel` with a plain string.
+    fn label_property(&self) -> NamedNodeRef<'static> {
+        match self.vocabulary {
+            Vocabulary::DataGovUk => rdfs::LABEL,
+            Vocabulary::Gist => skos::PREF_LABEL,
+        }
+    }
+
+    fn text(&self, text: &str) -> Literal {
+        match self.vocabulary {
+            Vocabulary::DataGovUk => english(text),
+            Vocabulary::Gist => Literal::new_simple_literal(text),
         }
     }
 
     /// Describes a thing; returns its node and its label.
     pub(crate) fn thing(&mut self, thing: &Thing) -> (NamedNode, String) {
-        let node = match thing {
+        let node = match self.vocabulary {
+            Vocabulary::DataGovUk => self.data_gov_uk(thing),
+            Vocabulary::Gist => self.gist(thing),
+        };
+        let label = self
+            .graph
+            .object_for_subject_predicate(&node, skos::PREF_LABEL)
+            .and_then(|o| match o {
+                TermRef::Literal(l) => Some(l.value().to_owned()),
+                _ => None,
+            })
+            .unwrap_or_default();
+        (node, label)
+    }
+
+    fn data_gov_uk(&mut self, thing: &Thing) -> NamedNode {
+        match thing {
             Thing::Aligned(a) => self.aligned(a),
             Thing::Instant(m) => {
                 let node = self.instant(*m);
@@ -753,16 +758,100 @@ impl Builder<'_> {
             Thing::Interval { start, duration } => self.interval(*start, duration),
             Thing::Point(p) => self.point(p),
             Thing::Set(s) => self.set(s),
-        };
-        let label = self
-            .graph
-            .object_for_subject_predicate(&node, rdfs::LABEL)
-            .and_then(|o| match o {
-                TermRef::Literal(l) => Some(l.value().to_owned()),
-                _ => None,
-            })
-            .unwrap_or_default();
-        (node, label)
+        }
+    }
+}
+
+fn set_comment(set: &Set) -> String {
+    match *set {
+        Set::All => "A dataset of unzoned calendar aligned intervals in the British, Gregorian \
+                     and Julian calendars, and of instants and intervals of any duration on the \
+                     Gregorian timeline."
+            .to_owned(),
+        Set::Calendar(calendar) => format!(
+            "A dataset of {} calendar aligned time intervals, from years to seconds.",
+            calendar.name()
+        ),
+        Set::Unit(calendar, unit) => format!(
+            "A dataset of {} calendar aligned time intervals of {} duration.",
+            calendar.name(),
+            unit_phrase(unit)
+        ),
+        Set::Instants => {
+            "A dataset of unzoned instants on the Gregorian timeline, to the second.".to_owned()
+        }
+        Set::Intervals => {
+            "A dataset of unzoned intervals on the Gregorian timeline, each named by \
+                           its start and its duration."
+                .to_owned()
+        }
+        Set::Points => {
+            "A dataset of points on the WGS84 ellipsoid, each named by its longitude (X) \
+                        and latitude (Y) in decimal degrees."
+                .to_owned()
+        }
+    }
+}
+
+/// The sets a set is divided into.
+fn subsets(set: &Set) -> Vec<Set> {
+    match *set {
+        Set::All => Calendar::ALL.into_iter().map(Set::Calendar).collect(),
+        Set::Calendar(calendar) => Unit::ALL
+            .into_iter()
+            .map(|unit| Set::Unit(calendar, unit))
+            .chain([Set::Instants, Set::Intervals])
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// The class of a set's members, in reference.data.gov.uk's terms.
+fn item_type(set: &Set) -> Option<NamedNodeRef<'static>> {
+    match *set {
+        Set::Unit(_, unit) => Some(classes(unit).0),
+        Set::Instants => Some(time::INSTANT),
+        Set::Intervals => Some(time::INTERVAL),
+        Set::Points => Some(sf::POINT),
+        Set::All | Set::Calendar(_) => None,
+    }
+}
+
+/// The pattern a member's path below `id/` matches.
+fn pattern(set: &Set) -> Option<String> {
+    match *set {
+        Set::Unit(calendar, unit) => Some(format!(
+            "{}{}/{}",
+            calendar.prefix(),
+            unit.name(),
+            unit_regex(unit)
+        )),
+        Set::Instants => Some(format!("gregorian-instant/{}", unit_regex(Unit::Second))),
+        Set::Intervals => Some(format!(
+            "gregorian-interval/{}/P([0-9]+Y)?([0-9]+M)?([0-9]+D)?(T([0-9]+H)?([0-9]+M)?([0-9]+S)?)?",
+            unit_regex(Unit::Second)
+        )),
+        Set::Points => {
+            Some("geopoint/wgs84/X-?[0-9]{1,3}(\\.[0-9]+)?Y-?[0-9]{1,2}(\\.[0-9]+)?".to_owned())
+        }
+        Set::All | Set::Calendar(_) => None,
+    }
+}
+
+/// The member a set's description names as an example.
+fn example(set: &Set) -> Option<Thing> {
+    let new_style = Moment::midnight(crate::calendar::gregorian_days(1752, 9, 14));
+    match *set {
+        Set::Unit(calendar, unit) => {
+            Aligned::holding(calendar, unit, new_style).map(Thing::Aligned)
+        }
+        Set::Instants => Some(Thing::Instant(new_style)),
+        Set::Intervals => Some(Thing::Interval {
+            start: Moment::midnight(crate::calendar::gregorian_days(2016, 6, 30)),
+            duration: Duration::months(3),
+        }),
+        Set::Points => Point::parse("X-0.1276Y51.5072").map(Thing::Point),
+        Set::All | Set::Calendar(_) => None,
     }
 }
 

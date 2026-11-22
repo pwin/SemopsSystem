@@ -85,6 +85,8 @@ PLACETIME                 (off unless --placetime or --placetime-base is given)
     gregorian-month/2006-02, julian-day/1582-10-04, gregorian-instant/2006-01-01T00:00:00,
     gregorian-interval/2006-01-01T00:00:00/P3M; and WGS84 points,
     geopoint/wgs84/X-0.1276Y51.5072, described with GeoSPARQL. /id/<SET> is the set itself.
+    Described in reference.data.gov.uk's vocabulary, or in gist with
+    --placetime-vocabulary gist.
 
     Every response carries a Server header naming the build: Server: holos/0.13.0 (d4b4fdd).
 
@@ -186,6 +188,11 @@ PLACETIME
     --placetime-base <URL>   Serve them under this base instead, for every request: the URIs
                              are <URL>id/..., answered at the base's path on this server, so
                              --placetime-base https://example.org/ref/ answers /ref/id/....
+    --placetime-vocabulary <data.gov.uk|gist>
+                             The vocabulary the documents describe the URIs in (default
+                             data.gov.uk): reference.data.gov.uk's, with OWL-Time, SCOVO and
+                             WGS84, as the URI sets have always been described; or gist
+                             14.1.0 with the placetime ontology built on it.
 
 MAINTENANCE
     --backup-dir <DIR>       Parent directory for `POST /backup`. With --store it writes a
@@ -262,6 +269,8 @@ struct Config {
     trust_easy_auth: bool,
     /// Where the placetime URI sets' base comes from; `None` serves none of them.
     placetime: Option<placetime::Mode>,
+    /// The vocabulary placetime documents are written in.
+    placetime_vocabulary: semops_placetime::Vocabulary,
     roles: Vec<String>,
     clearance: Option<u16>,
     deny_all: bool,
@@ -313,6 +322,7 @@ impl Default for Config {
             trust_forwarded: false,
             trust_easy_auth: false,
             placetime: None,
+            placetime_vocabulary: semops_placetime::Vocabulary::DataGovUk,
             roles: Vec::new(),
             clearance: None,
             deny_all: false,
@@ -539,12 +549,16 @@ surprise, check that this is the directory the load wrote to."
         eprintln!("  console  http://{listen}/");
     }
     eprintln!("  query    http://{listen}/query");
+    let vocabulary = state.config.placetime_vocabulary;
     match &state.config.placetime {
         Some(placetime::Mode::Host) => {
-            eprintln!("  placetime https://<Host>/id/... (303 to /doc/...)");
+            eprintln!("  placetime https://<Host>/id/... (303 to /doc/...), in {vocabulary}");
         }
         Some(placetime::Mode::Fixed(base)) => {
-            eprintln!("  placetime {base}id/... answered at {}id/...", base.path());
+            eprintln!(
+                "  placetime {base}id/... answered at {}id/..., in {vocabulary}",
+                base.path()
+            );
         }
         None => {}
     }
@@ -843,7 +857,14 @@ fn serve_placetime(
     } else {
         None
     };
-    let answer = placetime::answer(mode, relative, host.as_deref(), forwarded.as_deref(), accept);
+    let answer = placetime::answer(
+        mode,
+        state.config.placetime_vocabulary,
+        relative,
+        host.as_deref(),
+        forwarded.as_deref(),
+        accept,
+    );
     let extra: Vec<(&str, &str)> = answer
         .headers
         .iter()
@@ -1914,6 +1935,7 @@ fn format_for(path: &str) -> Result<RdfFormat> {
 #[allow(clippy::too_many_lines)]
 fn parse_args(args: &[String]) -> Result<Config> {
     let mut c = Config::default();
+    let mut placetime_vocabulary_named = false;
     let mut i = 0;
     while i < args.len() {
         let flag = args[i].clone();
@@ -2008,6 +2030,14 @@ fn parse_args(args: &[String]) -> Result<Config> {
                 let base = semops_placetime::Base::new(&value(&mut i)?)?;
                 c.placetime = Some(placetime::Mode::Fixed(base));
             }
+            "--placetime-vocabulary" => {
+                let name = value(&mut i)?;
+                c.placetime_vocabulary = semops_placetime::Vocabulary::parse(&name)
+                    .with_context(|| {
+                        format!("--placetime-vocabulary is data.gov.uk or gist, not `{name}`")
+                    })?;
+                placetime_vocabulary_named = true;
+            }
             "--role" => c.roles.push(value(&mut i)?),
             "--clearance" => c.clearance = Some(value(&mut i)?.parse()?),
             "--deny-all" => c.deny_all = true,
@@ -2025,6 +2055,11 @@ fn parse_args(args: &[String]) -> Result<Config> {
         }
         i += 1;
     }
+    anyhow::ensure!(
+        !placetime_vocabulary_named || c.placetime.is_some(),
+        "--placetime-vocabulary chooses how the placetime URI sets are described, and needs \
+         --placetime or --placetime-base to serve them"
+    );
     Ok(c)
 }
 

@@ -1,4 +1,5 @@
-//! The vocabularies the descriptions use.
+//! The vocabularies the descriptions use: reference.data.gov.uk's, with OWL-Time, SCOVO,
+//! WGS84 and GeoSPARQL, as IntervalServer wrote them, or gist and the placetime ontology.
 //!
 //! The reference.data.gov.uk namespaces stay `http://`. They are the names of published
 //! terms, not addresses this service answers at, and data already written with them would
@@ -204,6 +205,125 @@ pub mod wgs84 {
     use super::NamedNodeRef;
     terms!("http://www.w3.org/2003/01/geo/wgs84_pos#"; POINT = "Point", LAT = "lat", LONG = "long");
 }
+
+/// gist 14.1.0, Semantic Arts' upper ontology.
+pub mod gist {
+    use super::NamedNodeRef;
+    terms!("https://w3id.org/semanticarts/ns/ontology/gist/";
+        TIME_INTERVAL = "TimeInterval", MAGNITUDE = "Magnitude", COLLECTION = "Collection",
+        GEO_POINT = "GeoPoint",
+        START_DATE_TIME = "startDateTime", END_DATE_TIME = "endDateTime",
+        HAS_MAGNITUDE = "hasMagnitude", HAS_ASPECT = "hasAspect",
+        HAS_UNIT_OF_MEASURE = "hasUnitOfMeasure", NUMERIC_VALUE = "numericValue",
+        IS_PART_OF = "isPartOf", IS_DIRECT_PART_OF = "isDirectPartOf",
+        PRECEDES_DIRECTLY = "precedesDirectly", IS_CATEGORIZED_BY = "isCategorizedBy",
+        CONFORMS_TO = "conformsTo", IS_MEMBER_OF = "isMemberOf",
+        LATITUDE = "latitude", LONGITUDE = "longitude", DESCRIPTION = "description",
+    );
+}
+
+/// gist's reference data: the duration aspect, and the second, named as gist names its units.
+pub mod gistd {
+    use super::NamedNodeRef;
+    terms!("https://w3id.org/semanticarts/ns/data/gist/";
+        ASPECT_DURATION = "_Aspect_duration", UNIT_OF_MEASURE_SECOND = "_UnitOfMeasure_second",
+    );
+}
+
+/// The placetime ontology's classes (`ontology/placetime.ttl`).
+pub mod pt {
+    use super::NamedNodeRef;
+    terms!("https://www.semantechs.co.uk/ns/ontology/placetime/";
+        CALENDAR = "Calendar", CALENDAR_INTERVAL = "CalendarInterval",
+        CALENDAR_YEAR = "CalendarYear", CALENDAR_HALF_YEAR = "CalendarHalfYear",
+        CALENDAR_QUARTER = "CalendarQuarter", CALENDAR_MONTH = "CalendarMonth",
+        ISO8601_WEEK = "Iso8601Week", CALENDAR_DAY = "CalendarDay",
+        CALENDAR_HOUR = "CalendarHour", CALENDAR_MINUTE = "CalendarMinute",
+        CALENDAR_SECOND = "CalendarSecond", INSTANT = "Instant",
+    );
+}
+
+/// The placetime ontology's calendars.
+pub mod ptd {
+    use super::NamedNodeRef;
+    terms!("https://www.semantechs.co.uk/ns/data/placetime/";
+        CALENDAR_BRITISH = "_Calendar_British", CALENDAR_GREGORIAN = "_Calendar_Gregorian",
+        CALENDAR_JULIAN = "_Calendar_Julian",
+    );
+}
+
+/// The placetime ontology's categories: days of the week, months, quarters and halves.
+pub mod ptx {
+    use super::NamedNodeRef;
+    terms!("https://www.semantechs.co.uk/ns/taxonomy/placetime/";
+        MONDAY = "_DayOfWeek_Monday", TUESDAY = "_DayOfWeek_Tuesday",
+        WEDNESDAY = "_DayOfWeek_Wednesday", THURSDAY = "_DayOfWeek_Thursday",
+        FRIDAY = "_DayOfWeek_Friday", SATURDAY = "_DayOfWeek_Saturday",
+        SUNDAY = "_DayOfWeek_Sunday",
+        JANUARY = "_MonthOfYear_January", FEBRUARY = "_MonthOfYear_February",
+        MARCH = "_MonthOfYear_March", APRIL = "_MonthOfYear_April", MAY = "_MonthOfYear_May",
+        JUNE = "_MonthOfYear_June", JULY = "_MonthOfYear_July",
+        AUGUST = "_MonthOfYear_August", SEPTEMBER = "_MonthOfYear_September",
+        OCTOBER = "_MonthOfYear_October", NOVEMBER = "_MonthOfYear_November",
+        DECEMBER = "_MonthOfYear_December",
+        Q1 = "_QuarterOfYear_Q1", Q2 = "_QuarterOfYear_Q2", Q3 = "_QuarterOfYear_Q3",
+        Q4 = "_QuarterOfYear_Q4", H1 = "_HalfOfYear_H1", H2 = "_HalfOfYear_H2",
+    );
+
+    /// The day of the week, numbered Monday 1.
+    #[must_use]
+    pub fn weekday(day: u32) -> Option<NamedNodeRef<'static>> {
+        [
+            MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY,
+        ]
+        .get(usize::try_from(day).ok()?.checked_sub(1)?)
+        .copied()
+    }
+
+    /// The month, numbered January 1.
+    #[must_use]
+    pub fn month(month: u32) -> Option<NamedNodeRef<'static>> {
+        [
+            JANUARY, FEBRUARY, MARCH, APRIL, MAY, JUNE, JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER,
+            DECEMBER,
+        ]
+        .get(usize::try_from(month).ok()?.checked_sub(1)?)
+        .copied()
+    }
+
+    /// The quarter of the year, 1 to 4.
+    #[must_use]
+    pub fn quarter(quarter: u32) -> Option<NamedNodeRef<'static>> {
+        [Q1, Q2, Q3, Q4]
+            .get(usize::try_from(quarter).ok()?.checked_sub(1)?)
+            .copied()
+    }
+
+    /// The half of the year, 1 or 2.
+    #[must_use]
+    pub fn half(half: u32) -> Option<NamedNodeRef<'static>> {
+        [H1, H2]
+            .get(usize::try_from(half).ok()?.checked_sub(1)?)
+            .copied()
+    }
+}
+
+/// Prefixes for gist descriptions.
+pub const GIST_PREFIXES: &[(&str, &str)] = &[
+    ("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"),
+    ("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
+    ("xsd", "http://www.w3.org/2001/XMLSchema#"),
+    ("gist", gist::NS),
+    ("gistd", gistd::NS),
+    ("pt", pt::NS),
+    ("ptd", ptd::NS),
+    ("ptx", ptx::NS),
+    ("skos", skos::NS),
+    ("foaf", foaf::NS),
+    ("dcterms", dcterms::NS),
+    ("void", void::NS),
+    ("geo", geo::NS),
+];
 
 /// Prefixes for serialisations that use them, so the Turtle a person reads is legible.
 pub const PREFIXES: &[(&str, &str)] = &[

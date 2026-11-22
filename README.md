@@ -12,7 +12,7 @@ engine and the tarka mapper, built, versioned and released together. It implemen
 | [`crates/semops/`](crates/semops/) | The `semops` command. So far `semops check`, the ontology quality checks run natively | — |
 | [`crates/semops-checks/`](crates/semops-checks/) | The ontology quality check registry (61 checks, their SHACL shapes, SPARQL queries and repair templates) compiled in, and a runner for it on HOLOS | [pwin/consolidated-ontology-quality-suite-python](https://github.com/pwin/consolidated-ontology-quality-suite-python) 0.28.0's `resources/`, and its merge rules ported |
 | [`crates/semops-functions/`](crates/semops-functions/) | The SPARQL extension functions every evaluator registers: XPath `fn:` and `math:`, Jena `afn:` and property functions, SPIN `spif:` | HOLOS's and tarka's function code, merged and extended |
-| [`crates/semops-placetime/`](crates/semops-placetime/) | URIs for calendar intervals, instants and WGS84 points, each described in RDF from the URI alone, in the reference.data.gov.uk patterns; served by `holos-server --placetime` | A Rust rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer), with points added |
+| [`crates/semops-placetime/`](crates/semops-placetime/) | URIs for calendar intervals, instants and WGS84 points, each described in RDF from the URI alone, in the reference.data.gov.uk patterns; in reference.data.gov.uk's vocabulary or in gist 14.1.0, through the placetime ontology; served by `holos-server --placetime` | A Rust rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer), with points added |
 | [`deploy/azure/`](deploy/azure/) | Helm chart for AKS, Bicep for Container Apps, the API Management identity policy, and the guide to Azure hosting and NFS storage | — |
 | [`vendor/`](vendor/) | The two patched Oxigraph crates every engine builds against | One copy of what HOLOS and SHACL_Engine each vendored |
 | [`docs/manual/`](docs/manual/) | The manual: installing, a first run, the server, checking, validating, mapping, storage, security, Azure, and a reference. `python docs/manual/build.py` builds it as a website, an EPUB and an A4 PDF | — |
@@ -42,7 +42,9 @@ description of that quarter, and likewise for years to seconds in the British (J
 1752), Gregorian and Julian calendars, for instants and intervals of any length, and for
 WGS84 points (`/id/geopoint/wgs84/X-0.1276Y51.5072`), which GeoSPARQL queries can use once
 loaded. [docs/decisions/0004](docs/decisions/0004-placetime.md) has the patterns, what
-changed from IntervalServer and the licence position.
+changed from IntervalServer and the licence position. With `--placetime-vocabulary gist` the
+same URIs are described in gist 14.1.0, through a placetime ontology built on it;
+[docs/decisions/0007](docs/decisions/0007-placetime-in-gist.md) has the model.
 
 `semops check ontology.ttl data.ttl` runs the ontology quality suite's 61-check registry
 natively, compiled into the command, with the same findings as

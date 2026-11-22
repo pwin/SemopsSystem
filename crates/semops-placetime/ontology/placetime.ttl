@@ -1,0 +1,319 @@
+@prefix gist: <https://w3id.org/semanticarts/ns/ontology/gist/> .
+@prefix gistd: <https://w3id.org/semanticarts/ns/data/gist/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pt: <https://www.semantechs.co.uk/ns/ontology/placetime/> .
+@prefix ptd: <https://www.semantechs.co.uk/ns/data/placetime/> .
+@prefix ptx: <https://www.semantechs.co.uk/ns/taxonomy/placetime/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# The placetime ontology: calendar intervals, instants and the calendars that define them,
+# as an extension of gist 14.1.0. It adds classes and reference data and no properties:
+# every statement placetime makes about an interval or a point uses a gist property.
+# Laid out as gist lays out its own files, with gist's namespace split (ontology, taxonomy,
+# data) and its annotation conventions.
+
+<https://www.semantechs.co.uk/ontology/placetime>
+	a owl:Ontology ;
+	owl:imports <https://w3id.org/semanticarts/ontology/gistCore14.1.0> ;
+	owl:versionIRI <https://www.semantechs.co.uk/ontology/placetime0.1.0> ;
+	skos:definition "Calendar intervals, instants and the calendars that define them, as an extension of gist."^^xsd:string ;
+	skos:prefLabel "placetime"^^xsd:string ;
+	skos:scopeNote "The vocabulary the placetime service describes its interval, instant and point URIs in when it is asked for gist. Every statement about an interval or a point uses a gist property; this ontology supplies the classes, the calendars and the categories those statements refer to."^^xsd:string ;
+	gist:license "https://www.apache.org/licenses/LICENSE-2.0"^^xsd:anyURI ;
+	.
+
+# Classes
+
+pt:Calendar
+	a owl:Class ;
+	rdfs:subClassOf gist:Specification ;
+	skos:definition "A system for dividing time into years, months and days, with rules for the length of each."^^xsd:string ;
+	skos:example "The Gregorian calendar; the Julian calendar; the calendar in force in Great Britain and its colonies, Julian until 2 September 1752 and Gregorian from 14 September 1752."^^xsd:string ;
+	skos:prefLabel "Calendar"^^xsd:string ;
+	.
+
+pt:CalendarInterval
+	a owl:Class ;
+	rdfs:subClassOf
+		gist:TimeInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:conformsTo ;
+			owl:someValuesFrom pt:Calendar ;
+		]
+		;
+	skos:definition "A time interval that a calendar defines, such as a year, a month or a day."^^xsd:string ;
+	skos:prefLabel "Calendar Interval"^^xsd:string ;
+	skos:scopeNote
+		"The end date time of a calendar interval is the moment the next interval of the same kind begins, so the duration is the end less the start."^^xsd:string ,
+		"Start and end date times are written in the proleptic Gregorian calendar, as XML Schema requires, whichever calendar defines the interval. The Julian year 1700 begins at 1700-01-11T00:00:00."^^xsd:string
+		;
+	.
+
+pt:CalendarYear
+	a owl:Class ;
+	rdfs:subClassOf pt:CalendarInterval ;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarYear> ;
+	skos:definition "A year as a calendar defines it, beginning on the first of January."^^xsd:string ;
+	skos:prefLabel "Calendar Year"^^xsd:string ;
+	.
+
+pt:CalendarHalfYear
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarYear ;
+		] ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isCategorizedBy ;
+			owl:someValuesFrom pt:HalfOfYear ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarHalf> ;
+	skos:definition "The first or second six months of a calendar year."^^xsd:string ;
+	skos:prefLabel "Calendar Half Year"^^xsd:string ;
+	.
+
+pt:CalendarQuarter
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarHalfYear ;
+		] ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isCategorizedBy ;
+			owl:someValuesFrom pt:QuarterOfYear ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarQuarter> ;
+	skos:definition "One of the four three-month periods of a calendar year, beginning in January, April, July and October."^^xsd:string ;
+	skos:prefLabel "Calendar Quarter"^^xsd:string ;
+	.
+
+pt:CalendarMonth
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarQuarter ;
+		] ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isCategorizedBy ;
+			owl:someValuesFrom pt:MonthOfYear ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarMonth> ;
+	skos:definition "One of the twelve months of a calendar year."^^xsd:string ;
+	skos:prefLabel "Calendar Month"^^xsd:string ;
+	.
+
+pt:Iso8601Week
+	a owl:Class ;
+	rdfs:subClassOf pt:CalendarInterval ;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/Iso8601Week> ;
+	skos:definition "A seven-day week beginning on a Monday, numbered within its year by the rules of ISO 8601."^^xsd:string ;
+	skos:prefLabel "ISO 8601 Week"^^xsd:string ;
+	skos:scopeNote "Week 1 of a year is the week that holds the year's first Thursday, so a week can begin in one calendar year and end in the next, and is part of no calendar year or month."^^xsd:string ;
+	.
+
+pt:CalendarDay
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarMonth ;
+		] ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:Iso8601Week ;
+		] ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isCategorizedBy ;
+			owl:someValuesFrom pt:DayOfWeek ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarDay> ;
+	skos:definition "A day of a calendar month, from midnight to midnight."^^xsd:string ;
+	skos:prefLabel "Calendar Day"^^xsd:string ;
+	.
+
+pt:CalendarHour
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarDay ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarHour> ;
+	skos:definition "One of the twenty-four hours of a calendar day, beginning on the hour."^^xsd:string ;
+	skos:prefLabel "Calendar Hour"^^xsd:string ;
+	.
+
+pt:CalendarMinute
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarHour ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarMinute> ;
+	skos:definition "One of the sixty minutes of a calendar hour, beginning on the minute."^^xsd:string ;
+	skos:prefLabel "Calendar Minute"^^xsd:string ;
+	.
+
+pt:CalendarSecond
+	a owl:Class ;
+	rdfs:subClassOf
+		pt:CalendarInterval ,
+		[
+			a owl:Restriction ;
+			owl:onProperty gist:isDirectPartOf ;
+			owl:someValuesFrom pt:CalendarMinute ;
+		]
+		;
+	rdfs:seeAlso <http://reference.data.gov.uk/def/intervals/CalendarSecond> ;
+	skos:definition "One of the sixty seconds of a calendar minute."^^xsd:string ;
+	skos:prefLabel "Calendar Second"^^xsd:string ;
+	skos:scopeNote "Leap seconds are not counted: every calendar day is 86,400 seconds long."^^xsd:string ;
+	.
+
+[
+	a owl:AllDisjointClasses ;
+	owl:members (
+		pt:CalendarYear
+		pt:CalendarHalfYear
+		pt:CalendarQuarter
+		pt:CalendarMonth
+		pt:Iso8601Week
+		pt:CalendarDay
+		pt:CalendarHour
+		pt:CalendarMinute
+		pt:CalendarSecond
+		pt:Instant
+	) ;
+] .
+
+pt:Instant
+	a owl:Class ;
+	rdfs:subClassOf gist:TimeInterval ;
+	rdfs:seeAlso <http://www.w3.org/2006/time#Instant> ;
+	skos:definition "A moment in time, as a time interval whose start and end are the same and whose duration is zero."^^xsd:string ;
+	skos:prefLabel "Instant"^^xsd:string ;
+	skos:scopeNote "Modelled as a degenerate time interval so that an instant has the start date time, end date time and duration every gist time interval has, and can be compared with any interval by the same properties."^^xsd:string ;
+	.
+
+pt:DayOfWeek
+	a owl:Class ;
+	rdfs:subClassOf gist:Category ;
+	skos:definition "One of the seven named days of the week."^^xsd:string ;
+	skos:prefLabel "Day of Week"^^xsd:string ;
+	.
+
+pt:HalfOfYear
+	a owl:Class ;
+	rdfs:subClassOf gist:Category ;
+	skos:definition "Which half of a calendar year a half year is: the first or the second."^^xsd:string ;
+	skos:prefLabel "Half of Year"^^xsd:string ;
+	.
+
+pt:MonthOfYear
+	a owl:Class ;
+	rdfs:subClassOf gist:Category ;
+	skos:definition "One of the twelve named months."^^xsd:string ;
+	skos:prefLabel "Month of Year"^^xsd:string ;
+	.
+
+pt:QuarterOfYear
+	a owl:Class ;
+	rdfs:subClassOf gist:Category ;
+	skos:definition "Which quarter of a calendar year a quarter is: the first, second, third or fourth."^^xsd:string ;
+	skos:prefLabel "Quarter of Year"^^xsd:string ;
+	.
+
+# Calendars
+
+ptd:_Calendar_British
+	a pt:Calendar ;
+	rdfs:seeAlso <http://www.legislation.gov.uk/id/apgb/Geo2/24/23> ;
+	skos:prefLabel "British calendar"^^xsd:string ;
+	gist:description "The calendar of Great Britain and its colonies: Julian until Wednesday 2 September 1752, Gregorian from Thursday 14 September 1752, under the Calendar (New Style) Act 1750, with the eleven days between omitted."^^xsd:string ;
+	skos:scopeNote "Years here begin on 1 January throughout, as reference.data.gov.uk counted them, although the legal year in England began on 25 March until 1751."^^xsd:string ;
+	.
+
+ptd:_Calendar_Gregorian
+	a pt:Calendar ;
+	rdfs:seeAlso <https://en.wikipedia.org/wiki/Gregorian_calendar> ;
+	skos:prefLabel "Gregorian calendar"^^xsd:string ;
+	gist:description "The calendar of Pope Gregory XIII's 1582 reform, extended backwards before 1582: a leap year every fourth year except centuries not divisible by 400."^^xsd:string ;
+	.
+
+ptd:_Calendar_Julian
+	a pt:Calendar ;
+	rdfs:seeAlso <https://en.wikipedia.org/wiki/Julian_calendar> ;
+	skos:prefLabel "Julian calendar"^^xsd:string ;
+	gist:description "The calendar of Julius Caesar's 46 BC reform, with a leap year every fourth year and years beginning on 1 January."^^xsd:string ;
+	.
+
+# The unit of duration
+
+gistd:_UnitOfMeasure_second
+	a gist:UnitOfMeasure ;
+	skos:editorialNote "Named as gist names its reference data, which supplies its units of measure separately from gist itself. Described here so that the duration of an interval has a unit without that reference data loaded."^^xsd:string ;
+	skos:prefLabel "second"^^xsd:string ;
+	gist:exponentOfSecond "1"^^xsd:decimal ;
+	.
+
+# Categories
+
+ptx:_DayOfWeek_Monday a pt:DayOfWeek ; skos:prefLabel "Monday"^^xsd:string .
+ptx:_DayOfWeek_Tuesday a pt:DayOfWeek ; skos:prefLabel "Tuesday"^^xsd:string .
+ptx:_DayOfWeek_Wednesday a pt:DayOfWeek ; skos:prefLabel "Wednesday"^^xsd:string .
+ptx:_DayOfWeek_Thursday a pt:DayOfWeek ; skos:prefLabel "Thursday"^^xsd:string .
+ptx:_DayOfWeek_Friday a pt:DayOfWeek ; skos:prefLabel "Friday"^^xsd:string .
+ptx:_DayOfWeek_Saturday a pt:DayOfWeek ; skos:prefLabel "Saturday"^^xsd:string .
+ptx:_DayOfWeek_Sunday a pt:DayOfWeek ; skos:prefLabel "Sunday"^^xsd:string .
+
+ptx:_HalfOfYear_H1 a pt:HalfOfYear ; skos:prefLabel "first half"^^xsd:string .
+ptx:_HalfOfYear_H2 a pt:HalfOfYear ; skos:prefLabel "second half"^^xsd:string .
+
+ptx:_MonthOfYear_January a pt:MonthOfYear ; skos:prefLabel "January"^^xsd:string .
+ptx:_MonthOfYear_February a pt:MonthOfYear ; skos:prefLabel "February"^^xsd:string .
+ptx:_MonthOfYear_March a pt:MonthOfYear ; skos:prefLabel "March"^^xsd:string .
+ptx:_MonthOfYear_April a pt:MonthOfYear ; skos:prefLabel "April"^^xsd:string .
+ptx:_MonthOfYear_May a pt:MonthOfYear ; skos:prefLabel "May"^^xsd:string .
+ptx:_MonthOfYear_June a pt:MonthOfYear ; skos:prefLabel "June"^^xsd:string .
+ptx:_MonthOfYear_July a pt:MonthOfYear ; skos:prefLabel "July"^^xsd:string .
+ptx:_MonthOfYear_August a pt:MonthOfYear ; skos:prefLabel "August"^^xsd:string .
+ptx:_MonthOfYear_September a pt:MonthOfYear ; skos:prefLabel "September"^^xsd:string .
+ptx:_MonthOfYear_October a pt:MonthOfYear ; skos:prefLabel "October"^^xsd:string .
+ptx:_MonthOfYear_November a pt:MonthOfYear ; skos:prefLabel "November"^^xsd:string .
+ptx:_MonthOfYear_December a pt:MonthOfYear ; skos:prefLabel "December"^^xsd:string .
+
+ptx:_QuarterOfYear_Q1 a pt:QuarterOfYear ; skos:prefLabel "first quarter"^^xsd:string .
+ptx:_QuarterOfYear_Q2 a pt:QuarterOfYear ; skos:prefLabel "second quarter"^^xsd:string .
+ptx:_QuarterOfYear_Q3 a pt:QuarterOfYear ; skos:prefLabel "third quarter"^^xsd:string .
+ptx:_QuarterOfYear_Q4 a pt:QuarterOfYear ; skos:prefLabel "fourth quarter"^^xsd:string .

@@ -6,7 +6,7 @@ use holos_engine::{Engine, QueryOptions};
 use holos_security::Session;
 use oxrdf::{GraphName, Quad};
 use oxrdfio::{RdfFormat, RdfParser};
-use semops_placetime::{Base, Format};
+use semops_placetime::{Base, Format, Vocabulary};
 use spareval::QueryResults;
 
 // The server is a binary, so its modules reach a test through a path include, as `gsp.rs`
@@ -14,7 +14,25 @@ use spareval::QueryResults;
 #[path = "../src/placetime.rs"]
 mod placetime;
 
-use placetime::{answer, negotiate, Answer, Mode};
+use placetime::{negotiate, Answer, Mode};
+
+/// The answer in the default vocabulary, which every test but the gist ones wants.
+fn answer(
+    mode: &Mode,
+    relative: &str,
+    host: Option<&str>,
+    forwarded_host: Option<&str>,
+    accept: Option<&str>,
+) -> Answer {
+    placetime::answer(
+        mode,
+        Vocabulary::DataGovUk,
+        relative,
+        host,
+        forwarded_host,
+        accept,
+    )
+}
 
 fn header<'a>(answer: &'a Answer, name: &str) -> Option<&'a str> {
     answer
@@ -199,10 +217,14 @@ fn negotiation_honours_quality() {
 
 /// Loads every document's triples into one store and runs a query over them.
 fn rows(paths: &[&str], query: &str) -> Vec<String> {
+    rows_in(Vocabulary::DataGovUk, paths, query)
+}
+
+fn rows_in(vocabulary: Vocabulary, paths: &[&str], query: &str) -> Vec<String> {
     let base = Base::new("https://ref.example/").expect("base");
     let mut store = holos_store::Store::new();
     for path in paths {
-        let graph = semops_placetime::describe(&base, path).expect(path);
+        let graph = semops_placetime::describe_with(&base, path, vocabulary).expect(path);
         for triple in &graph {
             store
                 .insert(
@@ -280,4 +302,93 @@ fn intervals_are_ordered_by_their_instants_in_the_store() {
     assert!(found[0].starts_with("<https://ref.example/id/gregorian-day/1700-01-01>"));
     assert!(found[1].contains("\"1700-01-11T00:00:00\""));
     assert!(found[2].contains("\"1700-01-11T00:00:00\""));
+}
+
+#[test]
+fn a_gist_document_is_served_with_gist_prefixes() {
+    let a = placetime::answer(
+        &Mode::Host,
+        Vocabulary::Gist,
+        "doc/gregorian-month/2024-02.ttl",
+        Some("ref.example"),
+        None,
+        None,
+    );
+    assert_eq!(a.status, 200);
+    let body = String::from_utf8(a.body).expect("UTF-8");
+    assert!(body.contains("@prefix gist: <https://w3id.org/semanticarts/ns/ontology/gist/>"));
+    assert!(body.contains("pt:CalendarMonth"));
+    assert!(!body.contains("reference.data.gov.uk/def/intervals"));
+    // The topic comes first, as it does in the other vocabulary.
+    let topic = body
+        .find("<https://ref.example/id/gregorian-month/2024-02>")
+        .expect("the topic");
+    let other = body
+        .find("<https://ref.example/id/gregorian-month/2024-01>")
+        .expect("a neighbour");
+    assert!(topic < other);
+}
+
+#[test]
+fn gist_intervals_are_compared_by_their_start_and_end_in_the_store() {
+    // The British day 2 September 1752 ends as the Gregorian 14 September begins: the gap in
+    // the British calendar closes, and the two meet.
+    let found = rows_in(
+        Vocabulary::Gist,
+        &["day/1752-09-02", "gregorian-day/1752-09-14"],
+        r#"PREFIX gist: <https://w3id.org/semanticarts/ns/ontology/gist/>
+           SELECT ?a ?b WHERE {
+             ?a gist:endDateTime ?end .
+             ?b gist:startDateTime ?end .
+             FILTER(?a != ?b)
+           }"#,
+    );
+    assert!(
+        found.contains(
+            &"<https://ref.example/id/day/1752-09-02> <https://ref.example/id/gregorian-day/1752-09-14>"
+                .to_owned()
+        ),
+        "{found:#?}"
+    );
+}
+
+#[test]
+fn gist_durations_sum_in_the_store() {
+    // The months of the British 1752 add up to its 355 days.
+    let found = rows_in(
+        Vocabulary::Gist,
+        &["year/1752"],
+        r#"PREFIX gist: <https://w3id.org/semanticarts/ns/ontology/gist/>
+           PREFIX pt: <https://www.semantechs.co.uk/ns/ontology/placetime/>
+           SELECT (SUM(?s) / 86400 AS ?days) WHERE {
+             ?m a pt:CalendarMonth ;
+                gist:isPartOf <https://ref.example/id/year/1752> ;
+                gist:hasMagnitude/gist:numericValue ?s .
+           }"#,
+    );
+    assert_eq!(found.len(), 1);
+    assert!(found[0].starts_with("\"355"), "{found:#?}");
+}
+
+#[test]
+fn gist_points_are_found_by_geosparql_in_the_store() {
+    let found = rows_in(
+        Vocabulary::Gist,
+        &[
+            "geopoint/wgs84/X-0.1276Y51.5072",
+            "geopoint/wgs84/X2.3522Y48.8566",
+        ],
+        r#"PREFIX geo: <http://www.opengis.net/ont/geosparql#>
+           PREFIX geof: <http://www.opengis.net/def/function/geosparql/>
+           PREFIX gist: <https://w3id.org/semanticarts/ns/ontology/gist/>
+           SELECT ?p WHERE {
+             ?p a gist:GeoPoint ; geo:asWKT ?wkt .
+             FILTER(geof:sfWithin(?wkt,
+               "POLYGON((-8 49.9, 2 49.9, 2 61, -8 61, -8 49.9))"^^geo:wktLiteral))
+           }"#,
+    );
+    assert_eq!(
+        found,
+        ["<https://ref.example/id/geopoint/wgs84/X-0.1276Y51.5072>"]
+    );
 }

@@ -14,7 +14,7 @@
 //! that can name the host can name every URI in the answer.
 
 use oxrdfio::{RdfFormat, RdfSerializer};
-use semops_placetime::{Base, Format, Outcome};
+use semops_placetime::{Base, Format, Outcome, Vocabulary};
 
 /// Where the base comes from.
 #[derive(Clone, Debug)]
@@ -76,13 +76,15 @@ impl Answer {
     }
 }
 
-/// Answers a request for `relative` (from [`Mode::relative`]).
+/// Answers a request for `relative` (from [`Mode::relative`]), with documents in
+/// `vocabulary`.
 ///
 /// `host` is the `Host` header; `forwarded_host` is `X-Forwarded-Host`, which the caller
 /// passes only if forwarded headers are trusted.
 #[must_use]
 pub fn answer(
     mode: &Mode,
+    vocabulary: Vocabulary,
     relative: &str,
     host: Option<&str>,
     forwarded_host: Option<&str>,
@@ -109,7 +111,7 @@ pub fn answer(
             }
         }
     };
-    match semops_placetime::resolve(&base, relative) {
+    match semops_placetime::resolve_with(&base, relative, vocabulary) {
         Outcome::SeeOther(location) => Answer::redirect(303, location),
         Outcome::Moved(location) => Answer::redirect(301, location),
         Outcome::NotFound => Answer::text(404, "not found\n"),
@@ -126,7 +128,7 @@ pub fn answer(
                     )
                 }
             };
-            let body = match serialise(&doc.graph, &doc.topic, format) {
+            let body = match serialise(&doc.graph, &doc.topic, format, vocabulary) {
                 Ok(body) => body,
                 Err(e) => return Answer::text(500, &format!("serialising the document: {e}\n")),
             };
@@ -184,6 +186,7 @@ fn serialise(
     graph: &oxrdf::Graph,
     topic: &oxrdf::NamedNode,
     format: Format,
+    vocabulary: Vocabulary,
 ) -> Result<Vec<u8>, std::io::Error> {
     let rdf_format = match format {
         Format::Turtle | Format::N3 => RdfFormat::Turtle,
@@ -194,7 +197,7 @@ fn serialise(
         },
     };
     let mut serializer = RdfSerializer::from_format(rdf_format);
-    for (name, iri) in semops_placetime::PREFIXES {
+    for (name, iri) in vocabulary.prefixes() {
         serializer = serializer
             .with_prefix(*name, *iri)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
