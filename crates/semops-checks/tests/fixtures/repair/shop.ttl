@@ -1,0 +1,16 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix ex:   <https://example.org/shop#> .
+
+<https://example.org/shop> a owl:Ontology .
+
+ex:Shop a owl:Class ; rdfs:label "Shop" ; rdfs:comment "A place that sells things."@en .
+ex:openingHours a owl:DatatypeProperty ; rdfs:domain ex:Shop .
+ex:Bookshop a owl:Class ; rdfs:subClassOf ex:Shop .
+ex:BookStore a owl:Class ; rdfs:label "Book store"@en ; owl:equivalentClass ex:Bookshop .
+ex:Cafe a owl:Class ; rdfs:label "Cafe"@en ; rdfs:subClassOf ex:Shop ; owl:equivalentClass ex:Shop .
+ex:sells a owl:ObjectProperty ; rdfs:label "sells"@en ; rdfs:range ex:Item .
+ex:soldBy a owl:ObjectProperty ; rdfs:label "sold by"@en ; owl:inverseOf ex:sells .
+ex:inkwell a ex:Stationer ; ex:stocks ex:pen .

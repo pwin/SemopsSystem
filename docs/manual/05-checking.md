@@ -182,3 +182,52 @@ anonymous class expression, such as a restriction, is not seen. Imports are not 
 or `patch`) exits 1 when the bump reaches that level, which makes a build stop a breaking
 change to a published ontology. The default is `never`.
 
+## Repairing {#repair}
+
+Twelve of the 61 checks have a repair: a SPARQL Update that fixes the finding, with the
+project's choices filled in. `semops repair` runs the checks, then the repairs, and writes
+the repaired document to standard output. The list of repairs goes to standard error:
+
+```sh
+semops repair shop.ttl --check QUA-001 --check QUA-002 > shop-repaired.ttl
+```
+
+```{.output}
+QUA-001  https://example.org/shop#Bookshop  Add a label derived from the local name  +1 -0
+QUA-001  https://example.org/shop#openingHours  Add a label derived from the local name  +1 -0
+QUA-002  https://example.org/shop  Add owl:versionInfo from project standards  +1 -0
+3 repairs: 3 insert, 0 replace
+```
+
+A repair that only adds triples is appended to a Turtle file as a new block, and the rest of
+the file is kept as you wrote it:
+
+```turtle
+ex:Bookshop
+  rdfs:label "Bookshop"@en .
+
+ex:openingHours
+  rdfs:label "opening Hours"@en .
+
+<https://example.org/shop>
+  owl:versionInfo "0.1.0" .
+```
+
+A repair that removes a triple, such as tagging an untagged label (STY-003) or dropping a
+redundant `owl:equivalentClass` (LOG-003), means the whole document is written out again,
+and its comments and layout are lost. `semops repair` says so when it happens.
+
+| Option | What it does |
+|---|---|
+| `--check <ID>` | Only this check's findings. Repeat it for more |
+| `--write`, `--out <FILE>` | Write the repaired document back to the file, or to another |
+| `--language <TAG>` | The language tag of labels a repair adds (default `en`) |
+| `--version-info <TEXT>` | The `owl:versionInfo` a repair adds (default `0.1.0`) |
+| `--ontology-base <IRI>` | The base IRI of an `owl:Ontology` a repair declares |
+| `--redundant-equivalence-policy` | `keep-equivalent-class` or `keep-sub-class-of`: which axiom stays when both are asserted |
+
+The repairs are the Ontology Quality Suite's, which the VS Code extension offers one at a
+time as quick fixes. Four more repairs in the suite are for checks only the extension makes,
+and do not apply here. Check the result before you commit it: a label made from a local name
+is a start, not a definition.
+

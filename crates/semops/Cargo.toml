@@ -24,6 +24,8 @@ tarka-cli.workspace = true
 # `src/alloc.rs` of holos-server, compiled in here, counts through holos_engine::memory.
 holos-engine.workspace = true
 mimalloc = { version = "0.1", default-features = false }
+# Writing a repaired document out as Turtle.
+oxrdfio.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 csv.workspace = true

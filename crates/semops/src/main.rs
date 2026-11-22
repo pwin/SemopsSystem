@@ -105,6 +105,44 @@ enum Command {
         #[arg(long)]
         out: Option<PathBuf>,
     },
+    /// Apply the quality checks' repairs to an ontology file.
+    ///
+    /// Runs the checks, then each finding's quick fix: a SPARQL Update template, bound to the
+    /// finding and to the project's standards, run against the file's own triples, one
+    /// after another. Repairs that only add triples are appended to a Turtle file as a new
+    /// block, which keeps its formatting and comments. Any repair that removes a triple means
+    /// the whole file is written out again, without its comments.
+    ///
+    /// The repaired document goes to standard output, or back to the file with --write, or
+    /// to --out; what was repaired goes to standard error. Exit status: 0, or 2 when the
+    /// file cannot be read or a repair fails.
+    Repair {
+        /// The ontology file to repair.
+        file: PathBuf,
+        /// Repair only this check's findings. Repeatable; the default is every check with a
+        /// repair.
+        #[arg(long = "check", value_name = "ID")]
+        checks: Vec<String>,
+        /// Write the repaired document back to the file.
+        #[arg(long, conflicts_with = "out")]
+        write: bool,
+        /// Write the repaired document here.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// The language tag of labels a repair adds.
+        #[arg(long, default_value = "en")]
+        language: String,
+        /// The owl:versionInfo a repair adds.
+        #[arg(long, default_value = "0.1.0")]
+        version_info: String,
+        /// The base IRI of an owl:Ontology a repair declares.
+        #[arg(long, default_value = "https://example.org/ontology/")]
+        ontology_base: String,
+        /// Which axiom stays when owl:equivalentClass and rdfs:subClassOf are both asserted
+        /// (LOG-003).
+        #[arg(long, value_enum, default_value_t = RedundantEquivalencePolicy::KeepEquivalentClass)]
+        redundant_equivalence_policy: RedundantEquivalencePolicy,
+    },
     /// Run the ontology quality checks over an ontology and its data.
     ///
     /// The files are read into one graph, so declarations in the ontology are checked
@@ -171,6 +209,12 @@ enum DiffFailOn {
     Minor,
     Patch,
     Never,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum RedundantEquivalencePolicy {
+    KeepEquivalentClass,
+    KeepSubClassOf,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -296,6 +340,30 @@ fn run_cli(args: Vec<OsString>) -> Result<ExitCode> {
             fail_on,
             out,
         } => return diff(&old, &new, format, fail_on, out),
+        Command::Repair {
+            file,
+            checks,
+            write,
+            out,
+            language,
+            version_info,
+            ontology_base,
+            redundant_equivalence_policy,
+        } => {
+            let standards = semops_checks::repair::Standards {
+                default_language_tag: language,
+                redundant_equivalence_policy: match redundant_equivalence_policy {
+                    RedundantEquivalencePolicy::KeepEquivalentClass => "keepEquivalentClass",
+                    RedundantEquivalencePolicy::KeepSubClassOf => "keepSubClassOf",
+                }
+                .to_owned(),
+                default_ontology_base_iri: ontology_base,
+                default_version_info: version_info,
+                ..semops_checks::repair::Standards::default()
+            };
+            let target = if write { Some(file.clone()) } else { out };
+            return repair(&file, &checks, &standards, target);
+        }
         check @ Command::Check { .. } => return run_check(check),
     };
     Ok(forward(forwarded.0, forwarded.1))
@@ -332,6 +400,92 @@ fn diff(
     } else {
         ExitCode::SUCCESS
     })
+}
+
+fn repair(
+    file: &Path,
+    checks: &[String],
+    standards: &semops_checks::repair::Standards,
+    target: Option<PathBuf>,
+) -> Result<ExitCode> {
+    use semops_checks::repair::{self, Kind};
+    let (document, prefixes) = repair::load_document(file)?;
+    let report = run::check(&document)?;
+    let mut working = document;
+    let mut outcomes = Vec::new();
+    for finding in &report.findings {
+        let wanted = checks.is_empty()
+            || finding
+                .check_id
+                .as_deref()
+                .is_some_and(|id| checks.iter().any(|c| c == id));
+        if !wanted {
+            continue;
+        }
+        let Some(outcome) = repair::compute(&working, finding, standards, &prefixes)? else {
+            continue;
+        };
+        // A finding an earlier repair already dealt with changes nothing.
+        if outcome.added.is_empty() && outcome.removed.is_empty() {
+            continue;
+        }
+        eprintln!(
+            "{:<8} {}  {}  +{} -{}",
+            outcome.check_id,
+            finding.focus_node,
+            outcome.title,
+            outcome.added.len(),
+            outcome.removed.len()
+        );
+        working.clone_from(&outcome.result);
+        outcomes.push(outcome);
+    }
+    let original = std::fs::read_to_string(file).unwrap_or_default();
+    let turtle = file
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("ttl"));
+    let text = if outcomes.is_empty() {
+        eprintln!("semops: nothing to repair");
+        original
+    } else if turtle && outcomes.iter().all(|o| o.kind == Kind::Insert) {
+        let added: Vec<_> = outcomes
+            .iter()
+            .flat_map(|o| o.added.iter().cloned())
+            .collect();
+        let mut text = original;
+        if !text.ends_with('\n') {
+            text.push('\n');
+        }
+        text.push_str(&repair::render_added(&added, &prefixes));
+        text
+    } else {
+        eprintln!(
+            "semops: a repair removed triples, so the document is written out whole, without \
+             its comments or layout"
+        );
+        let mut serializer = oxrdfio::RdfSerializer::from_format(oxrdfio::RdfFormat::Turtle);
+        for (prefix, namespace) in &prefixes {
+            serializer = serializer.with_prefix(prefix, namespace)?;
+        }
+        let mut writer = serializer.for_writer(Vec::new());
+        for triple in &working {
+            writer.serialize_triple(triple)?;
+        }
+        String::from_utf8(writer.finish()?)?
+    };
+    let inserts = outcomes.iter().filter(|o| o.kind == Kind::Insert).count();
+    eprintln!(
+        "{} repairs: {inserts} insert, {} replace",
+        outcomes.len(),
+        outcomes.len() - inserts
+    );
+    match target {
+        Some(path) => {
+            std::fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
+        }
+        None => std::io::stdout().lock().write_all(text.as_bytes())?,
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 fn run_check(command: Command) -> Result<ExitCode> {

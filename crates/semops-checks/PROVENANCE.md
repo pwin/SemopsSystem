@@ -34,6 +34,7 @@ output by tests:
 | --- | --- | --- |
 | `src/run/merge.rs` | `checks/merge.py`: how the two formulations' findings merge | `tests/parity.rs` |
 | `src/diff.rs` | `versioning/diff.py`: version comparison and the suggested bump | `tests/diff.rs`, against `version-diff --exclude-imports --json` output in `tests/fixtures/expected/diff/` |
+| `src/repair.rs` | `checks/repair.py`: binding a repair template to a finding and running it | `tests/repair.rs`, against `compute_repair`'s added and removed triples in `tests/fixtures/expected/repair-shop.json` |
 
 `diff.rs` computes a domain or range's subclass closure by a plain reachability search
 where the suite uses a memoised walk with a cycle guard. The two give the same union for
