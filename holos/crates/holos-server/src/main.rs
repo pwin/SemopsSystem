@@ -1335,8 +1335,15 @@ fn named_dataset(
 /// Built from the `Host` header so it matches the URI the client actually used, which is
 /// what makes the resolved IRIs meaningful to that client.
 fn base_iri(request: &Request, path: &str) -> String {
-    let host = header(request, "host").unwrap_or_else(|| "localhost".to_owned());
-    format!("http://{host}{path}")
+    service_base(header(request, "host").as_deref(), path)
+}
+
+/// `https://{host}{path}`. The scheme is `https` whatever the request arrived on, as the
+/// placetime URIs' is: a server behind a front door that ends TLS receives plain HTTP, and
+/// reading the scheme off the connection would mint `http://` IRIs for a service published
+/// as `https://`.
+fn service_base(host: Option<&str>, path: &str) -> String {
+    format!("https://{}{path}", host.unwrap_or("localhost"))
 }
 
 fn rdf_format_of(content_type: Option<&str>) -> Option<RdfFormat> {
@@ -1836,6 +1843,15 @@ mod tests {
         assert!(unusable_body(Some("application/sparql-query; charset=\"UTF-8\"")).is_none());
         // No charset at all is the default, which is UTF-8.
         assert!(unusable_body(Some("application/sparql-query")).is_none());
+    }
+
+    #[test]
+    fn relative_iris_resolve_against_an_https_base() {
+        assert_eq!(
+            service_base(Some("data.example:8443"), "/query"),
+            "https://data.example:8443/query"
+        );
+        assert_eq!(service_base(None, "/update"), "https://localhost/update");
     }
 
     #[test]

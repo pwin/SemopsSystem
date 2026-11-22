@@ -123,5 +123,12 @@ attributes it and lists the changes.
   subsets, item type, URI pattern, an example and a source.
 - SPARQL functions that mint these URIs (for example a `placetime:quarter(?date)`), which
   `semops-functions` could add.
-- `holos-server` still resolves a query's relative IRIs against `http://{Host}/query`;
-  placetime's `https` default does not change the SPARQL endpoint.
+
+## The SPARQL endpoint's base follows
+
+`holos-server` resolved relative IRIs in a query or update against `http://{Host}/query`
+(or `/update`). It now uses `https://{Host}/…`, for the same reason as placetime: behind a
+TLS front door the scheme on the connection is not the scheme the service is published at.
+`CONSTRUCT { <s> <p> 1 } WHERE {}` sent to `data.example` now returns
+`<https://data.example/s>`, where it used to return `<http://data.example/s>`. A query that
+writes absolute IRIs is unaffected.
