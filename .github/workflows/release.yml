@@ -1,0 +1,202 @@
+# A SemOps System release: the `semops` binary for five platforms, the multi-arch container
+# image on GitHub Container Registry, and the GitHub Release that carries the binaries.
+#
+#   Tag  v*                 build everything, publish the image, create the release
+#   Run workflow (manual)   the same for a tag that exists, to retry without moving it
+#
+# Separate from workflow.yml, which publishes the Python wheel to PyPI as a trusted
+# publisher: this one writes to the repository (the release) and to the registry (the
+# image), and neither job needs the other's permissions. The two run side by side on their
+# own tags (`v*` here, `py-v*` there).
+#
+# The binary is the one `semops`, which is also holos-server, holos, shacl and tarka when run
+# under those names (docs/decisions/0008). The Unix archives carry those names as links.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and release, e.g. v0.29.0"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_RELEASE_DEBUG: "false"
+  IMAGE: ghcr.io/${{ github.repository_owner }}/semops
+
+jobs:
+  binaries:
+    name: binary (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          - { os: macos-latest, target: aarch64-apple-darwin }
+          - { os: macos-latest, target: x86_64-apple-darwin }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      # RocksDB's bindings need libclang, which neither hosted runner puts where bindgen
+      # looks. The fixes are HOLOS's (holos/.github/workflows/release.yml explains them).
+      - name: macOS build environment
+        if: runner.os == 'macOS'
+        run: |
+          lib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          test -f "$lib/libclang.dylib" || { echo "no libclang.dylib under $lib"; exit 1; }
+          echo "LIBCLANG_PATH=$lib" >> "$GITHUB_ENV"
+          if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=10.13" >> "$GITHUB_ENV"
+          fi
+      - name: Point bindgen at libclang (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $lib = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path "$lib\libclang.dll")) { throw "no libclang.dll under $lib" }
+          "LIBCLANG_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build
+        run: cargo build --locked --profile release-abort --target ${{ matrix.target }} -p semops
+      - name: Check the binary runs, as itself and under the engines' names
+        if: matrix.target != 'x86_64-apple-darwin'
+        shell: bash
+        run: |
+          dir="target/${{ matrix.target }}/release-abort"
+          exe=""
+          if [ "${{ runner.os }}" = "Windows" ]; then exe=".exe"; fi
+          "$dir/semops$exe" --version
+          "$dir/semops$exe" check --list | tail -1
+          for name in holos-server holos shacl tarka; do
+            cp "$dir/semops$exe" "$dir/$name$exe"
+            "$dir/$name$exe" --version
+          done
+      - name: Package
+        shell: bash
+        run: |
+          tag="${{ inputs.tag || github.ref_name }}"
+          name="semops-${tag#v}-${{ matrix.target }}"
+          dir="target/${{ matrix.target }}/release-abort"
+          mkdir -p "dist/$name"
+          cp README.md LICENSE-APACHE LICENSE-MIT "dist/$name/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "$dir/semops.exe" "dist/$name/"
+            (cd dist && 7z a -tzip "$name.zip" "$name" > /dev/null)
+          else
+            cp "$dir/semops" "dist/$name/"
+            for alias in holos-server holos shacl tarka; do ln -s semops "dist/$name/$alias"; done
+            tar -C dist -czf "dist/$name.tar.gz" "$name"
+          fi
+          ls -l dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binaries-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+
+  # The image for each architecture, built on a runner of that architecture (compiling
+  # RocksDB and Polars under emulation takes hours) and pushed by digest. The `image` job
+  # joins them into one multi-arch tag.
+  image-arch:
+    name: image (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, arch: amd64 }
+          - { os: ubuntu-24.04-arm, arch: arm64 }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, smoke-test and push
+        id: push
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag || github.ref_name }}"
+          local="semops:${tag#v}-${{ matrix.arch }}"
+          docker buildx build --load -f holos/deploy/Dockerfile -t "$local" .
+          # The image's own smoke test, against the server it starts.
+          docker run -d --name smoke -p 7878:7878 "$local"
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:7878/health > /dev/null && break; sleep 2; done
+          docker exec smoke holos-smoke
+          docker exec smoke semops check --list | tail -1
+          docker rm -f smoke
+          remote="${IMAGE}:${tag#v}-${{ matrix.arch }}"
+          docker tag "$local" "$remote"
+          docker push "$remote"
+
+  image:
+    name: image (multi-arch)
+    needs: image-arch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: One tag for both architectures
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          docker buildx imagetools create \
+            -t "${IMAGE}:${version}" -t "${IMAGE}:latest" \
+            "${IMAGE}:${version}-amd64" "${IMAGE}:${version}-arm64"
+          docker buildx imagetools inspect "${IMAGE}:${version}"
+
+  publish:
+    name: publish the release
+    needs: binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums
+        run: cd dist && sha256sum semops-* > SHA256SUMS && cat SHA256SUMS
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          gh release create "$TAG" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "SemOps System ${TAG#v}" \
+            --notes "The \`semops\` binary for Linux (x86_64, aarch64), macOS (Apple Silicon, Intel) and Windows (x64). It is also holos-server, holos, shacl and tarka when run under those names; the Unix archives include those names as links. Verify a download against SHA256SUMS. The container image is ${IMAGE}:${TAG#v}."

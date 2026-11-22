@@ -123,8 +123,9 @@ docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.29.0 check
 identity headers, as [chapter 9](09-security.md) describes.
 
 ::: note
-A published image, `ghcr.io/pwin/semops`, is planned and not yet published. Until then,
-build the image yourself, and push it to your own registry for Kubernetes or Azure.
+Each SemOps System release publishes the image as `ghcr.io/pwin/semops`, for amd64 and
+arm64, tagged with the version. No release has been made yet, so until the first one, build
+the image yourself and push it to your own registry for Kubernetes or Azure.
 :::
 
 ## Python {#python}
@@ -204,8 +205,13 @@ file is its reference.
 
 ## Release binaries {#release-binaries}
 
-Until SemOps System publishes its own release, each engine's repository publishes prebuilt
-commands, in an archive per platform with the licences and a README:
+Each SemOps System release carries the `semops` binary, in an archive per platform:
+Linux (x86-64 and arm64), macOS (Apple Silicon and Intel) and Windows (x86-64). The Unix
+archives include `holos-server`, `holos`, `shacl` and `tarka` as links to it. On Windows,
+copy `semops.exe` to any of those names to get that command. No release has been made yet.
+
+Until the first one, each engine's repository publishes prebuilt commands, in an archive
+per platform with the licences and a README:
 
 | Engine | Commands | Platforms | Releases |
 |---|---|---|---|
