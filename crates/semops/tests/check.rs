@@ -109,3 +109,65 @@ fn the_registry_can_be_listed() {
     assert!(stdout.contains("STR-001"));
     assert!(stdout.contains("61 checks"));
 }
+
+#[test]
+fn junit_has_a_case_per_check_failed_by_findings_at_the_gate() {
+    let domain = fixture("ontology/domain.ttl");
+    let domain = domain.to_str().expect("path");
+    let (code, xml, _) = semops(&["check", domain, "--format", "junit"]);
+    assert_eq!(
+        code, 1,
+        "the exit status follows --fail-on, whatever the format"
+    );
+    assert!(xml.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
+    assert_eq!(xml.matches("<testcase ").count(), 61, "one case per check");
+    assert!(xml.contains("<testsuites name=\"semops check\" tests=\"61\""));
+    // Every <failure> is a Violation at the default gate; warnings go to system-out.
+    let failures = xml.matches("<failure ").count();
+    assert!(failures > 0);
+    assert!(xml.matches("<failure type=\"Violation\"").count() == failures);
+    assert!(xml.contains("<system-out>"));
+    assert!(xml.contains(&format!("failures=\"{failures}\"")));
+    // With no gate, nothing fails.
+    let (code, xml, _) = semops(&["check", domain, "--format", "junit", "--fail-on", "never"]);
+    assert_eq!(code, 0);
+    assert_eq!(xml.matches("<failure ").count(), 0);
+}
+
+#[test]
+fn sarif_carries_every_finding_with_a_rule_and_a_place() {
+    let data = fixture("gist_patterns/data.ttl");
+    let ontology = fixture("gist_patterns/ontology.ttl");
+    let files = [
+        ontology.to_str().expect("path"),
+        data.to_str().expect("path"),
+    ];
+    let (_, out, _) = semops(&["check", files[0], files[1], "--format", "sarif"]);
+    let sarif: serde_json::Value = serde_json::from_str(&out).expect("SARIF is JSON");
+    assert_eq!(sarif["version"], "2.1.0");
+    let run = &sarif["runs"][0];
+    assert_eq!(run["tool"]["driver"]["name"], "semops");
+    let rules = run["tool"]["driver"]["rules"].as_array().expect("rules");
+    assert_eq!(rules.len(), 61);
+    assert_eq!(run["invocations"][0]["executionSuccessful"], true);
+    let results = run["results"].as_array().expect("results");
+    assert_eq!(results.len(), 15, "the same findings --format json gives");
+    for r in results {
+        assert!(["error", "warning", "note"].contains(&r["level"].as_str().expect("level")));
+        let rule = r["ruleIndex"].as_u64().expect("a registered rule") as usize;
+        assert_eq!(rules[rule]["id"], r["ruleId"]);
+        let location = &r["locations"][0];
+        let uri = location["physicalLocation"]["artifactLocation"]["uri"]
+            .as_str()
+            .expect("uri");
+        assert!(uri.ends_with(".ttl") && !uri.contains('\\'), "{uri}");
+        assert!(location["logicalLocations"][0]["fullyQualifiedName"].is_string());
+        assert!(r["partialFingerprints"]["semopsFinding/v1"].is_string());
+    }
+    // Named nodes are placed on the line that first writes them.
+    assert!(
+        results
+            .iter()
+            .any(|r| r["locations"][0]["physicalLocation"]["region"]["startLine"].is_u64())
+    );
+}
