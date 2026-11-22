@@ -1,0 +1,22 @@
+{
+  "bump": "none",
+  "removed_classes": [],
+  "added_classes": [],
+  "removed_properties": [],
+  "added_properties": [],
+  "removed_subclass_edges": [],
+  "added_subclass_edges": [],
+  "added_disjoint_pairs": [],
+  "removed_disjoint_pairs": [],
+  "added_equivalent_classes": [],
+  "removed_equivalent_classes": [],
+  "added_equivalent_properties": [],
+  "removed_equivalent_properties": [],
+  "narrowed_domain": {},
+  "widened_domain": {},
+  "narrowed_range": {},
+  "widened_range": {},
+  "added_characteristics": {},
+  "removed_characteristics": {},
+  "changed_annotation_terms": []
+}

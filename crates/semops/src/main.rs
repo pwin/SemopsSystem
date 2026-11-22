@@ -81,6 +81,30 @@ enum Command {
     /// Run SHACL-AF or SPARQL rules over a store (holos rules).
     #[command(disable_help_flag = true, disable_version_flag = true)]
     Rules(Forward),
+    /// Compare two versions of an ontology and suggest a semantic-version bump.
+    ///
+    /// Classes, properties, subclass edges, disjointness, equivalence, domains, ranges,
+    /// property characteristics and rdfs:label/rdfs:comment are compared, as the Ontology
+    /// Quality Suite's `version-diff` compares them. Removing or narrowing anything is a
+    /// major change; adding or widening is minor; changing only labels and comments is a
+    /// patch. Imports are not followed: each file is compared as it stands.
+    ///
+    /// Exit status: 0, or 1 when the bump is at or above --fail-on; 2 when a file cannot be
+    /// read.
+    Diff {
+        /// The earlier version.
+        old: PathBuf,
+        /// The later version.
+        new: PathBuf,
+        #[arg(long, value_enum, default_value_t = DiffFormat::Text)]
+        format: DiffFormat,
+        /// The least bump that fails the run.
+        #[arg(long, value_enum, default_value_t = DiffFailOn::Never)]
+        fail_on: DiffFailOn,
+        /// Write the report here rather than to standard output.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Run the ontology quality checks over an ontology and its data.
     ///
     /// The files are read into one graph, so declarations in the ontology are checked
@@ -131,6 +155,22 @@ enum Format {
     /// SARIF 2.1.0: each finding at the line its focus node first appears on, for code
     /// scanning such as GitHub's.
     Sarif,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum DiffFormat {
+    /// The suite's report: each kind of change, then the suggested bump.
+    Text,
+    /// The suite's `diff.json`.
+    Json,
+}
+
+#[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
+enum DiffFailOn {
+    Major,
+    Minor,
+    Patch,
+    Never,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -249,9 +289,49 @@ fn run_cli(args: Vec<OsString>) -> Result<ExitCode> {
         Command::Compact(f) => ("compact", f),
         Command::Entail(f) => ("entail", f),
         Command::Rules(f) => ("rules", f),
+        Command::Diff {
+            old,
+            new,
+            format,
+            fail_on,
+            out,
+        } => return diff(&old, &new, format, fail_on, out),
         check @ Command::Check { .. } => return run_check(check),
     };
     Ok(forward(forwarded.0, forwarded.1))
+}
+
+fn diff(
+    old: &Path,
+    new: &Path,
+    format: DiffFormat,
+    fail_on: DiffFailOn,
+    out: Option<PathBuf>,
+) -> Result<ExitCode> {
+    use semops_checks::diff::{self, Bump};
+    let (d, bump) = diff::diff(&run::load(&[old])?, &run::load(&[new])?);
+    let mut text = match format {
+        DiffFormat::Text => diff::report(&d, bump, &old.to_string_lossy(), &new.to_string_lossy()),
+        DiffFormat::Json => serde_json::to_string_pretty(&diff::to_json(&d, bump))?,
+    };
+    text.push('\n');
+    match out {
+        Some(path) => {
+            std::fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
+        }
+        None => std::io::stdout().lock().write_all(text.as_bytes())?,
+    }
+    let threshold = match fail_on {
+        DiffFailOn::Major => Some(Bump::Major),
+        DiffFailOn::Minor => Some(Bump::Minor),
+        DiffFailOn::Patch => Some(Bump::Patch),
+        DiffFailOn::Never => None,
+    };
+    Ok(if threshold.is_some_and(|t| bump >= t) {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    })
 }
 
 fn run_check(command: Command) -> Result<ExitCode> {

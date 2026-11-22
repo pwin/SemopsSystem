@@ -1,0 +1,31 @@
+Ontology version diff: v1.ttl -> v2-major.ttl
+
+Removed classes [MAJOR]:
+  - https://example.org/shop#Cafe
+
+Removed properties [MAJOR]:
+  - https://example.org/shop#staffCount
+
+Removed subclass edges [MAJOR]:
+  - https://example.org/shop#Bookshop no longer rdfs:subClassOf https://example.org/shop#Shop
+  - https://example.org/shop#Cafe no longer rdfs:subClassOf https://example.org/shop#Shop
+
+New disjointness axioms [MAJOR]:
+  - https://example.org/shop#Book disjointWith https://example.org/shop#Ledger
+
+Narrowed/changed property domains [MAJOR]:
+  - https://example.org/shop#ownedBy: {https://example.org/shop#Shop} -> {https://example.org/shop#Bookshop}
+
+Narrowed/changed property ranges [MAJOR]:
+  - https://example.org/shop#sells: {https://example.org/shop#Book} -> {https://example.org/shop#Ledger}
+
+Removed equivalentClass axioms [MAJOR]:
+  - https://example.org/shop#BookStore equivalentClass https://example.org/shop#Bookshop
+
+Removed equivalentProperty axioms [MAJOR]:
+  - https://example.org/shop#sells equivalentProperty https://example.org/shop#stocks
+
+New restricting property characteristics [MAJOR]:
+  - https://example.org/shop#ownedBy: http://www.w3.org/2002/07/owl#InverseFunctionalProperty
+
+Suggested version bump: MAJOR

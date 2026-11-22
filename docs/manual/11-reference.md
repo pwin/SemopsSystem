@@ -13,6 +13,7 @@ names is that command.
 | `semops validate` | `shacl` | `semops validate --help` |
 | `semops map` | `tarka` | `semops map --help`, `semops map run --help` |
 | `semops check` | The ontology quality checks, `semops` only | `semops check --help` |
+| `semops diff` | Version comparison: the suggested bump between two versions, `semops` only | `semops diff --help` |
 
 | Command | From | What it is for | Its own help |
 |---|---|---|---|

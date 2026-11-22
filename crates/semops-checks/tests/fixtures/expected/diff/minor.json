@@ -1,0 +1,63 @@
+{
+  "bump": "minor",
+  "removed_classes": [],
+  "added_classes": [
+    "https://example.org/shop#CoffeeShop",
+    "https://example.org/shop#Market"
+  ],
+  "removed_properties": [],
+  "added_properties": [
+    "https://example.org/shop#opens"
+  ],
+  "removed_subclass_edges": [],
+  "added_subclass_edges": [
+    [
+      "https://example.org/shop#Market",
+      "https://example.org/shop#Shop"
+    ],
+    [
+      "https://example.org/shop#Kiosk",
+      "https://example.org/shop#Shop"
+    ]
+  ],
+  "added_disjoint_pairs": [],
+  "removed_disjoint_pairs": [
+    [
+      "https://example.org/shop#Person",
+      "https://example.org/shop#Shop"
+    ]
+  ],
+  "added_equivalent_classes": [
+    [
+      "https://example.org/shop#Cafe",
+      "https://example.org/shop#CoffeeShop"
+    ]
+  ],
+  "removed_equivalent_classes": [],
+  "added_equivalent_properties": [],
+  "removed_equivalent_properties": [],
+  "narrowed_domain": {},
+  "widened_domain": {
+    "https://example.org/shop#sells": {
+      "old": [
+        "https://example.org/shop#Bookshop"
+      ],
+      "new": [
+        "https://example.org/shop#Shop"
+      ]
+    }
+  },
+  "narrowed_range": {},
+  "widened_range": {},
+  "added_characteristics": {
+    "https://example.org/shop#keeps": [
+      "http://www.w3.org/2002/07/owl#SymmetricProperty"
+    ]
+  },
+  "removed_characteristics": {
+    "https://example.org/shop#ownedBy": [
+      "http://www.w3.org/2002/07/owl#TransitiveProperty"
+    ]
+  },
+  "changed_annotation_terms": []
+}

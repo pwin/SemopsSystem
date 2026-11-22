@@ -1,0 +1,7 @@
+Ontology version diff: v1.ttl -> v2-patch.ttl
+
+Terms with changed rdfs:label/rdfs:comment only [patch]:
+  - https://example.org/shop#Bookshop
+  - https://example.org/shop#Shop
+
+Suggested version bump: PATCH

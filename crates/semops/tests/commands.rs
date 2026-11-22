@@ -57,7 +57,7 @@ fn the_help_lists_every_command() {
     assert_eq!(r.code, 0);
     for command in [
         "serve", "load", "query", "update", "validate", "map", "stats", "dump", "backup",
-        "compact", "entail", "rules", "check",
+        "compact", "entail", "rules", "check", "diff",
     ] {
         assert!(
             r.stdout.contains(&format!("  {command} ")),
