@@ -75,8 +75,20 @@ command names the check on its standard error.
 | `text` (default) | Reading at a terminal |
 | `json` | Another program: an array of findings with every field |
 | `csv` | A spreadsheet: the same columns as the suite's `full_results.csv` |
+| `junit` | A test results view, such as Azure DevOps's Tests tab: one test per check |
+| `sarif` | Code scanning, such as GitHub's: each finding as a SARIF 2.1.0 result |
 
-`--out <FILE>` writes the report to a file instead of standard output.
+`--out <FILE>` writes the report to a file instead of standard output. The exit status is
+the same whatever the format.
+
+In JUnit each of the 61 checks is a test. A check fails when it has findings at or above
+`--fail-on`, and its findings are the failure's text. Findings below the gate go in the
+test's output, and a check that could not run is an error.
+
+SARIF has no way to point at an RDF node, only at a place in a file. Each result points at
+the line where its focus node first appears in the input, by its full IRI or else by its
+local name after a prefix, and names the node itself as the result's logical location. A
+finding about a blank node points at the first file, with no line.
 
 ## Engines
 
@@ -96,6 +108,30 @@ A GitHub Actions step that fails the build on a violation:
 ```yaml
 - name: Check the ontology
   run: semops check ontology/*.ttl
+```
+
+To see the findings in GitHub's code scanning as well, write SARIF and upload it, even when
+the check fails:
+
+```yaml
+- name: Check the ontology
+  run: semops check ontology/*.ttl --format sarif --out semops.sarif
+- uses: github/codeql-action/upload-sarif@v4
+  if: always()
+  with:
+    sarif_file: semops.sarif
+```
+
+In Azure Pipelines, JUnit puts each check in the run's Tests tab:
+
+```yaml
+- script: semops check ontology/*.ttl --format junit --out semops-junit.xml
+  displayName: Check the ontology
+- task: PublishTestResults@2
+  condition: always()
+  inputs:
+    testResultsFormat: JUnit
+    testResultsFiles: semops-junit.xml
 ```
 
 The container image carries the command too, for a pipeline that does not install Rust:

@@ -22,6 +22,7 @@ use std::process::ExitCode;
 /// into this binary as it is into holos-server's.
 #[path = "../../../holos/crates/holos-server/src/alloc.rs"]
 mod alloc;
+mod reports;
 
 /// Counting, so `semops serve` enforces `--max-query-memory` as holos-server does, around
 /// mimalloc, so `semops validate` parses as fast as `shacl` does.
@@ -124,6 +125,12 @@ enum Format {
     Json,
     /// The suite's `full_results.csv` columns.
     Csv,
+    /// JUnit XML: one test case per check, failed by its findings at or above --fail-on,
+    /// for test result views such as Azure DevOps's Tests tab.
+    Junit,
+    /// SARIF 2.1.0: each finding at the line its focus node first appears on, for code
+    /// scanning such as GitHub's.
+    Sarif,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -308,6 +315,13 @@ fn check(files: &[PathBuf], options: Options) -> Result<ExitCode> {
     let registry = semops_checks::Registry::builtin();
     let report = run::check_with(&triples, registry, &semops_checks::queries(), engine)?;
 
+    // The rank at or below which a finding fails the run (0 Violation, 1 Warning, 2 Info).
+    let threshold = match fail_on {
+        FailOn::Violation => Some(0),
+        FailOn::Warning => Some(1),
+        FailOn::Info => Some(2),
+        FailOn::Never => None,
+    };
     let mut buffer = Vec::new();
     match format {
         Format::Text => write_text(&mut buffer, &report)?,
@@ -316,6 +330,13 @@ fn check(files: &[PathBuf], options: Options) -> Result<ExitCode> {
             buffer.push(b'\n');
         }
         Format::Csv => write_csv(&mut buffer, &report.findings)?,
+        Format::Junit => {
+            buffer.extend_from_slice(reports::junit(&report, registry, threshold, rank).as_bytes());
+        }
+        Format::Sarif => {
+            serde_json::to_writer_pretty(&mut buffer, &reports::sarif(&report, registry, files))?;
+            buffer.push(b'\n');
+        }
     }
     match out {
         Some(path) => {
@@ -340,17 +361,12 @@ fn check(files: &[PathBuf], options: Options) -> Result<ExitCode> {
     if !failed.is_empty() {
         return Ok(ExitCode::from(2));
     }
-    let gated = fail_on != FailOn::Never && {
-        let threshold = match fail_on {
-            FailOn::Violation => 0,
-            FailOn::Warning => 1,
-            _ => 2,
-        };
+    let gated = threshold.is_some_and(|threshold| {
         report
             .findings
             .iter()
             .any(|f| rank(&f.severity) <= threshold)
-    };
+    });
     Ok(if gated {
         ExitCode::from(1)
     } else {
