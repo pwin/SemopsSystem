@@ -10,6 +10,7 @@ engine and the tarka mapper, built, versioned and released together. It implemen
 | [`shacl/`](shacl/) | SHACL 1.0/1.2 and SHACL-AF validator | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine) 0.3.9 |
 | [`tarka/`](tarka/) | CSV, Parquet and Polars to RDF 1.1 through TARQL or OTTR | [pwin/tarka](https://github.com/pwin/tarka) 0.3.1 |
 | [`crates/semops-functions/`](crates/semops-functions/) | The SPARQL extension functions every evaluator registers: XPath `fn:` and `math:`, Jena `afn:` and property functions, SPIN `spif:` | HOLOS's and tarka's function code, merged and extended |
+| [`crates/semops-placetime/`](crates/semops-placetime/) | URIs for calendar intervals, instants and WGS84 points, each described in RDF from the URI alone, in the reference.data.gov.uk patterns; served by `holos-server --placetime` | A Rust rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer), with points added |
 | [`vendor/`](vendor/) | The two patched Oxigraph crates every engine builds against | One copy of what HOLOS and SHACL_Engine each vendored |
 | [`docs/decisions/`](docs/decisions/) | Why the workspace is laid out as it is, what it is called, and what it must be able to do | — |
 | [`versions.toml`](versions.toml) | Which engine releases the editor, extension and suite must use until the workspace ships its own packages | — |
@@ -30,6 +31,14 @@ all register, tested against one table of cases in each. HOLOS's native validato
 SHACL-SPARQL constraints too, through the adapted engine.
 [docs/decisions/0003](docs/decisions/0003-capability-floor-and-functions.md) has the
 requirement, what is supported and what is deliberately not.
+
+`holos-server --placetime` also answers the interval URIs reference.data.gov.uk used to
+serve, under `https://<host>/` or a configured base: `/id/quarter/2006-Q1` redirects to a
+description of that quarter, and likewise for years to seconds in the British (Julian until
+1752), Gregorian and Julian calendars, for instants and intervals of any length, and for
+WGS84 points (`/id/geopoint/wgs84/X-0.1276Y51.5072`), which GeoSPARQL queries can use once
+loaded. [docs/decisions/0004](docs/decisions/0004-placetime.md) has the patterns, what
+changed from IntervalServer and the licence position.
 
 ## Build and test
 
@@ -63,4 +72,5 @@ wheel on PyPI (`import semops_system`), the `semops-wasm` npm packages and the
 
 ## Licence
 
-MIT OR Apache-2.0, as each engine was.
+MIT OR Apache-2.0, as each engine was, except `crates/semops-placetime`, which is Apache-2.0
+because it is a rewrite of Apache-2.0 code; its NOTICE file says what it derives from.

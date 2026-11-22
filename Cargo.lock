@@ -1550,6 +1550,7 @@ dependencies = [
  "holos-store",
  "oxrdf",
  "oxrdfio",
+ "semops-placetime",
  "sparesults",
  "spareval",
  "tiny_http",
@@ -3961,6 +3962,14 @@ dependencies = [
  "sha1 0.11.0",
  "spareval",
  "spargebra",
+]
+
+[[package]]
+name = "semops-placetime"
+version = "0.29.0"
+dependencies = [
+ "oxrdf",
+ "oxrdfio",
 ]
 
 [[package]]

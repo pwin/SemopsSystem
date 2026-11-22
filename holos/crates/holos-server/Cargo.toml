@@ -19,6 +19,7 @@ holos-security.workspace = true
 holos-engine.workspace = true
 holos-shacl.workspace = true
 holos-stats.workspace = true
+semops-placetime.workspace = true
 oxrdf.workspace = true
 oxrdfio.workspace = true
 sparesults.workspace = true

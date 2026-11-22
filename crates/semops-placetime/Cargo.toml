@@ -1,0 +1,21 @@
+[package]
+name = "semops-placetime"
+description = "Calendar interval, instant and WGS84 point URI sets in the reference.data.gov.uk patterns, each described in RDF from its URI alone"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Not the workspace's MIT OR Apache-2.0. This is a rewrite of epimorphics/IntervalServer, which
+# is Apache-2.0, and it keeps that service's URI patterns, vocabulary and label wording, so it
+# stays under the licence it came from. NOTICE says what it derives from and what changed.
+license = "Apache-2.0"
+repository.workspace = true
+authors.workspace = true
+include = ["src/**", "tests/**", "Cargo.toml", "NOTICE", "README.md"]
+
+[dependencies]
+# Plain oxrdf, not the workspace spec, which turns RDF 1.2 on: nothing here needs it, and a
+# crate that inherits it would turn it on for every RDF 1.1 build that uses this one.
+oxrdf = "0.3"
+
+[dev-dependencies]
+oxrdfio = "0.2"
