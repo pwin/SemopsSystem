@@ -9,6 +9,8 @@ engine and the tarka mapper, built, versioned and released together. It implemen
 | [`holos/`](holos/) | RDF 1.2 store, SPARQL 1.2 engine and server, access policy, GeoSPARQL, holons, two SHACL validators | [pwin/triplestore](https://github.com/pwin/triplestore) 0.27.0 |
 | [`shacl/`](shacl/) | SHACL 1.0/1.2 and SHACL-AF validator | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine) 0.3.9 |
 | [`tarka/`](tarka/) | CSV, Parquet and Polars to RDF 1.1 through TARQL or OTTR | [pwin/tarka](https://github.com/pwin/tarka) 0.3.1 |
+| [`crates/semops/`](crates/semops/) | The `semops` command. So far `semops check`, the ontology quality checks run natively | — |
+| [`crates/semops-checks/`](crates/semops-checks/) | The ontology quality check registry (61 checks, their SHACL shapes, SPARQL queries and repair templates) compiled in, and a runner for it on HOLOS | [pwin/consolidated-ontology-quality-suite-python](https://github.com/pwin/consolidated-ontology-quality-suite-python) 0.28.0's `resources/`, and its merge rules ported |
 | [`crates/semops-functions/`](crates/semops-functions/) | The SPARQL extension functions every evaluator registers: XPath `fn:` and `math:`, Jena `afn:` and property functions, SPIN `spif:` | HOLOS's and tarka's function code, merged and extended |
 | [`crates/semops-placetime/`](crates/semops-placetime/) | URIs for calendar intervals, instants and WGS84 points, each described in RDF from the URI alone, in the reference.data.gov.uk patterns; served by `holos-server --placetime` | A Rust rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer), with points added |
 | [`vendor/`](vendor/) | The two patched Oxigraph crates every engine builds against | One copy of what HOLOS and SHACL_Engine each vendored |
@@ -40,6 +42,12 @@ WGS84 points (`/id/geopoint/wgs84/X-0.1276Y51.5072`), which GeoSPARQL queries ca
 loaded. [docs/decisions/0004](docs/decisions/0004-placetime.md) has the patterns, what
 changed from IntervalServer and the licence position.
 
+`semops check ontology.ttl data.ttl` runs the ontology quality suite's 61-check registry
+natively, compiled into the command, with the same findings as
+`ontology-suite check --engine sparql` and no Python, and exits 1 on a violation for a CI
+gate. [docs/decisions/0005](docs/decisions/0005-check-registry.md) says how it was held to
+the suite's output.
+
 ## Build and test
 
 Rust 1.90 or later, a C++ toolchain and libclang (for RocksDB).
@@ -66,8 +74,8 @@ wheel on PyPI (`import semops_system`), the `semops-wasm` npm packages and the
 | Phase | State |
 | --- | --- |
 | 1. Align | `versions.toml` and `scripts/check_pins.py` are in place. The editor, extension and suite are still one engine release behind |
-| 2. One workspace | The three engines are in one workspace with one vendor copy and one CI, and the image builds and passes its smoke test. The check registry crate is still to do |
-| 3. One artifact: `semops` command, `semops-system` wheel, one WASM package, OCI image | `semops-system` 0.29.0.dev1 is on PyPI as a bridge that pins the three engine wheels; the native wheel, command, WASM package and image are not started |
+| 2. One workspace | The three engines are in one workspace with one vendor copy and one CI, and the image builds and passes its smoke test. The check registry is a crate, `semops-checks` |
+| 3. One artifact: `semops` command, `semops-system` wheel, one WASM package, OCI image | `semops-system` 0.29.0.dev1 is on PyPI as a bridge that pins the three engine wheels; the `semops` command exists with one subcommand, `check`; the native wheel, WASM package and image are not started |
 | 4. Azure, one SHACL validator, one function library | The function library is done, and the native validator checks SHACL-SPARQL through the adapted engine. One validator and Azure are not started |
 
 ## Licence

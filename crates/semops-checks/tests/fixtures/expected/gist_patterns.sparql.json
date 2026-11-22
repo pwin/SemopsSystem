@@ -1,0 +1,182 @@
+[
+ {
+  "check_id": "DAT-004",
+  "severity": "Violation",
+  "focus_node": "https://example.org/gistpatterns/data/MagnitudeGradient",
+  "focus_is_blank": false,
+  "path": "https://w3id.org/semanticarts/ns/ontology/gist/hasUnitOfMeasure",
+  "value": "https://example.org/gistpatterns/data/AspectLaneCount",
+  "message": "Magnitude https://example.org/gistpatterns/data/MagnitudeGradient has gist:hasUnitOfMeasure https://example.org/gistpatterns/data/AspectLaneCount, which is not typed gist:UnitOfMeasure.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "DAT-004",
+  "severity": "Violation",
+  "focus_node": "https://example.org/gistpatterns/data/MagnitudeLaneCount",
+  "focus_is_blank": false,
+  "path": "https://w3id.org/semanticarts/ns/ontology/gist/hasUnitOfMeasure",
+  "value": "https://example.org/gistpatterns/data/MagnitudeLaneCount",
+  "message": "Magnitude https://example.org/gistpatterns/data/MagnitudeLaneCount has no gist:hasUnitOfMeasure link to a gist:UnitOfMeasure.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Carriageway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/gistpatterns/Carriageway",
+  "message": "Term https://example.org/gistpatterns/Carriageway has no skos:prefLabel.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Verge",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/gistpatterns/Verge",
+  "message": "Term https://example.org/gistpatterns/Verge has 2 untagged skos:prefLabel values; at most one is allowed per language.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/hasCarriageway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/gistpatterns/hasCarriageway",
+  "message": "Term https://example.org/gistpatterns/hasCarriageway has 2 skos:prefLabel values tagged @en; at most one is allowed per language.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Motorway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/gistpatterns/Motorway",
+  "message": "Term https://example.org/gistpatterns/Motorway has no skos:definition.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Carriageway",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/gistpatterns/Carriageway",
+  "message": "Class https://example.org/gistpatterns/Carriageway has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Road",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/gistpatterns/Road",
+  "message": "Class https://example.org/gistpatterns/Road has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Verge",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/gistpatterns/Verge",
+  "message": "Class https://example.org/gistpatterns/Verge has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://w3id.org/semanticarts/ns/ontology/gist/Aspect",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://w3id.org/semanticarts/ns/ontology/gist/Aspect",
+  "message": "Class https://w3id.org/semanticarts/ns/ontology/gist/Aspect has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://w3id.org/semanticarts/ns/ontology/gist/Magnitude",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://w3id.org/semanticarts/ns/ontology/gist/Magnitude",
+  "message": "Class https://w3id.org/semanticarts/ns/ontology/gist/Magnitude has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STR-004",
+  "severity": "Warning",
+  "focus_node": "https://w3id.org/semanticarts/ns/ontology/gist/UnitOfMeasure",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://w3id.org/semanticarts/ns/ontology/gist/UnitOfMeasure",
+  "message": "Class https://w3id.org/semanticarts/ns/ontology/gist/UnitOfMeasure has no formal definition (no owl:equivalentClass, owl:intersectionOf, rdfs:subClassOf, owl:unionOf, owl:oneOf or owl:disjointWith axiom).",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Bridge",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "Pont",
+  "message": "Term https://example.org/gistpatterns/Bridge has skos:prefLabel 'Pont' which does not match its local name, suggesting the label and IRI have drifted apart.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/Verge",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "Roadside verge",
+  "message": "Term https://example.org/gistpatterns/Verge has skos:prefLabel 'Roadside verge' which does not match its local name, suggesting the label and IRI have drifted apart.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-004",
+  "severity": "Warning",
+  "focus_node": "https://example.org/gistpatterns/hasCarriageway",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "carriageway of",
+  "message": "Term https://example.org/gistpatterns/hasCarriageway has skos:prefLabel 'carriageway of' which does not match its local name, suggesting the label and IRI have drifted apart.",
+  "sources": [
+   "sparql"
+  ]
+ }
+]
