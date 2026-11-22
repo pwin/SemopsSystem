@@ -282,9 +282,11 @@ ptd:_Calendar_Julian
 
 gistd:_UnitOfMeasure_second
 	a gist:UnitOfMeasure ;
-	skos:editorialNote "Named as gist names its reference data, which supplies its units of measure separately from gist itself. Described here so that the duration of an interval has a unit without that reference data loaded."^^xsd:string ;
+	rdfs:seeAlso <https://github.com/semanticarts/gistReferenceData> ;
+	skos:editorialNote "This instance has been duplicated from the gist reference data, release 1.0.0, so that the unit of a duration is described without the reference data loaded. Its type, label, conversion factor and unit group are as the reference data gives them; the unit group there carries the exponents."^^xsd:string ;
 	skos:prefLabel "second"^^xsd:string ;
-	gist:exponentOfSecond "1"^^xsd:decimal ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistd:_UnitGroup_duration ;
 	.
 
 # Categories

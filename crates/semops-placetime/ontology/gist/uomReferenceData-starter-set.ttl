@@ -1,0 +1,3434 @@
+@prefix gist: <https://w3id.org/semanticarts/ns/ontology/gist/> .
+@prefix gistd: <https://w3id.org/semanticarts/ns/data/gist/> .
+@prefix gistx: <https://w3id.org/semanticarts/ns/data/gist/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+gistx:_Aspect_absorbed_dose
+	a gist:Aspect ;
+	rdfs:comment "Note that the absorbed dose is not a good indicator of the likely biological effect. 1 Gy of alpha radiation would be much more biologically damaging than 1 Gy of photon radiation for example. Appropriate weighting factors can be applied reflecting the different relative biological effects to find the equivalent dose. The risk of toxic effects due to radiation exposure can be quantified using the effective dose, which is a weighted average of the equivalent dose to each organ depending upon its radiosensitivity. When ionising radiation is used to treat cancer, the doctor will usually prescribe the radiotherapy treatment in Gy. When risk from ionising radiation is being discussed, a related unit, the Sievert is used."^^xsd:string ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Absorbed_dose"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31895"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/AbsorbedDose> ;
+	skos:definition 'from QUDT: "Absorbed Dose" (also known as Total Ionizing Dose, TID) is a measure of the energy deposited in a medium by ionizing radiation. It is equal to the energy deposited per unit mass of medium, and so has the unit \\(J/kg\\), which is given the special name Gray (\\(Gy\\)).'^^xsd:string ;
+	skos:prefLabel "absorbed dose"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_absorbed_dose ;
+	gist:isCategorizedBy
+		gistx:_Discipline_medicine ,
+		gistx:_Discipline_radiology
+		;
+	.
+
+gistx:_Aspect_activity
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Mass_number"^^xsd:anyURI ,
+		"https://en.wikipedia.org/wiki/Radioactive_decay"^^xsd:anyURI ,
+		"https://en.wikipedia.org/wiki/Radioactive_decay#Radioactive_decay_rates"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31895"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Activity> ;
+	skos:definition 'from QUDT: "Activity" is the number of decays per unit time of a radioactive sample, the term used to characterise the number of nuclei which disintegrate in a radioactive substance per unit time. Activity is usually measured in Becquerels (\\(Bq\\)), where 1 \\(Bq\\) is 1 disintegration per second, in honor of the scientist Henri Becquerel.'^^xsd:string ;
+	skos:prefLabel "activity"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_activity ;
+	gist:isCategorizedBy gistx:_Discipline_radiology ;
+	.
+
+gistx:_Aspect_altitude
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Altitude> ;
+	skos:definition
+		"The aspect altitude."^^xsd:string ,
+		'from QUDT: Altitude or height is defined based on the context in which it is used (aviation, geometry, geographical survey, sport, and more). As a general definition, altitude is a distance measurement, usually in the vertical or "up" direction, between a reference datum and a point or object. The reference datum also often varies according to the context. [Wikipedia]'^^xsd:string
+		;
+	skos:editorialNote "This instance has been duplicated from reference data so it can be used in property restrictions."^^xsd:string ;
+	skos:prefLabel
+		"altitude"^^xsd:string ,
+		"area"^^xsd:string
+		;
+	gist:hasUnitGroup gistx:_UnitGroup_altitude ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_amount_of_data
+	a gist:Aspect ;
+	skos:prefLabel "amount of data"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_amount_of_data ;
+	gist:isCategorizedBy gistx:_Discipline_computing ;
+	.
+
+gistx:_Aspect_amount_of_heat
+	a gist:Aspect ;
+	skos:prefLabel "amount of heat"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_amount_of_heat ;
+	gist:isCategorizedBy gistx:_Discipline_thermodynamics ;
+	.
+
+gistx:_Aspect_amount_of_substance
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Amount_of_substance"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31894"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/AmountOfSubstance> ;
+	skos:definition "from QUDT: \"Amount of Substance\" is a standards-defined quantity that measures the size of an ensemble of elementary entities, such as atoms, molecules, electrons, and other particles. It is sometimes referred to as chemical amount. The International System of Units (SI) defines the amount of substance to be proportional to the number of elementary entities present. The SI unit for amount of substance is \\(mole\\). It has the unit symbol \\(mol\\). The mole is defined as the amount of substance that contains an equal number of elementary entities as there are atoms in 0.012kg of the isotope carbon-12. This number is called Avogadro's number and has the value \\(6.02214179(30) \\times 10^{23}\\). The only other unit of amount of substance in current use is the \\(pound-mole\\) with the symbol \\(lb-mol\\), which is sometimes used in chemical engineering in the United States. One \\(pound-mole\\) is exactly \\(453.59237 mol\\)."^^xsd:string ;
+	skos:prefLabel "amount of substance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_amount_of_substance ;
+	gist:isCategorizedBy gistx:_Discipline_chemistry ;
+	.
+
+gistx:_Aspect_angle
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Angle> ;
+	skos:definition "An angle formed by two rays, also known as a plane angle."^^xsd:string ;
+	skos:prefLabel "angle"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_angle ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_angular_velocity
+	a gist:Aspect ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Angular_velocity"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/AngularVelocity> ;
+	skos:definition
+		"from QUDT: Angular Velocity refers to how fast an object rotates or revolves relative to another point."^^xsd:string ,
+		"from QUDT: The change of angle per unit time; specifically, in celestial mechanics, the change in angle of the radius vector per unit time."^^xsd:string
+		;
+	skos:prefLabel "angular velocity"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_angular_velocity ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_area
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Area> ;
+	skos:definition
+		"The aspect area."^^xsd:string ,
+		"from QUDT: Area is a quantity expressing the two-dimensional size of a defined part of a surface, typically a region bounded by a closed curve."^^xsd:string
+		;
+	skos:editorialNote "This instance has been duplicated from reference data so it can be used in property restrictions."^^xsd:string ;
+	skos:prefLabel "area"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_area ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_atmospheric_pressure
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/AtmosphericPressure> ;
+	skos:definition "from QUDT: The pressure exerted by the weight of the air above it at any point on the earth's surface. At sea level the atmosphere will support a column of mercury about \\(760 mm\\) high. This decreases with increasing altitude. The standard value for the atmospheric pressure at sea level in SI units is \\(101,325 pascals\\)."^^xsd:string ;
+	skos:prefLabel "atmospheric pressure"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_atmospheric_pressure ;
+	gist:isCategorizedBy gistx:_Discipline_earth_sciences ;
+	.
+
+gistx:_Aspect_atomic_charge
+	a gist:Aspect ;
+	rdfs:seeAlso "https://www.answers.com/topic/atomic-charge"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/AtomicCharge> ;
+	skos:definition "from QUDT: The electric charge of an ion, equal to the number of electrons the atom has gained or lost in its ionization multiplied by the charge on one electron."^^xsd:string ;
+	skos:prefLabel "atomic charge"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_particle_charge ;
+	gist:isCategorizedBy gistx:_Discipline_atomic_physics ;
+	.
+
+gistx:_Aspect_atomic_mass
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Atomic_mass"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31895"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/AtomicMass> ;
+	skos:definition 'from QUDT: The "Atomic Mass" is the mass of a specific isotope, most often expressed in unified atomic mass units.'^^xsd:string ;
+	skos:prefLabel "atomic mass"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_particle_mass ;
+	gist:isCategorizedBy gistx:_Discipline_atomic_physics ;
+	.
+
+gistx:_Aspect_blood_pressure
+	a gist:Aspect ;
+	rdfs:seeAlso "https://www.oxfordreference.com/view/10.1093/acref/9780199549351.001.0001/acref-9780199549351-e-1162"^^xsd:anyURI ;
+	skos:definition "from QUDT: The pressure of blood in the arteries which rises to a maximum as blood is pumped out by the left ventricle (systole) and drops to a minimum in diastole. The systolic/diastolic pressure is normally ~120/80 mmHg in a young adult."^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_blood_pressure ;
+	gist:isCategorizedBy
+		gistx:_Discipline_biometrics ,
+		gistx:_Discipline_medicine
+		;
+	.
+
+gistx:_Aspect_capacitance
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://www.iso.org/iso/catalogue_detail?csnumber=43012"^^xsd:anyURI ,
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Capacitance> ;
+	skos:definition 'from QUDT: "Capacitance" is the ability of a body to hold an electrical charge; it is quantified as the amount of electric charge stored for a given electric potential. Capacitance is a scalar-valued quantity.'^^xsd:string ;
+	skos:prefLabel "capacitance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_capacitance ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_cycle_time
+	a gist:Aspect ;
+	skos:definition "The time a process takes to complete."^^xsd:string ;
+	skos:prefLabel "cycle time"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_cycle_time ;
+	gist:isCategorizedBy gistx:_Discipline_processes ;
+	.
+
+gistx:_Aspect_data_rate
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/DataRate> ;
+	skos:definition 'from QUDT: The frequency derived from the period of time required to transmit one bit. This represents the amount of data transferred per second by a communications channel or a computing or storage device. Data rate is measured in units of bits per second (written "b/s" or "bps"), bytes per second (Bps), or baud. When applied to data rate, the multiplier prefixes "kilo-", "mega-", "giga-", etc. (and their abbreviations, "k", "M", "G", etc.) always denote powers of 1000. For example, 64 kbps is 64,000 bits per second. This contrasts with units of storage which use different prefixes to denote multiplication by powers of 1024, for example 1 kibibit = 1024 bits.'^^xsd:string ;
+	skos:prefLabel "data rate"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_data_rate ;
+	gist:isCategorizedBy
+		gistx:_Discipline_communications ,
+		gistx:_Discipline_computing
+		;
+	.
+
+gistx:_Aspect_distance
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Distance"^^xsd:anyURI ,
+		"https://en.wikipedia.org/wiki/Length"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=43012"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Length> ;
+	skos:definition "The distance between objects or a distance describing a length, width, etc. of an object."^^xsd:string ;
+	skos:prefLabel "distance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_distance ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_dose_equivalent
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Equivalent_dose"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31895"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/DoseEquivalent> ;
+	skos:definition 'from QUDT: "Dose Equivalent} (former), or \\textit{Equivalent Absorbed Radiation Dose}, usually shortened to \\textit{Equivalent Dose", is a computed average measure of the radiation absorbed by a fixed mass of biological tissue, that attempts to account for the different biological damage potential of different types of ionizing radiation. The equivalent dose to a tissue is found by multiplying the absorbed dose, in gray, by a dimensionless "quality factor" \\(Q\\), dependent upon radiation type, and by another dimensionless factor \\(N\\), dependent on all other pertinent factors. N depends upon the part of the body irradiated, the time and volume over which the dose was spread, even the species of the subject.'^^xsd:string ;
+	skos:prefLabel "dose equivalent"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_dose_equivalent ;
+	gist:isCategorizedBy gistx:_Discipline_radiology ;
+	.
+
+gistx:_Aspect_duration
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Time> ;
+	skos:definition
+		"The aspect duration."^^xsd:string ,
+		"from QUDT: Time is a basic component of the measuring system used to sequence events, to compare the durations of events and the intervals between them, and to quantify the motions of objects."^^xsd:string
+		;
+	skos:editorialNote "This instance has been duplicated from reference data so it can be used in property restrictions."^^xsd:string ;
+	skos:prefLabel "duration"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_duration ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_electric_charge
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Electric_charge"^^xsd:anyURI ,
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/ElectricCharge> ;
+	skos:definition 'from QUDT: "Electric Charge" is a fundamental conserved property of some subatomic particles, which determines their electromagnetic interaction. Electrically charged matter is influenced by, and produces, electromagnetic fields. The electric charge on a body may be positive or negative. Two positively charged bodies experience a mutual repulsive force, as do two negatively charged bodies. A positively charged body and a negatively charged body experience an attractive force. Electric charge is carried by discrete particles and can be positive or negative. The sign convention is such that the elementary electric charge \\(e\\), that is, the charge of the proton, is positive. The SI derived unit of electric charge is the coulomb.'^^xsd:string ;
+	skos:prefLabel "electric charge"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_electric_charge ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_electric_current
+	a gist:Aspect ;
+	rdfs:seeAlso "https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/ElectricCurrent> ;
+	skos:definition 'from QUDT: "Electric Current" is the flow (movement) of electric charge. The amount of electric current through some surface, for example, a section through a copper conductor, is defined as the amount of electric charge flowing through that surface over time. Current is a scalar-valued quantity. Electric current is one of the base quantities in the International System of Quantities, ISQ, on which the International System of Units, SI, is based. '^^xsd:string ;
+	skos:prefLabel "electric current"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_electric_current ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_electric_power
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/ElectricPower> ;
+	skos:definition 'from QUDT: "Electric Power" is the rate at which electrical energy is transferred by an electric circuit. In the simple case of direct current circuits, electric power can be calculated as the product of the potential difference in the circuit (V) and the amount of current flowing in the circuit (I): \\(P = VI\\), where \\(P\\) is the power, \\(V\\) is the potential difference, and \\(I\\) is the current. However, in general electric power is calculated by taking the integral of the vector cross-product of the electrical and magnetic fields over a specified area.'^^xsd:string ;
+	skos:prefLabel "electric power"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_electric_power ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_electric_resistance
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://www.electropedia.org/iev/iev.nsf/display?openform&ievref=131-12-45"^^xsd:anyURI ,
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Resistance> ;
+	skos:definition "The electrical resistance of an object is a measure of its opposition to the passage of a steady electric current. [QUDT] Electric resistance is the inverse of electric conductivity."^^xsd:string ;
+	skos:prefLabel "electric resistance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_electric_resistance ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_electron_affinity
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Electron_affinity"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31897"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/ElectronAffinity> ;
+	skos:definition 'from QUDT: "Electron Affinity" is the energy difference between an electron at rest at infinity and an electron at the lowest level of the conduction band in an insulator or semiconductor. The the amount of energy released when an electron is added to a neutral atom or molecule to form a negative ion.'^^xsd:string ;
+	skos:prefLabel "electron affinity"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_particle_energy ;
+	gist:isCategorizedBy gistx:_Discipline_solid_state_physics ;
+	.
+
+gistx:_Aspect_energy
+	a gist:Aspect ;
+	rdfs:seeAlso "https://www.iso.org/iso/catalogue_detail?csnumber=31890"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Energy> ;
+	skos:definition "from QUDT: Energy is the quantity characterizing the ability of a system to do work."^^xsd:string ;
+	skos:prefLabel "energy"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_energy_or_work ;
+	gist:isCategorizedBy gistx:_Discipline_thermodynamics ;
+	.
+
+gistx:_Aspect_force
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Force"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=43012"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Force> ;
+	skos:definition "from QUDT: \"Force\" is an influence that causes mass to accelerate. It may be experienced as a lift, a push, or a pull. Force is defined by Newton's Second Law as \\(F = m \\times a \\), where \\(F\\) is force, \\(m\\) is mass and \\(a\\) is acceleration. Net force is mathematically equal to the time rate of change of the momentum of the body on which it acts. Since momentum is a vector quantity (has both a magnitude and direction), force also is a vector quantity."^^xsd:string ;
+	skos:prefLabel "force"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_force ;
+	gist:isCategorizedBy gistx:_Discipline_mechanics ;
+	.
+
+gistx:_Aspect_force_per_area
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Pressure"^^xsd:anyURI ,
+		"https://www.thefreedictionary.com/force+per+unit+area"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/ForcePerArea> ;
+	skos:definition "from QUDT: The force applied to a unit area of surface; measured in pascals (SI unit) or in dynes (cgs unit)"^^xsd:string ;
+	skos:prefLabel "force per area"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_pressure ;
+	gist:isCategorizedBy gistx:_Discipline_fluid_dynamics ;
+	.
+
+gistx:_Aspect_frequency
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Frequency> ;
+	skos:definition 'from QUDT: "Frequency" is the number of occurrences of a repeating event per unit time. The repetition of the events may be periodic (that is. the length of time between event repetitions is fixed) or aperiodic (i.e. the length of time between event repetitions varies). Therefore, we distinguish between periodic and aperiodic frequencies. In the SI system, periodic frequency is measured in hertz (Hz) or multiples of hertz, while aperiodic frequency is measured in becquerel (Bq). In spectroscopy, \\(\\nu\\) is mostly used. Light passing through different media keeps its frequency, but not its wavelength or wavenumber.'^^xsd:string ;
+	skos:prefLabel "frequency"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_frequency ;
+	gist:isCategorizedBy
+		gistx:_Discipline_acoustics ,
+		gistx:_Discipline_radiology ,
+		gistx:_Discipline_space_and_time
+		;
+	.
+
+gistx:_Aspect_genetic_strand_length
+	a gist:Aspect ;
+	skos:prefLabel "genetic strand length "^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_genetic_strand_length ;
+	gist:isCategorizedBy gistx:_Discipline_biology ;
+	.
+
+gistx:_Aspect_heart_rate
+	a gist:Aspect ;
+	rdfs:seeAlso "https://www.oxfordreference.com/view/10.1093/oi/authority.20110803100354463"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/HeartRate> ;
+	skos:definition "from QUDT: The number of heartbeats per unit of time, usually per minute. The heart rate is based on the number of contractions of the ventricles (the lower chambers of the heart). The heart rate may be too fast (tachycardia) or too slow (bradycardia). The average adult pulse rate at rest is 60-80 per minute, but exercise, injury, illness, and emotion may produce much faster rates."^^xsd:string ;
+	skos:prefLabel "heart rate"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_count_per_minute_duration ;
+	gist:isCategorizedBy
+		gistx:_Discipline_biometrics ,
+		gistx:_Discipline_medicine
+		;
+	.
+
+gistx:_Aspect_impedance
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Electrical_impedance"^^xsd:anyURI ,
+		"https://www.electropedia.org/iev/iev.nsf/display?openform&ievref=131-12-43"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=43012"^^xsd:anyURI ,
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Impedance> ;
+	skos:definition 'from QUDT: "Impedance" is the measure of the opposition that a circuit presents to the passage of a current when a voltage is applied. In quantitative terms, it is the complex ratio of the voltage to the current in an alternating current (AC) circuit. Impedance extends the concept of resistance to AC circuits, and possesses both magnitude and phase, unlike resistance, which has only magnitude. When a circuit is driven with direct current (DC), there is no distinction between impedance and resistance; the latter can be thought of as impedance with zero phase angle.'^^xsd:string ;
+	skos:prefLabel "impedance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_electric_resistance ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_inductance
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://www.electropedia.org/iev/iev.nsf/display?openform&ievref=131-12-19"^^xsd:anyURI ,
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Inductance> ;
+	skos:definition "Inductance is an electromagentic quantity that characterizes a circuit's resistance to any change of electric current; a change in the electric current through induces an opposing electromotive force (EMF). Quantitatively, inductance is proportional to the magnetic flux per unit of electric current. [QUDT]"^^xsd:string ;
+	skos:prefLabel "inductance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_inductance ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_ionization_energy
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Ionization_energy"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31897"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/IonizationEnergy> ;
+	skos:definition 'from QUDT: "Ionization Energy" is the energy difference between an electron at rest at infinity and an electron at a certain energy level. The amount of energy required to remove an electron from that atom or molecule in the gas phase.'^^xsd:string ;
+	skos:prefLabel "ionization energy"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_ionization_energy ;
+	gist:isCategorizedBy gistx:_Discipline_solid_state_physics ;
+	.
+
+gistx:_Aspect_labor_consumption_rate
+	a gist:Aspect ;
+	skos:prefLabel "labor consumption rate"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_labor_consumption_rate ;
+	gist:isCategorizedBy gistx:_Discipline_finance ;
+	.
+
+gistx:_Aspect_luminance
+	a gist:Aspect ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Luminance"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Luminance> ;
+	skos:definition "from QUDT: Luminance is a photometric measure of the luminous intensity per unit area of light travelling in a given direction. It describes the amount of light that passes through or is emitted from a particular area, and falls within a given solid angle."^^xsd:string ;
+	skos:prefLabel "luminance"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_luminous_flux_per_area ;
+	gist:isCategorizedBy gistx:_Discipline_optics ;
+	.
+
+gistx:_Aspect_luminous_flux
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Luminous_flux"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=43012"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/LuminousFlux> ;
+	skos:definition "from QUDT: Luminous Flux or Luminous Power is the measure of the perceived power of light. It differs from radiant flux, the measure of the total power of light emitted, in that luminous flux is adjusted to reflect the varying sensitivity of the human eye to different wavelengths of light."^^xsd:string ;
+	skos:prefLabel "luminous flux"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_luminous_flux ;
+	gist:isCategorizedBy gistx:_Discipline_optics ;
+	.
+
+gistx:_Aspect_luminous_intensity
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/LuminousIntensity> ;
+	skos:definition "from QUDT: Luminous Intensity is a measure of the wavelength-weighted power emitted by a light source in a particular direction per unit solid angle. The weighting is determined by the luminosity function, a standardized model of the sensitivity of the human eye to different wavelengths."^^xsd:string ;
+	skos:prefLabel "luminous intensity"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_luminous_intensity ;
+	gist:isCategorizedBy gistx:_Discipline_optics ;
+	.
+
+gistx:_Aspect_luminous_intensity_per_unit_of_power
+	a gist:Aspect ;
+	skos:prefLabel "luminous intensity per unit of power "^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_luminous_intensity_per_unit_of_power ;
+	gist:isCategorizedBy gistx:_Discipline_optics ;
+	.
+
+gistx:_Aspect_magnetic_flux
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI ,
+		"https://www.oxfordreference.com/view/10.1093/acref/9780199233991.001.0001/acref-9780199233991-e-1800"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/MagneticFlux> ;
+	skos:definition 'from QUDT: "Magnetic Flux" is the product of the average magnetic field times the perpendicular area that it penetrates.'^^xsd:string ;
+	skos:prefLabel "magnetic flux"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_magnetic_flux ;
+	gist:isCategorizedBy gistx:_Discipline_electricity_and_magnetism ;
+	.
+
+gistx:_Aspect_magnetic_flux_density
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=31891"^^xsd:anyURI ,
+		"https://www.oxfordreference.com/view/10.1093/acref/9780199233991.001.0001/acref-9780199233991-e-1798"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/MagneticFluxDensity> ;
+	skos:definition 'from QUDT: "Magnetic Flux Density" is a vector quantity and is the magnetic flux per unit area of a magnetic field at right angles to the magnetic force. It can be defined in terms of the effects the field has, for example by \\(B = F/q v \\sin \\theta\\), where \\(F\\) is the force a moving charge \\(q\\) would experience if it was travelling at a velocity \\(v\\) in a direction making an angle θ with that of the field. The magnetic field strength is also a vector quantity and is related to \\(B\\) by: \\(H = B/\\mu\\), where \\(\\mu\\) is the permeability of the medium.'^^xsd:string ;
+	skos:prefLabel "magnetic flux density"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_magnetic_flux_density ;
+	gist:isCategorizedBy
+		gistx:_Discipline_electricity_and_magnetism ,
+		gistx:_Discipline_radiology
+		;
+	.
+
+gistx:_Aspect_monetary_value
+	a gist:Aspect ;
+	skos:definition "The aspect monetary value."^^xsd:string ;
+	skos:editorialNote "This instance has been duplicated from reference data so it can be used in property restrictions."^^xsd:string ;
+	skos:prefLabel "monetary value"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_monetary_value ;
+	gist:isCategorizedBy gistx:_Discipline_finance ;
+	.
+
+gistx:_Aspect_monetary_value_per_duration
+	a gist:Aspect ;
+	skos:prefLabel "monetary value per duration"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_monetary_value_per_duration ;
+	gist:isCategorizedBy gistx:_Discipline_finance ;
+	.
+
+gistx:_Aspect_number
+	skos:prefLabel "number"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_number ;
+	gist:isCategorizedBy gistx:_Discipline_numeric ;
+	.
+
+gistx:_Aspect_number_of_things
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Count> ;
+	skos:definition "The number of things, when counted."^^xsd:string ;
+	skos:prefLabel "number of things"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_number_of_things ;
+	gist:isCategorizedBy gistx:_Discipline_numeric ;
+	.
+
+gistx:_Aspect_number_per_duration
+	a gist:Aspect ;
+	skos:prefLabel "number per unit time"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_number_per_duration ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_number_per_volume
+	a gist:Aspect ;
+	skos:altLabel "number density"^^xsd:string ;
+	skos:prefLabel "number per volume"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_number_per_volume ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_percentage
+	a gist:Aspect ;
+	skos:definition "percentage"^^xsd:string ;
+	skos:prefLabel "percentage"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_percentage ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_power
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Power"^^xsd:anyURI ,
+		"https://en.wikipedia.org/wiki/Power_%28physics%29"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31889"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Power> ;
+	skos:definition "from QUDT: Power is the rate at which work is performed or energy is transmitted, or the amount of energy required or expended for a given unit of time. As a rate of change of work done or the energy of a subsystem, power is: \\(P = W/t\\), where \\(P\\) is power, \\(W\\) is work and {t} is time."^^xsd:string ;
+	skos:prefLabel "power"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_power ;
+	gist:isCategorizedBy gistx:_Discipline_mechanics ;
+	.
+
+gistx:_Aspect_probability
+	a gist:Aspect ;
+	skos:definition
+		"The aspect probability."^^xsd:string ,
+		"The likelihood of something occurring."^^xsd:string
+		;
+	skos:editorialNote "This instance has been duplicated from reference data so it can be used in property restrictions."^^xsd:string ;
+	skos:prefLabel "probability"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_probability ;
+	gist:isCategorizedBy gistx:_Discipline_numeric ;
+	.
+
+gistx:_Aspect_ratio
+	a gist:Aspect ;
+	skos:definition "A ratio in which the aspects cancel out, such as weight per weight."^^xsd:string ;
+	skos:prefLabel "ratio"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_ratio ;
+	gist:isCategorizedBy gistx:_Discipline_numeric ;
+	.
+
+gistx:_Aspect_ratio_of_masses
+	a gist:Aspect ;
+	skos:definition "A ratio in which the numerator and denominator are both masses."^^xsd:string ;
+	skos:prefLabel "ratio of masses"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_ratio_of_masses ;
+	gist:isCategorizedBy gistx:_Discipline_numeric ;
+	.
+
+gistx:_Aspect_respiratory_rate
+	a gist:Aspect ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Respiratory_rate"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/RespiratoryRate> ;
+	skos:definition "from QUDT: Respiratory rate (Vf, Rf or RR) is also known by respiration rate, pulmonary ventilation rate, ventilation rate, or breathing frequency is the number of breaths taken within a set amount of time, typically 60 seconds. A normal respiratory rate is termed eupnea, an increased respiratory rate is termed tachypnea and a lower than normal respiratory rate is termed bradypnea."^^xsd:string ;
+	skos:prefLabel "respiratory rate"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_count_per_minute_duration ;
+	gist:isCategorizedBy
+		gistx:_Discipline_biometrics ,
+		gistx:_Discipline_medicine
+		;
+	.
+
+gistx:_Aspect_score
+	a gist:Aspect ;
+	skos:definition "A score of a test, a game, a subjective rating, etc."^^xsd:string ;
+	skos:prefLabel "score"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_score ;
+	gist:isCategorizedBy gistx:_Discipline_numeric ;
+	.
+
+gistx:_Aspect_sound_power_level
+	a gist:Aspect ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Sound_power#Sound_power_level"^^xsd:anyURI ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/SoundPowerLevel> ;
+	skos:definition "from QUDT: Sound Power Level abbreviated as \\(SWL\\) expresses sound power more practically as a relation to the threshold of hearing - 1 picoW - in a logarithmic scale."^^xsd:string ;
+	skos:prefLabel "sound power level"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_sound_power_level ;
+	gist:isCategorizedBy gistx:_Discipline_acoustics ;
+	.
+
+gistx:_Aspect_spectral_radiant_energy_density
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/SpectralRadiantEnergyDensity> ;
+	skos:definition 'from QUDT: "Spectral Radiant Energy Density" is the spectral concentration of radiant energy density (in terms of wavelength), or the spectral radiant energy density (in terms of wave length).'^^xsd:string ;
+	skos:prefLabel "spectral radiant energy density"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_spectral_radiant_energy_density ;
+	gist:isCategorizedBy gistx:_Discipline_radiometry ;
+	.
+
+gistx:_Aspect_speed
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Speed> ;
+	skos:definition "from QUDT: Speed is the magnitude of velocity."^^xsd:string ;
+	skos:prefLabel "speed"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_speed ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_temperature
+	a gist:Aspect ;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Temperature> ;
+	skos:definition "from QUDT: Temperature is a physical property of matter that quantitatively expresses the common notions of hot and cold. Objects of low temperature are cold, while various degrees of higher temperatures are referred to as warm or hot. Heat spontaneously flows from bodies of a higher temperature to bodies of lower temperature, at a rate that increases with the temperature difference and the thermal conductivity."^^xsd:string ;
+	skos:prefLabel "temperature"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_temperature ;
+	gist:isCategorizedBy gistx:_Discipline_thermodynamics ;
+	.
+
+gistx:_Aspect_torque
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Torque"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31889"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/Torque> ;
+	skos:definition """from QUDT: In physics, a torque (\\(\\tau\\)) is a vector that measures the tendency of a force to rotate an object about some axis. The magnitude of a torque is defined as force times its lever arm. Just as a force is a push or a pull, a torque can be thought of as a twist. The SI unit for torque is newton meters (\\(N m\\)). In U.S. customary units, it is measured in foot pounds (ft lbf) (also known as \"pounds feet\").
+Mathematically, the torque on a particle (which has the position r in some reference frame) can be defined as the cross product: \\(τ = r x F\\)
+where,
+r is the particle's position vector relative to the fulcrum
+F is the force acting on the particles,
+or, more generally, torque can be defined as the rate of change of angular momentum: \\(τ = dL/dt\\)
+where,
+L is the angular momentum vector
+t stands for time."""^^xsd:string ;
+	skos:prefLabel "torque"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_torque ;
+	gist:isCategorizedBy gistx:_Discipline_mechanics ;
+	.
+
+gistx:_Aspect_volume
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Volume"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=43012"^^xsd:anyURI
+		;
+	skos:closeMatch
+		<http://qudt.org/vocab/quantitykind/CartesianVolume> ,
+		<http://qudt.org/vocab/quantitykind/Volume>
+		;
+	skos:definition
+		"The aspect volume."^^xsd:string ,
+		'from QUDT: "Volume" is the quantity of three-dimensional space enclosed by some closed boundary, for example, the space that a substance (solid, liquid, gas, or plasma) or shape occupies or contains.'^^xsd:string ,
+		"from QUDT: The volume of a solid object is the three-dimensional concept of how much space it occupies, often quantified numerically. One-dimensional figures (such as lines) and two-dimensional shapes (such as squares) are assigned zero volume in the three-dimensional space."^^xsd:string
+		;
+	skos:editorialNote "This instance has been duplicated from reference data so it can be used in property restrictions."^^xsd:string ;
+	skos:prefLabel "volume"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_volume ;
+	gist:isCategorizedBy gistx:_Discipline_space_and_time ;
+	.
+
+gistx:_Aspect_volume_flow_rate
+	a gist:Aspect ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Volumetric_flow_rate"^^xsd:anyURI ,
+		"https://www.iso.org/iso/catalogue_detail?csnumber=31889"^^xsd:anyURI
+		;
+	skos:closeMatch <http://qudt.org/vocab/quantitykind/VolumeFlowRate> ;
+	skos:definition "from QUDT: Volumetric Flow Rate, (also known as volume flow rate, rate of fluid flow or volume velocity) is the volume of fluid which passes through a given surface per unit time."^^xsd:string ;
+	skos:prefLabel "volume flow rate"^^xsd:string ;
+	gist:hasUnitGroup gistx:_UnitGroup_volume_per_duration ;
+	gist:isCategorizedBy gistx:_Discipline_fluid_dynamics ;
+	.
+
+gistx:_UnitGroup_absorbed_dose
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L2I0M0H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure absorbed dose"^^xsd:string ;
+	skos:scopeNote "meterSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_activity
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L0I0M0H0T-1D0."^^xsd:string ;
+	skos:prefLabel "units that measure activity"^^xsd:string ;
+	skos:scopeNote "per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_altitude
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure altitude"^^xsd:string ;
+	skos:scopeNote "meter"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_amount_of_data
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure amount of data"^^xsd:string ;
+	skos:scopeNote "bit"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "1.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_amount_of_heat
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure amount of heat"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_amount_of_substance
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A1E0L0I0M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure amount of substance"^^xsd:string ;
+	skos:scopeNote "mole"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "1.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_angle
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure angle"^^xsd:string ;
+	skos:scopeNote "radian"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "1.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_angular_velocity
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure angular velocity"^^xsd:string ;
+	skos:scopeNote "radian per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "1.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_area
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L2I0M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure area"^^xsd:string ;
+	skos:scopeNote "meterSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_atmospheric_pressure
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L-1I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure atmospheric pressure"^^xsd:string ;
+	skos:scopeNote "kilogram per meter secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_blood_pressure
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L-1I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure blood pressure"^^xsd:string ;
+	skos:scopeNote "kilogram per meter secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_capacitance
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E2L-2I0M-1H0T4D0."^^xsd:string ;
+	skos:prefLabel "units that measure capacitance"^^xsd:string ;
+	skos:scopeNote "ampereSquared secondToTheFourth per kilogram meterSquared"^^xsd:string ;
+	gist:exponentOfAmpere "2.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "-1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "4.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_count_per_minute_duration
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure count per duration, with duration in minutes"^^xsd:string ;
+	skos:scopeNote "number per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_cycle_time
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure cycle time"^^xsd:string ;
+	skos:scopeNote "second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_data_rate
+	a gist:UnitGroup ;
+	skos:definition "The rate at which data is transmitted."^^xsd:string ;
+	skos:prefLabel "units that measure data rate"^^xsd:string ;
+	skos:scopeNote "bit per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "1.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_distance
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L1I0M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure distance"^^xsd:string ;
+	skos:scopeNote "meter"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_dose_equivalent
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L2I0M0H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure dose equivalent"^^xsd:string ;
+	skos:scopeNote "kilogramSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_duration
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L0I0M0H0T1D0."^^xsd:string ;
+	skos:prefLabel "units that measure duration"^^xsd:string ;
+	skos:scopeNote "second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_electric_charge
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E1L0I0M0H0T1D0."^^xsd:string ;
+	skos:prefLabel "units that measure electric charge"^^xsd:string ;
+	skos:scopeNote "ampere second"^^xsd:string ;
+	gist:exponentOfAmpere "1.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_electric_current
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E1L0I0M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure electric current"^^xsd:string ;
+	skos:scopeNote "ampere"^^xsd:string ;
+	gist:exponentOfAmpere "1.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_electric_power
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure electric power"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-3.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_electric_resistance
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E-2L2I0M1H0T-3D0."^^xsd:string ;
+	skos:prefLabel "units that measure electric resistance"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per ampereSquared secondCubed"^^xsd:string ;
+	gist:exponentOfAmpere "-2.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-3.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_energy_or_work
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L2I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure energy"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_force
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L1I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel
+		"units that measure force"^^xsd:string ,
+		"units that measure force per angle"^^xsd:string
+		;
+	skos:scopeNote "kilogram meter per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_frequency
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L0I0M0H0T-1D0."^^xsd:string ;
+	skos:prefLabel "units that measure frequency"^^xsd:string ;
+	skos:scopeNote "per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_genetic_strand_length
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure genetic strand length"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_inductance
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E-2L2I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure inductance"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per ampereSquared secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "-2.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_ionization_energy
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure ionization energy"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_labor_consumption_rate
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure labor consumption rate"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_luminous_flux
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L0I1M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure luminous flux"^^xsd:string ;
+	skos:scopeNote "candela"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "1.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_luminous_flux_per_area
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L-2I1M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure luminous flux per area"^^xsd:string ;
+	skos:scopeNote "candela per meterSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "1.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_luminous_intensity
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L0I1M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure luminous intensity"^^xsd:string ;
+	skos:scopeNote "candela"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "1.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_luminous_intensity_per_unit_of_power
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L-2I1M-1H0T3D0."^^xsd:string ;
+	skos:scopeNote "candela secondCubed per kilogram meterSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "1.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "-1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "3.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_magnetic_flux
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E-1L2I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure magnetic flux"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per ampere secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "-1.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_magnetic_flux_density
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E-1L0I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure magnetic flux density"^^xsd:string ;
+	skos:scopeNote "kilogram per ampere secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "-1.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_monetary_value
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure monetary value"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "1.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_monetary_value_per_duration
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure monetary value per duration"^^xsd:string ;
+	skos:scopeNote "US Dollar per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "1.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_number
+	a gist:UnitGroup ;
+	skos:definition "Units expressed as pure numbers."^^xsd:string ;
+	skos:prefLabel "units that are expressed as pure numbers"^^xsd:string ;
+	skos:scopeNote "number"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_number_of_things
+	a gist:UnitGroup ;
+	skos:definition "Units that measure the number of things, e.g. when counting."^^xsd:string ;
+	skos:prefLabel "units that measure the number of things"^^xsd:string ;
+	skos:scopeNote "number of things"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_number_per_duration
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure number per duration"^^xsd:string ;
+	skos:scopeNote "number per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_number_per_volume
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure number per volume"^^xsd:string ;
+	skos:scopeNote "number per meterCubed"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-3.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_particle_charge
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure particle charge"^^xsd:string ;
+	skos:scopeNote "ampere second"^^xsd:string ;
+	gist:exponentOfAmpere "1.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_particle_energy
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure energy at the scale of particles"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_particle_mass
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure mass at the scale of atmoic particles"^^xsd:string ;
+	skos:scopeNote "kilogram"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_percentage
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure percentage"^^xsd:string ;
+	skos:scopeNote "percent"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_power
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L2I0M1H0T-3D0."^^xsd:string ;
+	skos:prefLabel "units that measure power"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-3.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_pressure
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L-1I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure force per area"^^xsd:string ;
+	skos:scopeNote "kilogram per meter secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_probability
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure probability"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_ratio
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure ratio"^^xsd:string ;
+	skos:scopeNote "ratio with no units remaining"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_ratio_of_masses
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure ratio of masses"^^xsd:string ;
+	skos:scopeNote "kilogram per kilogram"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_score
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure scores"^^xsd:string ;
+	skos:scopeNote "a numerical score"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "1.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_sound_power_level
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure sound power level"^^xsd:string ;
+	skos:scopeNote "a logarithm"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "1.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_spectral_radiant_energy_density
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L-2I0M1H0T-2D0."^^xsd:string ;
+	skos:prefLabel "units that measure spectral radiant energy density"^^xsd:string ;
+	skos:scopeNote "kilogram per meterSquared secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "-2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_speed
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L1I0M0H0T-1D0."^^xsd:string ;
+	skos:prefLabel "units that measure speed"^^xsd:string ;
+	skos:scopeNote "meter per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "1.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_temperature
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L0I0M0H1T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure temperature"^^xsd:string ;
+	skos:scopeNote "kelvin"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "1.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "0.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_torque
+	a gist:UnitGroup ;
+	skos:prefLabel "units that measure torque"^^xsd:string ;
+	skos:scopeNote "kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "1.0"^^xsd:decimal ;
+	gist:exponentOfMeter "2.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-2.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_volume
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L3I0M0H0T0D0."^^xsd:string ;
+	skos:prefLabel "units that measure volume"^^xsd:string ;
+	skos:scopeNote "meterCubed"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "3.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "0.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitGroup_volume_per_duration
+	a gist:UnitGroup ;
+	skos:definition "Based on QUDT Quantity Kind Dimension Vector A0E0L3I0M0H0T-1D0."^^xsd:string ;
+	skos:prefLabel "units that measure volume per unit time"^^xsd:string ;
+	skos:scopeNote "meterCubed per second"^^xsd:string ;
+	gist:exponentOfAmpere "0.0"^^xsd:decimal ;
+	gist:exponentOfBit "0.0"^^xsd:decimal ;
+	gist:exponentOfCandela "0.0"^^xsd:decimal ;
+	gist:exponentOfKelvin "0.0"^^xsd:decimal ;
+	gist:exponentOfKilogram "0.0"^^xsd:decimal ;
+	gist:exponentOfMeter "3.0"^^xsd:decimal ;
+	gist:exponentOfMole "0.0"^^xsd:decimal ;
+	gist:exponentOfNumber "0.0"^^xsd:decimal ;
+	gist:exponentOfOther "0.0"^^xsd:decimal ;
+	gist:exponentOfRadian "0.0"^^xsd:decimal ;
+	gist:exponentOfSecond "-1.0"^^xsd:decimal ;
+	gist:exponentOfSteradian "0.0"^^xsd:decimal ;
+	gist:exponentOfUSDollar "0.0"^^xsd:decimal ;
+	.
+
+gistx:_UnitOfMeasure_US_Dollar
+	a gist:UnitOfMeasure ;
+	skos:altLabel "US dollars"^^xsd:string ;
+	skos:definition "Currency of the United States."^^xsd:string ;
+	skos:prefLabel "US dollar"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_monetary_value ;
+	.
+
+gistx:_UnitOfMeasure_US_Dollar_per_hour
+	a gist:UnitOfMeasure ;
+	skos:altLabel "US dollars per hour"^^xsd:string ;
+	skos:definition "US dollar per hour."^^xsd:string ;
+	skos:prefLabel "US dollar per hour"^^xsd:string ;
+	skos:scopeNote "1 US dollar per hour = 0.000277777777 x US dollar per second "^^xsd:string ;
+	gist:conversionFactor "0.000277777777"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_monetary_value_per_duration ;
+	.
+
+gistx:_UnitOfMeasure_acre
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Acre"^^xsd:anyURI ;
+	skos:altLabel "acres"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/AC> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "acre"^^xsd:string ;
+	skos:scopeNote "1 acre = 4046.8564224 x meterSquared"^^xsd:string ;
+	gist:conversionFactor "4046.8564224"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_area ;
+	gist:symbol "acre"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_ampere
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Ampere"^^xsd:anyURI ;
+	skos:altLabel "amperes"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/A> ;
+	skos:prefLabel "ampere"^^xsd:string ;
+	skos:scopeNote "1 ampere = 1.0 x ampere"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_electric_current ;
+	gist:symbol "A"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_atomic_mass_unit
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Atomic_mass_unit"^^xsd:anyURI ;
+	skos:altLabel "atomic mass units"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/AMU> ;
+	skos:prefLabel "atomic mass unit"^^xsd:string ;
+	skos:scopeNote "1 atomic mass unit = 0.00000000000000000000000000166053878283 x kilogram"^^xsd:string ;
+	gist:conversionFactor "0.00000000000000000000000000166053878283"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_particle_mass ;
+	gist:symbol "amu"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_becquerel
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Becquerel"^^xsd:anyURI ;
+	skos:altLabel "becquerels"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/BQ> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "becquerel"^^xsd:string ;
+	skos:scopeNote "1 becquerel = 1.0 x per second"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_activity ;
+	gist:symbol "Bq"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_bit
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Bit"^^xsd:anyURI ;
+	skos:altLabel "bits"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/BIT> ;
+	skos:prefLabel "bit"^^xsd:string ;
+	skos:scopeNote "1 bit = 1 x bit"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_data ;
+	gist:symbol "b"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_british_thermal_unit_international
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/British_thermal_unit"^^xsd:anyURI ,
+		"https://physics.nist.gov/Pubs/SP811/appenB9.html"^^xsd:anyURI ,
+		"https://www.iso.org/iso/home/store/catalogue_ics/catalogue_detail_ics.htm?csnumber=31890"^^xsd:anyURI ,
+		"https://www.knowledgedoor.com/2/units_and_constants_handbook/british-thermal-unit_group.html"^^xsd:anyURI
+		;
+	skos:altLabel "british thermal units (international definition)"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/BTU_IT> ;
+	skos:definition "from QUDT: Is part of the IMPERIAL system."^^xsd:string ;
+	skos:prefLabel "british thermal unit (international definition)"^^xsd:string ;
+	skos:scopeNote "1 british thermal unit international = 1055.05585 kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1055.05585"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_heat ;
+	gist:symbol "Btu{IT}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_byte
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Byte"^^xsd:anyURI ;
+	skos:altLabel "bytes"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/BYTE> ;
+	skos:prefLabel "byte"^^xsd:string ;
+	skos:scopeNote "1 byte = 8 x bit"^^xsd:string ;
+	gist:conversionFactor "8.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_data ;
+	gist:symbol "B"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_candela
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Candela"^^xsd:anyURI ,
+		"https://www.simetric.co.uk/siderived.htm"^^xsd:anyURI
+		;
+	skos:altLabel "candelas"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/CD> ;
+	skos:prefLabel "candela"^^xsd:string ;
+	skos:scopeNote "1 candela = 1.0 x candela"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_luminous_flux ,
+		gistx:_UnitGroup_luminous_intensity
+		;
+	gist:symbol "cd"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_centimeter
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Centimetre"^^xsd:anyURI ;
+	skos:altLabel "centimeters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/CentiM> ;
+	skos:prefLabel "centimeter"^^xsd:string ;
+	skos:scopeNote "1 centimeter = 0.01 x meter"^^xsd:string ;
+	gist:conversionFactor "0.01"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_distance ;
+	gist:symbol "cm"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_coulomb
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Coulomb"^^xsd:anyURI ;
+	skos:altLabel "coulombs"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/C> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "coulomb"^^xsd:string ;
+	skos:scopeNote "1 coulomb = 1.0 x ampere second"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_electric_charge ;
+	gist:symbol "C"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_count
+	a gist:UnitOfMeasure ;
+	skos:altLabel "count"^^xsd:string ;
+	skos:definition "One thing, when counting."^^xsd:string ;
+	skos:prefLabel "count"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	.
+
+gistx:_UnitOfMeasure_count_per_minute
+	a gist:UnitOfMeasure ;
+	skos:altLabel "count per minute"^^xsd:string ;
+	skos:definition "Count per minute."^^xsd:string ;
+	skos:prefLabel "counts per minute"^^xsd:string ;
+	skos:scopeNote "1 count per minute = 0.0166666666666 x number per second"^^xsd:string ;
+	gist:conversionFactor "0.0166666666666"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_count_per_minute_duration ;
+	.
+
+gistx:_UnitOfMeasure_cubic_foot
+	a gist:UnitOfMeasure ;
+	skos:altLabel "cubic feet"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FT3> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "cubic foot"^^xsd:string ;
+	skos:scopeNote "1 cubic foot = 0.028316846592 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.028316846592"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "ft³"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_cubic_meter
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Cubic_metre"^^xsd:anyURI ;
+	skos:altLabel "cubic meters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/M3> ;
+	skos:prefLabel "cubic meter"^^xsd:string ;
+	skos:scopeNote "1 cubic meter = 1.0 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "m³"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_cubic_yard
+	a gist:UnitOfMeasure ;
+	skos:altLabel "cubic yards"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/YD3> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "cubic yard"^^xsd:string ;
+	skos:scopeNote "1 cubic yard = 0.764554857984 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.764554857984"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "yd³"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_day
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Day"^^xsd:anyURI ;
+	skos:altLabel "days"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DAY> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "day"^^xsd:string ;
+	skos:scopeNote "1 day = 86400.0 x second"^^xsd:string ;
+	gist:conversionFactor "86400.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_cycle_time ,
+		gistx:_UnitGroup_duration
+		;
+	gist:symbol "d"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_day_per_week
+	a gist:UnitOfMeasure ;
+	skos:altLabel "days per week"^^xsd:string ;
+	skos:definition "day_per_week."^^xsd:string ;
+	skos:prefLabel "day per week"^^xsd:string ;
+	gist:conversionFactor "0.14285714"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_labor_consumption_rate ;
+	.
+
+gistx:_UnitOfMeasure_decibel
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Decibel"^^xsd:anyURI ;
+	skos:altLabel "decibels"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DeciB> ;
+	skos:prefLabel "decibel"^^xsd:string ;
+	gist:isMemberOf gistx:_UnitGroup_sound_power_level ;
+	gist:symbol "dB"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_degree
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://www.oxfordreference.com/view/10.1093/acref/9780198605225.001.0001/acref-9780198605225-e-331"^^xsd:anyURI ;
+	skos:altLabel "degrees"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DEG> ;
+	skos:prefLabel "degree"^^xsd:string ;
+	skos:scopeNote "1 degree = 0.01745329252 radian"^^xsd:string ;
+	gist:conversionFactor "0.01745329252"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_angle ;
+	gist:symbol "°"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_degree_celsius
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Celsius"^^xsd:anyURI ;
+	skos:altLabel "degrees celsius"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DEG_C> ;
+	skos:prefLabel "degree celsius"^^xsd:string ;
+	skos:scopeNote "y degrees celsius = (y + 273.15) degrees kelvin"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:conversionOffset "273.15"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_temperature ;
+	gist:symbol "°C"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_degree_fahrenheit
+	a gist:UnitOfMeasure ;
+	skos:altLabel "degrees fahrenheit"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DEG_F> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "degree fahrenheit"^^xsd:string ;
+	skos:scopeNote "y degrees fahrenheit = (y + 459.6669607) x 5/9 degrees Kelvin"^^xsd:string ;
+	gist:conversionFactor "0.5555555555555556"^^xsd:decimal ;
+	gist:conversionOffset "459.669607"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_temperature ;
+	gist:symbol "°F"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_degree_per_second
+	a gist:UnitOfMeasure ;
+	skos:altLabel "degrees per second"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DEG-PER-SEC> ;
+	skos:prefLabel "degree per second"^^xsd:string ;
+	skos:scopeNote "1 degree per second = 0.0174532925 x radian per second"^^xsd:string ;
+	gist:conversionFactor "0.0174532925"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_angular_velocity ;
+	gist:symbol "°/s"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_dozen
+	a gist:UnitOfMeasure ;
+	skos:altLabel "count"^^xsd:string ;
+	skos:definition "One dozen things, when counting."^^xsd:string ;
+	skos:prefLabel "count"^^xsd:string ;
+	skos:scopeNote "1 dozen = 12 things"^^xsd:string ;
+	gist:conversionFactor "12.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	.
+
+gistx:_UnitOfMeasure_dyne
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Dyne"^^xsd:anyURI ;
+	skos:altLabel "dynes"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/DYN> ;
+	skos:prefLabel "dyne"^^xsd:string ;
+	skos:scopeNote "1 dyne = 0.00001 x kilogram meter per secondSquared"^^xsd:string ;
+	gist:conversionFactor "0.00001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_force ;
+	gist:symbol "dyn"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_each
+	a gist:UnitOfMeasure ;
+	skos:altLabel "each"^^xsd:string ;
+	skos:definition "One item of inventory or other counted item."^^xsd:string ;
+	skos:prefLabel "each"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	.
+
+gistx:_UnitOfMeasure_electron_volt
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Electron_volt"^^xsd:anyURI ,
+		"https://physics.nist.gov/cuu/Constants/bibliography.html"^^xsd:anyURI
+		;
+	skos:altLabel "electron volts"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/EV> ;
+	skos:prefLabel "electron volt"^^xsd:string ;
+	skos:scopeNote "1 electron volt = 0.0000000000000000001602176634 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "0.0000000000000000001602176634"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_ionization_energy ,
+		gistx:_UnitGroup_particle_energy
+		;
+	gist:symbol "eV"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_elementary_charge
+	a gist:UnitOfMeasure ;
+	skos:altLabel "elementary charges"^^xsd:string ;
+	skos:closeMatch
+		<http://qudt.org/vocab/unit/E> ,
+		<http://qudt.org/vocab/unit/ElementaryCharge>
+		;
+	skos:prefLabel "elementary charge"^^xsd:string ;
+	skos:scopeNote "1 elementary charge = 0.0000000000000000001602176634 x ampere second"^^xsd:string ;
+	gist:conversionFactor "0.0000000000000000001602176634"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_particle_charge ;
+	gist:symbol "e"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_erg
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Erg"^^xsd:anyURI ;
+	skos:altLabel "ergs"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/ERG> ;
+	skos:prefLabel "erg"^^xsd:string ;
+	skos:scopeNote "1 erg = 0.0000001 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "0.0000001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_heat ;
+	gist:symbol "erg"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_farad
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Farad"^^xsd:anyURI ;
+	skos:altLabel "farads"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FARAD> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "farad"^^xsd:string ;
+	skos:scopeNote "1 farad = 1.0 x ampereSquared secondToTheFourth per kilogram meterSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_capacitance ;
+	gist:symbol "F"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_foot
+	a gist:UnitOfMeasure ;
+	skos:altLabel "feet"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FT> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "foot"^^xsd:string ;
+	skos:scopeNote "1 foot = 0.3048 x meter"^^xsd:string ;
+	gist:conversionFactor "0.3048"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_altitude ,
+		gistx:_UnitGroup_distance
+		;
+	gist:symbol "ft"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_foot_candle
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Foot-candle"^^xsd:anyURI ;
+	skos:altLabel "foot candles"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FC> ;
+	skos:prefLabel "foot candle"^^xsd:string ;
+	skos:scopeNote "1 foot candle = 10.764 x candela per meterSquared"^^xsd:string ;
+	gist:conversionFactor "10.764"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_luminous_flux_per_area ;
+	gist:symbol "fc"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_foot_per_second
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Foot_per_second"^^xsd:anyURI ;
+	skos:altLabel "feet per second"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FT-PER-SEC> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "foot per second"^^xsd:string ;
+	skos:scopeNote "1 foot per second = 0.3048 x meter per second"^^xsd:string ;
+	gist:conversionFactor "0.3048"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_speed ;
+	gist:symbol "ft/s"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_foot_pound_force
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Foot-pound_force"^^xsd:anyURI ;
+	skos:altLabel "foot pounds force"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FT-LB_F> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "foot pound force"^^xsd:string ;
+	skos:scopeNote "1 foot pound force = 1.35581807 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.35581807"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_torque ;
+	gist:symbol "ft·lbf"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_fraction
+	a gist:UnitOfMeasure ;
+	skos:altLabel "fraction"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FRACTION> ;
+	skos:prefLabel "fraction"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_ratio ;
+	gist:symbol "÷"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gauss
+	a gist:UnitOfMeasure ;
+	skos:altLabel "gausses"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GAUSS> ;
+	skos:definition "from QUDT: CGS unit of the magnetic flux density B"^^xsd:string ;
+	skos:prefLabel "gauss"^^xsd:string ;
+	skos:scopeNote "1 gauss = 0.0001 x kilogram per ampere secondSquared"^^xsd:string ;
+	gist:conversionFactor "0.0001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_magnetic_flux_density ;
+	gist:symbol "Gs"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gigabase_pair
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://www.genome.gov/genetics-glossary/Gigabase"^^xsd:anyURI ;
+	skos:altLabel "gigabase pairs"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GigaBasePair> ;
+	skos:definition "from QUDT: A gigabase (abbreviated Gb, or Gbp for gigabase pairs.) is a unit of measurement used to help designate the length of DNA. One gigabase is equal to 1 billion bases. "^^xsd:string ;
+	skos:prefLabel "gigabase pair"^^xsd:string ;
+	skos:scopeNote "1 gigabase pair = 1000000000.0 x base pair"^^xsd:string ;
+	gist:conversionFactor "1000000000.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_genetic_strand_length ;
+	gist:symbol "Gbp"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gigabecquerel
+	a gist:UnitOfMeasure ;
+	skos:altLabel "gigabecquerels"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GigaBQ> ;
+	skos:definition "1 000 000 000-fold of the derived SI unit becquerel"^^xsd:string ;
+	skos:prefLabel "gigabecquerel"^^xsd:string ;
+	skos:scopeNote "1 gigabecquerel = 1000000000.0 x per second"^^xsd:string ;
+	gist:conversionFactor "1000000000.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_activity ;
+	gist:symbol "GBq"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gigabit_per_second
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Data-rate_units#Gigabit_per_second"^^xsd:anyURI ;
+	skos:altLabel "gigabits per second"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GigaBIT-PER-SEC> ;
+	skos:prefLabel "gigabit per second"^^xsd:string ;
+	skos:scopeNote "1 gigabit per second = 693147180.55994530941723212145818 x per second"^^xsd:string ;
+	gist:conversionFactor "693147180.55994530941"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_data_rate ;
+	gist:symbol "Gbps"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gigahertz
+	a gist:UnitOfMeasure ;
+	skos:altLabel "gigahertz"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GigaHZ> ;
+	skos:prefLabel "gigahertz"^^xsd:string ;
+	skos:scopeNote "1 gigahertz = 1000000000.0 x per second"^^xsd:string ;
+	gist:conversionFactor "1000000000.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_frequency ;
+	gist:symbol "GHz"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gram_force
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Kilogram-force"^^xsd:anyURI ;
+	skos:altLabel "grams force"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GM_F> ;
+	skos:prefLabel "gram force"^^xsd:string ;
+	skos:scopeNote "1 gram force = 0.00980665 x kilogram meter per secondSquared"^^xsd:string ;
+	gist:conversionFactor "0.00980665"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_force ;
+	gist:symbol "gf"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_gray
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Gray_(unit)"^^xsd:anyURI ;
+	skos:altLabel "grays"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GRAY> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "gray"^^xsd:string ;
+	skos:scopeNote "1 gray = 1.0 x meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_absorbed_dose ;
+	gist:symbol "Gy"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_henry
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Henry_(unit)"^^xsd:anyURI ;
+	skos:altLabel "henrys"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/H> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "henry"^^xsd:string ;
+	skos:scopeNote "1 henry = 1.0 x kilogram meterSquared per ampereSquared secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_inductance ;
+	gist:symbol "H"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_hertz
+	a gist:UnitOfMeasure ;
+	skos:altLabel "hertz"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/HZ> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "hertz"^^xsd:string ;
+	skos:scopeNote "1 hertz = 1.0 x per second"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_frequency ;
+	gist:symbol "Hz"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_horsepower
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Horsepower"^^xsd:anyURI ;
+	skos:altLabel "horsepower"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/HP> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "horsepower"^^xsd:string ;
+	skos:scopeNote "1 horsepower = 745.6999 x kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:conversionFactor "745.6999"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_power ;
+	gist:symbol "HP"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_hour
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Hour"^^xsd:anyURI ;
+	skos:altLabel "hours"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/HR> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "hour"^^xsd:string ;
+	skos:scopeNote "1 hour = 3600.0 x second"^^xsd:string ;
+	gist:conversionFactor "3600.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_duration ;
+	gist:symbol "h"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_hour_per_week
+	a gist:UnitOfMeasure ;
+	skos:altLabel "hours per week"^^xsd:string ;
+	skos:definition "hour_per_week."^^xsd:string ;
+	skos:prefLabel "hour per week"^^xsd:string ;
+	gist:conversionFactor "0.00595238"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_labor_consumption_rate ;
+	.
+
+gistx:_UnitOfMeasure_inch
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Inch"^^xsd:anyURI ;
+	skos:altLabel "inches"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/IN> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "inch"^^xsd:string ;
+	skos:scopeNote "1 inch = 0.0254 x meter"^^xsd:string ;
+	gist:conversionFactor "0.0254"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_distance ;
+	gist:symbol "in"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_inch_of_mercury
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Inch_of_mercury"^^xsd:anyURI ;
+	skos:altLabel "inches of mercury"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/IN_HG> ;
+	skos:prefLabel "inch of mercury"^^xsd:string ;
+	skos:scopeNote "1 inch of mercury = 3386.389 x kilogram per meter secondSquared"^^xsd:string ;
+	gist:conversionFactor "3386.389"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_pressure ;
+	gist:symbol "inHg"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_international_calorie
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://physics.nist.gov/Pubs/SP811/appenB9.html"^^xsd:anyURI ;
+	skos:altLabel "international table calories"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/CAL_IT> ;
+	skos:prefLabel "international table calorie"^^xsd:string ;
+	skos:scopeNote "1 international table calorie = 4.1868 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "4.1868"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_heat ;
+	gist:symbol "cal{IT}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_item
+	a gist:UnitOfMeasure ;
+	skos:altLabel "items"^^xsd:string ;
+	skos:definition "One item, when counting."^^xsd:string ;
+	skos:prefLabel "item"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	.
+
+gistx:_UnitOfMeasure_joule
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Joule"^^xsd:anyURI ;
+	skos:altLabel "joules"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/J> ;
+	skos:definition "from QUDT: The SI unit of work or energy, defined to be the work done by a force of one newton acting to move an object through a distance of one meter in the direction in which the force is applied. Equivalently, since kinetic energy is one half the mass times the square of the velocity, one joule is the kinetic energy of a mass of two kilograms moving at a velocity of 1 m/s. This is the same as 107 ergs in the CGS system, or approximately 0.737 562 foot-pound in the traditional English system. In other energy units, one joule equals about 9.478 170 x 10-4 Btu, 0.238 846 (small) calories, or 2.777 778 x 10-4 watt hour. The joule is named for the British physicist James Prescott Joule (1818-1889), who demonstrated the equivalence of mechanical and thermal energy in a famous experiment in 1843. "^^xsd:string ;
+	skos:prefLabel "joule"^^xsd:string ;
+	skos:scopeNote "1 joule = 1.0 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_amount_of_heat ,
+		gistx:_UnitGroup_energy_or_work
+		;
+	gist:symbol "J"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_joule_per_hour
+	a gist:UnitOfMeasure ;
+	skos:altLabel "joules per hour"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/J-PER-HR> ;
+	skos:definition "from QUDT: SI derived unit joule divided by the 3600 times the SI base unit second"^^xsd:string ;
+	skos:prefLabel "joule per hour"^^xsd:string ;
+	skos:scopeNote "1 joule per hour = 3600.0 x kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:conversionFactor "3600.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_power ;
+	gist:symbol "J/h"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_joule_per_quartic_meter
+	a gist:UnitOfMeasure ;
+	skos:altLabel "joules per quartic meter"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/J-PER-M4> ;
+	skos:prefLabel "joule per quartic meter"^^xsd:string ;
+	skos:scopeNote "1 joule per quartic meter = 1.0 x kilogram per meterSquared secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_spectral_radiant_energy_density ;
+	gist:symbol "J/m⁴"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_joule_per_second
+	a gist:UnitOfMeasure ;
+	skos:altLabel "joules per second"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/J-PER-SEC> ;
+	skos:definition "from QUDT: SI derived unit joule divided by the SI base unit second"^^xsd:string ;
+	skos:prefLabel "joule per second"^^xsd:string ;
+	skos:scopeNote "1 joule per second = 1.0 x kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_power ;
+	gist:symbol "J/s"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_kelvin
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Kelvin"^^xsd:anyURI ;
+	skos:altLabel "kelvin"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/K> ;
+	skos:prefLabel "kelvin"^^xsd:string ;
+	skos:scopeNote "1 kelvin = 1.0 x kelvin"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_temperature ;
+	gist:symbol "K"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_kilogram_force
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Kilogram-force"^^xsd:anyURI ;
+	skos:altLabel "kilograms force"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/KiloGM_F> ;
+	skos:prefLabel "kilogram force"^^xsd:string ;
+	skos:scopeNote "1 kilogram force = 9.80665 x kilogram meter per secondSquared"^^xsd:string ;
+	gist:conversionFactor "9.80665"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_force ;
+	gist:symbol "kgf"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_kilometer
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Kilometre"^^xsd:anyURI ;
+	skos:altLabel "kilometers"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/KiloM> ;
+	skos:prefLabel "kilometer"^^xsd:string ;
+	skos:scopeNote "1 kilometer = 1000.0 x meter"^^xsd:string ;
+	gist:conversionFactor "1000.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_altitude ,
+		gistx:_UnitGroup_distance
+		;
+	gist:symbol "km"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_kilometer_per_hour
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Kilometres_per_hour"^^xsd:anyURI ;
+	skos:altLabel "kilometers per hour"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/KiloM-PER-HR> ;
+	skos:prefLabel "kilometer per hour"^^xsd:string ;
+	skos:scopeNote "1 kilometer per hour = 0.2777777777777778 x meter per second"^^xsd:string ;
+	gist:conversionFactor "0.2777777777777778"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_speed ;
+	gist:symbol "km/h"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_kilowatt
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Watt"^^xsd:anyURI ;
+	skos:altLabel "kilowatts"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/KiloW> ;
+	skos:prefLabel "kilowatt"^^xsd:string ;
+	skos:scopeNote "1 kilowatt = 1000.0 x kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:conversionFactor "1000.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_electric_power ,
+		gistx:_UnitGroup_power
+		;
+	gist:symbol "kW"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_knot
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Knot_(unit)"^^xsd:anyURI ;
+	skos:altLabel "knots"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/KN> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "knot"^^xsd:string ;
+	skos:scopeNote "1 knot = 0.5144444444444445 x meter per second"^^xsd:string ;
+	gist:conversionFactor "0.5144444444444445"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_speed ;
+	gist:symbol "kn"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_lambert
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Lambert_(unit)"^^xsd:anyURI ;
+	skos:altLabel "lamberts"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/LA> ;
+	skos:prefLabel "lambert"^^xsd:string ;
+	skos:scopeNote "1 lambert = 3183.09886 x candela per meterSquared"^^xsd:string ;
+	gist:conversionFactor "3183.09886"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_luminous_flux_per_area ;
+	gist:symbol "L"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_liter
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Litre"^^xsd:anyURI ;
+	skos:altLabel "liters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/L> ;
+	skos:prefLabel "liter"^^xsd:string ;
+	skos:scopeNote "1 liter = 0.001 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.001"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_number_per_volume ,
+		gistx:_UnitGroup_volume
+		;
+	gist:symbol "L"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_liter_per_minute
+	a gist:UnitOfMeasure ;
+	skos:altLabel "liters per minute"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/L-PER-MIN> ;
+	skos:definition "from QUDT: unit litre divided by the unit minute"^^xsd:string ;
+	skos:prefLabel "liter per minute"^^xsd:string ;
+	skos:scopeNote "1 liter per minute = 0.00001666667 x meterCubed per second"^^xsd:string ;
+	gist:conversionFactor "0.00001666667"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume_per_duration ;
+	gist:symbol "L/min"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_lumen
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Lumen_(unit)"^^xsd:anyURI ;
+	skos:altLabel "lumens"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/LM> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "lumen"^^xsd:string ;
+	skos:scopeNote "1 lumen = 1.0 x candela"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_luminous_flux ,
+		gistx:_UnitGroup_luminous_intensity
+		;
+	gist:symbol "lm"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_lumen_per_watt
+	a gist:UnitOfMeasure ;
+	skos:altLabel "lumens per watt"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/LM-PER-W> ;
+	skos:prefLabel "lumen per watt"^^xsd:string ;
+	skos:scopeNote "1 lumen per watt = 1.0 x candela secondCubed per kilogram meterSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_luminous_intensity_per_unit_of_power ;
+	gist:symbol "lm/W"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_maxwell
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Maxwell_(unit)"^^xsd:anyURI ;
+	skos:altLabel "maxwells"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MX> ;
+	skos:prefLabel "maxwell"^^xsd:string ;
+	skos:scopeNote "1 maxwell = 0.00000001 x kilogram meterSquared per ampere secondSquared"^^xsd:string ;
+	gist:conversionFactor "0.00000001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_magnetic_flux ;
+	gist:symbol "Mx"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_megabecquerel
+	a gist:UnitOfMeasure ;
+	skos:altLabel "megabecquerels"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MegaBQ> ;
+	skos:definition "1 000 000-fold of the derived unit becquerel"^^xsd:string ;
+	skos:prefLabel "megabecquerel"^^xsd:string ;
+	skos:scopeNote "1 megabecquerel = 1000000.0 x per second"^^xsd:string ;
+	gist:conversionFactor "1000000.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_activity ;
+	gist:symbol "MBq"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_megabit_per_second
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Data-rate_units"^^xsd:anyURI ;
+	skos:altLabel "megabits per second"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MegaBIT-PER-SEC> ;
+	skos:prefLabel "megabit per second"^^xsd:string ;
+	skos:scopeNote "1 megabit per second = 693147.18055994530941723212145818 x per second"^^xsd:string ;
+	gist:conversionFactor "693147.18055994530941"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_data_rate ;
+	gist:symbol "mbps"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_megawatt
+	a gist:UnitOfMeasure ;
+	skos:altLabel "megaws"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MegaW> ;
+	skos:prefLabel "megaw"^^xsd:string ;
+	skos:scopeNote "1 megawatt = 1000000.0 x kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:conversionFactor "1000000.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_electric_power ,
+		gistx:_UnitGroup_power
+		;
+	gist:symbol "MW"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_meter
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Metre"^^xsd:anyURI ;
+	skos:altLabel "meters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/M> ;
+	skos:definition
+		"from QUDT: Is part of the SI system."^^xsd:string ,
+		"from QUDT: The metric and SI base unit of distance. The meter is equal to approximately 1.093 613 3 yards, 3.280 840 feet, or 39.370 079 inches."^^xsd:string
+		;
+	skos:prefLabel "meter"^^xsd:string ;
+	skos:scopeNote "1 meter = 1.0 x meter"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_altitude ,
+		gistx:_UnitGroup_distance
+		;
+	gist:symbol "m"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_meter_per_hour
+	a gist:UnitOfMeasure ;
+	skos:altLabel "meters per hour"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/M-PER-HR> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "meter per hour"^^xsd:string ;
+	skos:scopeNote "1 meter per hour = 0.000277777778 x meter per second"^^xsd:string ;
+	gist:conversionFactor "0.000277777778"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_speed ;
+	gist:symbol "m/h"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_mile
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Mile"^^xsd:anyURI ;
+	skos:altLabel "miles"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MI> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "mile"^^xsd:string ;
+	skos:scopeNote "1 mile = 1609.344 x meter"^^xsd:string ;
+	gist:conversionFactor "1609.344"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_altitude ,
+		gistx:_UnitGroup_distance
+		;
+	gist:symbol "mi"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_mile_per_hour
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Miles_per_hour"^^xsd:anyURI ;
+	skos:altLabel "miles per hour"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MI-PER-HR> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "mile per hour"^^xsd:string ;
+	skos:scopeNote "1 mile per hour = 0.44704 x meter per second"^^xsd:string ;
+	gist:conversionFactor "0.44704"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_speed ;
+	gist:symbol "mi/h"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_milliampere
+	a gist:UnitOfMeasure ;
+	skos:altLabel "milliamperes"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MilliA> ;
+	skos:prefLabel "milliampere"^^xsd:string ;
+	skos:scopeNote "1 milliampere = 0.001 x ampere"^^xsd:string ;
+	gist:conversionFactor "0.001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_electric_current ;
+	gist:symbol "mA"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_milligram_per_kilogram
+	a gist:UnitOfMeasure ;
+	skos:altLabel "milligrams per kilogram"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MilliGM-PER-KiloGM> ;
+	skos:definition "from QUDT: 0.000001-fold of the SI base unit kilogram divided by the SI base unit kilogram"^^xsd:string ;
+	skos:prefLabel "milligram per kilogram"^^xsd:string ;
+	skos:scopeNote "1 milligram per kilogram = 0.000001 x kilogram per kilogram"^^xsd:string ;
+	gist:conversionFactor "0.000001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_ratio_of_masses ;
+	gist:symbol "mg/kg"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_millimeter_of_mercury
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Torr"^^xsd:anyURI ;
+	skos:altLabel "millimeters of mercury"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MilliM_HG> ;
+	skos:prefLabel "millimeter of mercury"^^xsd:string ;
+	skos:scopeNote "1 millimeter of mercury = 133.322387415 x kilogram per meter secondSquared"^^xsd:string ;
+	gist:conversionFactor "133.322387415"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_atmospheric_pressure ,
+		gistx:_UnitGroup_blood_pressure ,
+		gistx:_UnitGroup_pressure
+		;
+	gist:symbol "mmHg"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_millimole
+	a gist:UnitOfMeasure ;
+	skos:altLabel "millimoles"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MilliMOL> ;
+	skos:definition "from QUDT: 0.001-fold of the SI base unit mol"^^xsd:string ;
+	skos:prefLabel "millimole"^^xsd:string ;
+	skos:scopeNote "1 millimole = 0.001 x mole"^^xsd:string ;
+	gist:conversionFactor "0.001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_substance ;
+	gist:symbol "mmol"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_millisecond
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Millisecond"^^xsd:anyURI ;
+	skos:altLabel "milliseconds"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MilliSEC> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "millisecond"^^xsd:string ;
+	skos:scopeNote "1 millisecond = 0.001 x second"^^xsd:string ;
+	gist:conversionFactor "0.001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_duration ;
+	gist:symbol "ms"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_minute
+	a gist:UnitOfMeasure ;
+	skos:altLabel "minutes"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MIN> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "minute"^^xsd:string ;
+	skos:scopeNote "1 minute = 60.0 x second"^^xsd:string ;
+	gist:conversionFactor "60.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_duration ;
+	gist:symbol "min"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_minute_angle
+	a gist:UnitOfMeasure ;
+	skos:altLabel "minute angle"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MIN_Angle> ;
+	skos:prefLabel "minute angle"^^xsd:string ;
+	gist:isMemberOf gistx:_UnitGroup_angle ;
+	.
+
+gistx:_UnitOfMeasure_mole
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Mole_(unit)"^^xsd:anyURI ;
+	skos:altLabel "moles"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/MOL> ;
+	skos:prefLabel "mole"^^xsd:string ;
+	skos:scopeNote "1 mole = 1.0 x mole"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_substance ;
+	gist:symbol "mol"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_newton
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Newton"^^xsd:anyURI ;
+	skos:altLabel "newtons"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/N> ;
+	skos:prefLabel "newton"^^xsd:string ;
+	skos:scopeNote "1 newton = 1.0 x kilogram meter per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_force ;
+	gist:symbol "N"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_newton_meter
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Newton_metre"^^xsd:anyURI ;
+	skos:altLabel "newton meters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/N-M> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "newton meter"^^xsd:string ;
+	skos:scopeNote "1 newton meter = 1.0 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_torque ;
+	gist:symbol "N·m"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_number
+	a gist:UnitOfMeasure ;
+	skos:altLabel "number"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/NUM> ;
+	skos:prefLabel "number"^^xsd:string ;
+	gist:isMemberOf
+		gistx:_UnitGroup_number ,
+		gistx:_UnitGroup_probability ,
+		gistx:_UnitGroup_score
+		;
+	gist:symbol "#"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_number_per_hour
+	a gist:UnitOfMeasure ;
+	skos:altLabel "number per hour"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/NUM-PER-HR> ;
+	skos:prefLabel "number per hour"^^xsd:string ;
+	skos:scopeNote "1 number per hour = 0.000277777777777778 x number per second"^^xsd:string ;
+	gist:conversionFactor "0.000277777777777778"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_per_duration ;
+	gist:symbol "#/h"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_ohm
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Ohm"^^xsd:anyURI ;
+	skos:altLabel "ohms"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/OHM> ;
+	skos:prefLabel "ohm"^^xsd:string ;
+	skos:scopeNote "1 ohm = 1.0 x kilogram meterSquared per ampereSquared secondCubed"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_electric_resistance ;
+	gist:symbol "Ω"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_one
+	a gist:UnitOfMeasure ;
+	skos:altLabel "one"^^xsd:string ;
+	skos:definition "One thing."^^xsd:string ;
+	skos:prefLabel "one"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	.
+
+gistx:_UnitOfMeasure_pascal
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Pascal"^^xsd:anyURI ;
+	skos:altLabel "pascals"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/PA> ;
+	skos:prefLabel "pascal"^^xsd:string ;
+	skos:scopeNote "1 pascal = 1.0 x kilogram per meter secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_pressure ;
+	gist:symbol "Pa"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_percent
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Percentage"^^xsd:anyURI ;
+	skos:altLabel "percent"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/PERCENT> ;
+	skos:prefLabel "percent"^^xsd:string ;
+	skos:scopeNote "1 percent = 1 percent"^^xsd:string ;
+	gist:conversionFactor "0.01"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_percentage ,
+		gistx:_UnitGroup_probability ,
+		gistx:_UnitGroup_ratio ,
+		gistx:_UnitGroup_score
+		;
+	gist:symbol "%"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_planck_charge
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Planck_units"^^xsd:anyURI ;
+	skos:altLabel "planck charges"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/PlanckCharge> ;
+	skos:prefLabel "planck charge"^^xsd:string ;
+	skos:scopeNote "1 planck charge = 0.00000000000000000187554587 x ampere second"^^xsd:string ;
+	gist:conversionFactor "0.00000000000000000187554587"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_particle_charge ;
+	gist:symbol "planckcharge"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_pound_force
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Pound-force"^^xsd:anyURI ;
+	skos:altLabel "pounds force"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/LB_F> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "pound force"^^xsd:string ;
+	skos:scopeNote "1 pound force = 4.448222 x kilogram meter per secondSquared"^^xsd:string ;
+	gist:conversionFactor "4.448222"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_force ;
+	gist:symbol "lbf"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_pound_force_per_square_inch
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Pounds_per_square_inch"^^xsd:anyURI ;
+	skos:altLabel "pounds force per square inch"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/LB_F-PER-IN2> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "pound force per square inch"^^xsd:string ;
+	skos:scopeNote "1 pound force per square inch = 6894.75789 x kilogram per meter secondSquared"^^xsd:string ;
+	gist:conversionFactor "6894.75789"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_pressure ;
+	gist:symbol "lbf/in²"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_psi
+	a gist:UnitOfMeasure ;
+	skos:altLabel "psi"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/PSI> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string ,
+		"from QUDT: Pounds of force per square inch, the unit for pressure as a compounded unit pound-force according to the Anglo-American system of units divided by the power of the unit Inch according to the Anglo-American and Imperial system of units by exponent 2"^^xsd:string
+		;
+	skos:prefLabel "psi"^^xsd:string ;
+	skos:scopeNote "1 psi = 6894.75789 x kilogram per meter secondSquared"^^xsd:string ;
+	gist:conversionFactor "6894.75789"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_atmospheric_pressure ,
+		gistx:_UnitGroup_pressure
+		;
+	gist:symbol "psi"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_radian
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Radian"^^xsd:anyURI ;
+	skos:altLabel "radians"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/RAD> ;
+	skos:definition
+		"from QUDT: Is part of the SI system."^^xsd:string ,
+		'from QUDT: The radian is the standard unit of angular measure, used in many areas of mathematics. It describes the plane angle subtended by a circular arc as the length of the arc divided by the radius of the arc. The unit was formerly a SI supplementary unit, but this category was abolished in 1995 and the radian is now considered a SI derived unit. The SI unit of solid angle measurement is the steradian. The radian is represented by the symbol "rad" or, more rarely, by the superscript c (for "circular measure"). For example, an angle of 1.2 radians would be written as "1.2 rad" or "1.2c" (the second symbol is often mistaken for a degree: "1.2u00b0"). As the ratio of two lengths, the radian is a "pure number" that needs no unit symbol, and in mathematical writing the symbol "rad" is almost always omitted. In the absence of any symbol radians are assumed, and when degrees are meant the symbol u00b0 is used. [Wikipedia]'^^xsd:string
+		;
+	skos:prefLabel "radian"^^xsd:string ;
+	skos:scopeNote "1 radian = 1 x radian"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_angle ;
+	gist:symbol "rad"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_revolution
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Revolution_(unit)"^^xsd:anyURI ;
+	skos:altLabel "revolutions"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/REV> ;
+	skos:prefLabel "revolution"^^xsd:string ;
+	skos:scopeNote "1 revolution = 6.283 x radian"^^xsd:string ;
+	gist:isMemberOf gistx:_UnitGroup_angle ;
+	gist:symbol "rev"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_revolution_per_minute
+	a gist:UnitOfMeasure ;
+	skos:altLabel "revolutions per minute"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/REV-PER-MIN> ;
+	skos:prefLabel "revolution per minute"^^xsd:string ;
+	skos:scopeNote "1 revolution per minute = 0.104719755 x radian per second"^^xsd:string ;
+	gist:conversionFactor "0.104719755"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_angular_velocity ;
+	gist:symbol "rev/min"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_second
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Second"^^xsd:anyURI ;
+	skos:altLabel "seconds"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/SEC> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "second"^^xsd:string ;
+	skos:scopeNote "1 second = 1.0 x second"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_duration ;
+	gist:symbol "s"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_sievert
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Sievert"^^xsd:anyURI ,
+		"https://www.oxfordreference.com/view/10.1093/acref/9780198605225.001.0001/acref-9780198605225-e-1284"^^xsd:anyURI
+		;
+	skos:altLabel "sieverts"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/SV> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "sievert"^^xsd:string ;
+	skos:scopeNote "1 sievert = 1.0 x meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_dose_equivalent ;
+	gist:symbol "Sv"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_square_centimeter
+	a gist:UnitOfMeasure ;
+	skos:altLabel "square centimeters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/CentiM2> ;
+	skos:prefLabel "square centimeter"^^xsd:string ;
+	skos:scopeNote "1 square centimeter = 0.0001 x meterSquared"^^xsd:string ;
+	gist:conversionFactor "0.0001"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_area ;
+	gist:symbol "cm²"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_square_foot
+	a gist:UnitOfMeasure ;
+	skos:altLabel "square feet"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FT2> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "square foot"^^xsd:string ;
+	skos:scopeNote "1 square foot = 0.09290304 x meterSquared"^^xsd:string ;
+	gist:conversionFactor "0.09290304"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_area ;
+	gist:symbol "ft²"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_square_inch
+	a gist:UnitOfMeasure ;
+	skos:altLabel "square inches"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/IN2> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "square inch"^^xsd:string ;
+	skos:scopeNote "1 square inch = 0.00064516 x meterSquared"^^xsd:string ;
+	gist:conversionFactor "0.00064516"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_area ;
+	gist:symbol "in²"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_square_meter
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Square_metre"^^xsd:anyURI ;
+	skos:altLabel "square meters"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/M2> ;
+	skos:prefLabel "square meter"^^xsd:string ;
+	skos:scopeNote "1 square meter = 1.0 x meterSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_area ;
+	gist:symbol "m²"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_standard_atmosphere
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Atmosphere_(unit)"^^xsd:anyURI ;
+	skos:altLabel "standard atmospheres"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/ATM> ;
+	skos:prefLabel "standard atmosphere"^^xsd:string ;
+	skos:scopeNote "1 standard atmosphere = 101325.0 x kilogram per meter secondSquared"^^xsd:string ;
+	gist:conversionFactor "101325.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_atmospheric_pressure ,
+		gistx:_UnitGroup_pressure
+		;
+	gist:symbol "atm"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_star
+	a gist:UnitOfMeasure ;
+	skos:altLabel "stars"^^xsd:string ;
+	skos:definition "One star, when rating is done using stars."^^xsd:string ;
+	skos:prefLabel "star"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_score ;
+	.
+
+gistx:_UnitOfMeasure_tablespoon
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Tablespoon"^^xsd:anyURI ;
+	skos:altLabel "tablespoons"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/TBSP> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "tablespoon"^^xsd:string ;
+	skos:scopeNote "1 tablespoon = 0.0000147867656 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.0000147867656"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "tbsp"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_teaspoon
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Teaspoon"^^xsd:anyURI ;
+	skos:altLabel "teaspoons"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/TSP> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "teaspoon"^^xsd:string ;
+	skos:scopeNote "1 teaspoon = 0.00000492892187 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.00000492892187"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "tsp"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_terabyte
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Terabyte"^^xsd:anyURI ;
+	skos:altLabel "terabytes"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/TeraBYTE> ;
+	skos:prefLabel "terabyte"^^xsd:string ;
+	skos:scopeNote "1 terabyte = 8000000000000 x bit"^^xsd:string ;
+	gist:conversionFactor "8000000000000.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_data ;
+	gist:symbol "TB"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_tesla
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso
+		"https://en.wikipedia.org/wiki/Tesla_(unit)"^^xsd:anyURI ,
+		"https://www.oxfordreference.com/view/10.1093/acref/9780198605225.001.0001/acref-9780198605225-e-1406?rskey=AzXBLd"^^xsd:anyURI
+		;
+	skos:altLabel "teslas"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/T> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "tesla"^^xsd:string ;
+	skos:scopeNote "1 tesla = 1.0 x kilogram per ampere secondSquared"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_magnetic_flux_density ;
+	gist:symbol "T"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_therm_us
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://www.convertunits.com/info/therm%2B%5BU.S.%5D"^^xsd:anyURI ;
+	skos:altLabel "therms us"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/THM_US> ;
+	skos:prefLabel "therm us"^^xsd:string ;
+	skos:scopeNote "1 therm us = 105480400.0 x kilogram meterSquared per secondSquared"^^xsd:string ;
+	gist:conversionFactor "105480400.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_amount_of_heat ;
+	gist:symbol "thm{US}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_thing
+	a gist:UnitOfMeasure ;
+	skos:altLabel "things"^^xsd:string ;
+	skos:definition "One thing."^^xsd:string ;
+	skos:prefLabel "thing"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	.
+
+gistx:_UnitOfMeasure_unitless
+	a gist:UnitOfMeasure ;
+	skos:altLabel ""^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/UNITLESS> ;
+	skos:prefLabel ""^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_number_of_things ;
+	gist:symbol "一"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_gallon
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us gallons"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GAL_US> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us gallon"^^xsd:string ;
+	skos:scopeNote "1 us gallon = 0.003785412 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.003785412"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "gal{US}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_gallon_per_day
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us gallons per day"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/GAL_US-PER-DAY> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us gallon per day"^^xsd:string ;
+	skos:scopeNote "1 us gallon per day = 0.0000000438126389 x meterCubed per second"^^xsd:string ;
+	gist:conversionFactor "0.0000000438126389"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume_per_duration ;
+	gist:symbol "gal{US}/day"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_liquid_cup
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us liquid cups"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/CUP> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us liquid cup"^^xsd:string ;
+	skos:scopeNote "1 us liquid cup = 0.00023658825 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.00023658825"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "cup"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_liquid_ounce
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us liquid ounces"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/OZ_VOL_US> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us liquid ounce"^^xsd:string ;
+	skos:scopeNote "1 us liquid ounce = 0.0000295735296 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.0000295735296"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "fl oz{US}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_liquid_pint
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us liquid pints"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/PINT_US> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us liquid pint"^^xsd:string ;
+	skos:scopeNote "1 us liquid pint = 0.0004731765 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.0004731765"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "pt{US}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_liquid_quart
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us liquid quarts"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/QT_US> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us liquid quart"^^xsd:string ;
+	skos:scopeNote "1 us liquid quart = 0.000946353 x meterCubed"^^xsd:string ;
+	gist:conversionFactor "0.000946353"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_volume ;
+	gist:symbol "qt{US liq}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_us_survey_foot
+	a gist:UnitOfMeasure ;
+	skos:altLabel "us survey feet"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/FT_US> ;
+	skos:definition "from QUDT: Is part of the USCS system."^^xsd:string ;
+	skos:prefLabel "us survey foot"^^xsd:string ;
+	skos:scopeNote "1 us survey foot = 0.3048006 x meter"^^xsd:string ;
+	gist:conversionFactor "0.3048006"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_distance ;
+	gist:symbol "ft{US Survey}"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_watt
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Watt"^^xsd:anyURI ;
+	skos:altLabel "watts"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/W> ;
+	skos:definition "from QUDT: Is part of the SI system."^^xsd:string ;
+	skos:prefLabel "watt"^^xsd:string ;
+	skos:scopeNote "1 watt = 1.0 x kilogram meterSquared per secondCubed"^^xsd:string ;
+	gist:conversionFactor "1.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_electric_power ,
+		gistx:_UnitGroup_power
+		;
+	gist:symbol "W"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_week
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Week"^^xsd:anyURI ;
+	skos:altLabel "weeks"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/WK> ;
+	skos:prefLabel "week"^^xsd:string ;
+	skos:scopeNote "1 week = 604800.0 x second"^^xsd:string ;
+	gist:conversionFactor "604800.0"^^xsd:decimal ;
+	gist:isMemberOf
+		gistx:_UnitGroup_cycle_time ,
+		gistx:_UnitGroup_duration
+		;
+	gist:symbol "wk"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_yard
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://en.wikipedia.org/wiki/Yard"^^xsd:anyURI ;
+	skos:altLabel "yards"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/YD> ;
+	skos:definition
+		"from QUDT: Is part of the IMPERIAL system."^^xsd:string ,
+		"from QUDT: Is part of the USCS system."^^xsd:string
+		;
+	skos:prefLabel "yard"^^xsd:string ;
+	skos:scopeNote "1 yard = 0.9144 x meter"^^xsd:string ;
+	gist:conversionFactor "0.9144"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_distance ;
+	gist:symbol "yd"^^xsd:string ;
+	.
+
+gistx:_UnitOfMeasure_year
+	a gist:UnitOfMeasure ;
+	rdfs:seeAlso "https://www.oxfordreference.com/view/10.1093/acref/9780198605225.001.0001/acref-9780198605225-e-1533?rskey=b94Fd6"^^xsd:anyURI ;
+	skos:altLabel "years"^^xsd:string ;
+	skos:closeMatch <http://qudt.org/vocab/unit/YR> ;
+	skos:prefLabel "year"^^xsd:string ;
+	skos:scopeNote "1 year = 31557600.0 x second"^^xsd:string ;
+	gist:conversionFactor "31557600.0"^^xsd:decimal ;
+	gist:isMemberOf gistx:_UnitGroup_duration ;
+	gist:symbol "a"^^xsd:string ;
+	.
+

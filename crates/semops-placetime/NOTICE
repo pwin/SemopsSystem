@@ -48,3 +48,19 @@ The ontology extends gist, Semantic Arts' upper ontology, a copy of which is bun
 
 It is bundled so that the ontology's owl:imports resolves without a network, and so that the
 tests can check every term a gist description uses against the release it names.
+
+The unit and aspect of a duration come from the gist reference data, the starter set of
+which is bundled beside it:
+
+    ontology/gist/uomReferenceData-starter-set.ttl
+    gistReferenceData 1.0.0 (tag v1.0.0, commit eb17a5a86c31de9d2bb988add7c3698c96f26aa1),
+    Data/uomReferenceData-starter-set.ttl, unchanged
+    https://github.com/semanticarts/gistReferenceData
+    By Semantic Arts, licensed under the Creative Commons Attribution 4.0 International
+    licence: https://creativecommons.org/licenses/by/4.0/
+    Much of it derives from QUDT (https://qudt.org), as its README acknowledges.
+    SHA-256 06747239a2ddd334f2a85da0075ae8bae976294e890f92628abcd4da862ebf32
+
+The ontology repeats four statements the reference data makes about the second (its type,
+label, conversion factor and unit group), as gist itself repeats the aspects its
+restrictions use.

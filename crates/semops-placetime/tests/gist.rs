@@ -17,6 +17,8 @@ const PT: &str = "https://www.semantechs.co.uk/ns/ontology/placetime/";
 const PTD: &str = "https://www.semantechs.co.uk/ns/data/placetime/";
 const PTX: &str = "https://www.semantechs.co.uk/ns/taxonomy/placetime/";
 const GIST_CORE: &str = include_str!("../ontology/gist/gistCore14.1.0.ttl");
+/// The gist reference data's starter set, release 1.0.0: aspects, unit groups and units.
+const GIST_REFERENCE_DATA: &str = include_str!("../ontology/gist/uomReferenceData-starter-set.ttl");
 
 /// A path of every kind, in every calendar, with the edge cases: the British calendar's
 /// change, a leap month, the Julian calendar's leap centuries, and sets.
@@ -370,6 +372,7 @@ fn declared(triples: &[Triple]) -> BTreeSet<String> {
 #[test]
 fn every_gist_and_placetime_term_used_is_declared() {
     let mut known = declared(&parse(GIST_CORE));
+    known.extend(declared(&parse(GIST_REFERENCE_DATA)));
     known.extend(declared(&parse(ONTOLOGY)));
     let ours = |s: &str| {
         [GIST, GISTD, PT, PTD, PTX]
@@ -391,6 +394,46 @@ fn every_gist_and_placetime_term_used_is_declared() {
         }
     }
     assert!(undeclared.is_empty(), "undeclared: {undeclared:#?}");
+}
+
+#[test]
+fn the_unit_and_aspect_of_a_duration_are_the_reference_datas() {
+    let data = parse(GIST_REFERENCE_DATA);
+    let says =
+        |s: &NamedNode, p: &str, o: Term| data.contains(&Triple::new(s.clone(), iri(GIST, p), o));
+    let second = iri(GISTD, "_UnitOfMeasure_second");
+    let group = iri(GISTD, "_UnitGroup_duration");
+    let decimal = |v: &str| -> Term {
+        oxrdf::Literal::new_typed_literal(v, oxrdf::vocab::xsd::DECIMAL).into()
+    };
+    // The second is the reference data's base unit of duration, so a duration in seconds
+    // needs no conversion.
+    assert!(data.contains(&Triple::new(
+        second.clone(),
+        rdf::TYPE,
+        iri(GIST, "UnitOfMeasure")
+    )));
+    assert!(says(&second, "isMemberOf", group.clone().into()));
+    assert!(says(&second, "conversionFactor", decimal("1.0")));
+    assert!(says(&group, "exponentOfSecond", decimal("1.0")));
+    assert!(says(
+        &iri(GISTD, "_Aspect_duration"),
+        "hasUnitGroup",
+        group.into()
+    ));
+    // What the ontology repeats about the second, the reference data says too: the copy
+    // adds only its own annotations.
+    let annotations = [
+        "http://www.w3.org/2000/01/rdf-schema#seeAlso",
+        "http://www.w3.org/2004/02/skos/core#editorialNote",
+    ];
+    for t in parse(ONTOLOGY) {
+        if t.subject == oxrdf::NamedOrBlankNode::from(second.clone())
+            && !annotations.contains(&t.predicate.as_str())
+        {
+            assert!(data.contains(&t), "not in the reference data: {t}");
+        }
+    }
 }
 
 #[test]

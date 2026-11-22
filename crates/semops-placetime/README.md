@@ -57,12 +57,14 @@ The classes, calendars and categories are in the placetime ontology,
 declares no properties of its own. [`ontology/placetime-shapes.ttl`](ontology/placetime-shapes.ttl)
 (`SHAPES`) checks a description in SHACL: validate it together with the ontology. gist
 14.1.0 itself is bundled in [`ontology/gist/`](ontology/gist/) so the import resolves
-offline. [docs/decisions/0007](../../docs/decisions/0007-placetime-in-gist.md) has the
+offline, with the starter set of the
+[gist reference data](https://github.com/semanticarts/gistReferenceData), where the second
+and the duration aspect are defined. [docs/decisions/0007](../../docs/decisions/0007-placetime-in-gist.md) has the
 modelling choices.
 
 ## Licence
 
 Apache-2.0. A rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer);
 see NOTICE. The design and the licence position are in
-[docs/decisions/0004](../../docs/decisions/0004-placetime.md). The bundled gist release is
-Semantic Arts', under CC BY 4.0; NOTICE has the attribution.
+[docs/decisions/0004](../../docs/decisions/0004-placetime.md). The bundled gist release and
+reference data are Semantic Arts', under CC BY 4.0; NOTICE has the attribution.
