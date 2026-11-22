@@ -1,0 +1,10 @@
+Ontology version diff: cycle-old.ttl -> cycle-new.ttl
+
+Widened property domains [minor]:
+  - https://example.org/loop#p: {https://example.org/loop#A} -> {https://example.org/loop#C}
+  - https://example.org/loop#q: {https://example.org/loop#D} -> {https://example.org/loop#B}
+
+Widened property ranges [minor]:
+  - https://example.org/loop#p: {https://example.org/loop#D} -> {https://example.org/loop#A}
+
+Suggested version bump: MINOR

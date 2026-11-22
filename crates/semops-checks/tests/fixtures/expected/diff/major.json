@@ -1,0 +1,72 @@
+{
+  "bump": "major",
+  "removed_classes": [
+    "https://example.org/shop#Cafe"
+  ],
+  "added_classes": [],
+  "removed_properties": [
+    "https://example.org/shop#staffCount"
+  ],
+  "added_properties": [],
+  "removed_subclass_edges": [
+    [
+      "https://example.org/shop#Bookshop",
+      "https://example.org/shop#Shop"
+    ],
+    [
+      "https://example.org/shop#Cafe",
+      "https://example.org/shop#Shop"
+    ]
+  ],
+  "added_subclass_edges": [],
+  "added_disjoint_pairs": [
+    [
+      "https://example.org/shop#Book",
+      "https://example.org/shop#Ledger"
+    ]
+  ],
+  "removed_disjoint_pairs": [],
+  "added_equivalent_classes": [],
+  "removed_equivalent_classes": [
+    [
+      "https://example.org/shop#BookStore",
+      "https://example.org/shop#Bookshop"
+    ]
+  ],
+  "added_equivalent_properties": [],
+  "removed_equivalent_properties": [
+    [
+      "https://example.org/shop#sells",
+      "https://example.org/shop#stocks"
+    ]
+  ],
+  "narrowed_domain": {
+    "https://example.org/shop#ownedBy": {
+      "old": [
+        "https://example.org/shop#Shop"
+      ],
+      "new": [
+        "https://example.org/shop#Bookshop"
+      ]
+    }
+  },
+  "widened_domain": {},
+  "narrowed_range": {
+    "https://example.org/shop#sells": {
+      "old": [
+        "https://example.org/shop#Book"
+      ],
+      "new": [
+        "https://example.org/shop#Ledger"
+      ]
+    }
+  },
+  "widened_range": {},
+  "added_characteristics": {
+    "https://example.org/shop#ownedBy": [
+      "http://www.w3.org/2002/07/owl#InverseFunctionalProperty"
+    ]
+  },
+  "removed_characteristics": {},
+  "changed_annotation_terms": []
+}

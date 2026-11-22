@@ -20,6 +20,9 @@ use std::sync::OnceLock;
 #[cfg(feature = "run")]
 pub mod run;
 
+/// Version comparison: the suite's `version-diff`, over triples. Needs no engine.
+pub mod diff;
+
 /// The release and commit of the Python suite the embedded files come from.
 pub const SUITE: &str = "ontology-quality-suite 0.28.0 (d9300e6)";
 

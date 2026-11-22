@@ -140,3 +140,45 @@ The container image carries the command too, for a pipeline that does not instal
 docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.29.0 \
   check ontology/*.ttl --format csv --out findings.csv
 ```
+
+## Comparing versions {#diff}
+
+`semops diff` compares two versions of an ontology and says what kind of release the change
+is, in semantic-versioning terms:
+
+```sh
+semops diff v1.ttl v2.ttl
+```
+
+```{.output}
+Ontology version diff: v1.ttl -> v2.ttl
+
+Added classes [minor]:
+  - https://example.org/shop#CoffeeShop
+  - https://example.org/shop#Market
+
+Widened property domains [minor]:
+  - https://example.org/shop#sells: {https://example.org/shop#Bookshop} -> {https://example.org/shop#Shop}
+
+Removed (relaxed) disjointness axioms [minor]:
+  - https://example.org/shop#Person disjointWith https://example.org/shop#Shop
+…
+Suggested version bump: MINOR
+```
+
+| Bump | When |
+|---|---|
+| Major | A class or property is removed, a subclass edge is removed, a disjointness axiom is added, a domain or range narrows or changes, an equivalence is removed, or a property becomes functional, inverse functional, asymmetric or irreflexive |
+| Minor | Something is added or widened, a disjointness axiom or a characteristic is removed, or another characteristic is added |
+| Patch | Only `rdfs:label` and `rdfs:comment` text changed |
+| None | Nothing compared changed |
+
+A domain or range is compared by every class that satisfies it, subclasses included, so
+moving `sells` from `Bookshop` to its superclass `Shop` widens it. Only named terms are
+compared, as in the Ontology Quality Suite, whose rules these are: a change inside an
+anonymous class expression, such as a restriction, is not seen. Imports are not followed.
+
+`--format json` writes the same as the suite's `diff.json`. `--fail-on major` (or `minor`,
+or `patch`) exits 1 when the bump reaches that level, which makes a build stop a breaking
+change to a published ontology. The default is `never`.
+

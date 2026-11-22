@@ -1,0 +1,3 @@
+Ontology version diff: v1.ttl -> v1.ttl
+
+Suggested version bump: NONE

@@ -1,0 +1,26 @@
+Ontology version diff: v1.ttl -> v2-minor.ttl
+
+Added classes [minor]:
+  - https://example.org/shop#CoffeeShop
+  - https://example.org/shop#Market
+
+Added properties [minor]:
+  - https://example.org/shop#opens
+
+Added subclass edges [minor]:
+  - https://example.org/shop#Kiosk rdfs:subClassOf https://example.org/shop#Shop
+  - https://example.org/shop#Market rdfs:subClassOf https://example.org/shop#Shop
+
+Widened property domains [minor]:
+  - https://example.org/shop#sells: {https://example.org/shop#Bookshop} -> {https://example.org/shop#Shop}
+
+Removed (relaxed) disjointness axioms [minor]:
+  - https://example.org/shop#Person disjointWith https://example.org/shop#Shop
+
+Added equivalentClass axioms [minor]:
+  - https://example.org/shop#Cafe equivalentClass https://example.org/shop#CoffeeShop
+
+Removed (relaxed) property characteristics [minor]:
+  - https://example.org/shop#ownedBy: http://www.w3.org/2002/07/owl#TransitiveProperty
+
+Suggested version bump: MINOR

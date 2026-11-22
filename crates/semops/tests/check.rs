@@ -171,3 +171,41 @@ fn sarif_carries_every_finding_with_a_rule_and_a_place() {
             .any(|r| r["locations"][0]["physicalLocation"]["region"]["startLine"].is_u64())
     );
 }
+
+fn diff_fixture(name: &str) -> String {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../semops-checks/tests/fixtures/diff")
+        .join(name)
+        .to_str()
+        .expect("path")
+        .to_owned()
+}
+
+#[test]
+fn diff_suggests_a_bump_and_gates_on_it() {
+    let (v1, major) = (diff_fixture("v1.ttl"), diff_fixture("v2-major.ttl"));
+    let (code, text, _) = semops(&["diff", &v1, &major]);
+    assert_eq!(code, 0, "--fail-on defaults to never, as in the suite");
+    assert!(text.contains("Removed classes [MAJOR]:"), "{text}");
+    assert!(
+        text.trim_end().ends_with("Suggested version bump: MAJOR"),
+        "{text}"
+    );
+    let (code, _, _) = semops(&["diff", &v1, &major, "--fail-on", "major"]);
+    assert_eq!(code, 1);
+    let patch = diff_fixture("v2-patch.ttl");
+    let (code, json, _) = semops(&[
+        "diff",
+        &v1,
+        &patch,
+        "--format",
+        "json",
+        "--fail-on",
+        "minor",
+    ]);
+    assert_eq!(code, 0, "a patch is below minor");
+    let value: serde_json::Value = serde_json::from_str(&json).expect("JSON");
+    assert_eq!(value["bump"], "patch");
+    let (code, _, stderr) = semops(&["diff", &v1, "no-such-file.ttl"]);
+    assert_eq!(code, 2, "{stderr}");
+}

@@ -25,6 +25,21 @@ character apart from line endings, when `ONTOLOGY_SUITE` names one or the checko
 `../upstream/consolidated-ontology-quality-suite-python` beside this workspace; it skips
 otherwise.
 
+## Code ported from the suite
+
+Rewritten in Rust at the same commit, with the suite's rules unchanged, and held to its
+output by tests:
+
+| Here | There | Held by |
+| --- | --- | --- |
+| `src/run/merge.rs` | `checks/merge.py`: how the two formulations' findings merge | `tests/parity.rs` |
+| `src/diff.rs` | `versioning/diff.py`: version comparison and the suggested bump | `tests/diff.rs`, against `version-diff --exclude-imports --json` output in `tests/fixtures/expected/diff/` |
+
+`diff.rs` computes a domain or range's subclass closure by a plain reachability search
+where the suite uses a memoised walk with a cycle guard. The two give the same union for
+any set of classes, cycles included (the `cycle` fixture). The suite's text report sorts
+subclass edges by the text of a Python tuple, and the port reproduces that sort key.
+
 ## Updating
 
 Copy the four paths above from the suite at the new commit, normalise line endings, update
