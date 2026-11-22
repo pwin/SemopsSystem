@@ -578,11 +578,58 @@ impl std::fmt::Debug for BulkState {
 const BULK_BATCH_OPS: usize = 64 * 1024;
 
 impl RocksStorage {
-    /// Opens or creates a store at `path`.
+    /// Opens or creates a store at `path`, as its one writer.
+    ///
+    /// Refused on a network filesystem whose locks stay on the client (an NFS mount with
+    /// `nolock`, as Azure Blob Storage's NFS endpoint requires): `RocksDB`'s lock on the store
+    /// would keep out nobody on another machine, and two writers corrupt a store. See
+    /// [`crate::fscheck`]; [`crate::fscheck::ALLOW_LOCAL_LOCKS`] overrides it for a
+    /// deployment that guarantees one writer some other way.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+        if let crate::fscheck::Locking::LocalOnly {
+            fstype,
+            mount_point,
+            option,
+        } = crate::fscheck::inspect(path)
+        {
+            if std::env::var_os(crate::fscheck::ALLOW_LOCAL_LOCKS).is_none() {
+                return Err(StorageError::Unsupported(format!(
+                    "refusing to open {} as a writable store: it is on {fstype} mounted at {} \
+                     with `{option}`, so the store's lock does not reach other machines and \
+                     two writers could corrupt it. Use a mount whose locks reach the server \
+                     (NFS 4.1, or NFS 3 with NLM), a local or managed disk, or open it \
+                     read-only; set {}=1 only if one writer is guaranteed another way.",
+                    path.display(),
+                    mount_point.display(),
+                    crate::fscheck::ALLOW_LOCAL_LOCKS
+                )));
+            }
+        }
+        Self::open_with(path, false)
+    }
+
+    /// Opens an existing store read-only.
+    ///
+    /// Takes no lock and writes nothing to the store's directory (`RocksDB`'s own log goes to
+    /// the system temporary directory instead), so any number of processes, on any number
+    /// of machines, can open one store this way at once: a checkpoint on a shared NFS or
+    /// SMB volume, say, served by several read replicas. They must not open a store a
+    /// writer is still changing; a checkpoint never changes, which is what makes it the
+    /// thing to share. Every write fails.
+    pub fn open_read_only(path: impl AsRef<Path>) -> Result<Self> {
+        Self::open_with(path.as_ref(), true)
+    }
+
+    fn open_with(path: &Path, read_only: bool) -> Result<Self> {
         let mut db_opts = Options::default();
-        db_opts.create_if_missing(true);
-        db_opts.create_missing_column_families(true);
+        db_opts.create_if_missing(!read_only);
+        db_opts.create_missing_column_families(!read_only);
+        if read_only {
+            let logs = std::env::temp_dir().join(format!("holos-rocksdb-{}", std::process::id()));
+            std::fs::create_dir_all(&logs)?;
+            db_opts.set_db_log_dir(&logs);
+        }
         db_opts.set_compression_type(DBCompressionType::Lz4);
         // One writer, many readers — the discipline the `Storage` trait already encodes
         // by taking `&mut self` for writes.
@@ -605,8 +652,13 @@ impl RocksStorage {
             families.push(ColumnFamilyDescriptor::new(name, index_opts(codec::ID)));
         }
 
-        let path = path.as_ref().to_path_buf();
-        let db = DB::open_cf_descriptors(&db_opts, &path, families).map_err(rocks_err)?;
+        let path = path.to_path_buf();
+        let db = if read_only {
+            DB::open_cf_descriptors_read_only(&db_opts, &path, families, false)
+        } else {
+            DB::open_cf_descriptors(&db_opts, &path, families)
+        }
+        .map_err(rocks_err)?;
 
         // Refuse a store written by an incompatible encoding rather than silently
         // decoding its term ids as something else (`holos_core::FORMAT_VERSION`).
@@ -624,6 +676,12 @@ impl RocksStorage {
                          {FORMAT_VERSION}"
                     )));
                 }
+            }
+            None if read_only => {
+                return Err(StorageError::corruption(format!(
+                    "{} is not a HOLOS store: it has no format version",
+                    path.display()
+                )));
             }
             None => db
                 .put(META_VERSION, FORMAT_VERSION.to_be_bytes())

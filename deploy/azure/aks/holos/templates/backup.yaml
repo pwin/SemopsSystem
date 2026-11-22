@@ -1,0 +1,55 @@
+{{- if .Values.backup.enabled }}
+{{- if ne .Values.identity.mode "forwarded" }}
+{{- fail "backup.enabled needs identity.mode=forwarded: POST /backup admits only a principal holding backup.role" }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "holos.fullname" . }}-backup
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "holos.labels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: checkpoint
+              image: {{ include "holos.image" . }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["/bin/sh", "-c"]
+              # The writer takes the checkpoint itself (a second process cannot open a
+              # store its writer holds); then the oldest are pruned, the newest kept.
+              # Replicas notice the new one themselves (replicas.refreshSeconds).
+              args:
+                - |
+                  set -eu
+                  curl -fsS -X POST -H "X-Holos-Principal: backup-job" \
+                    -H "X-Holos-Roles: {{ .Values.backup.role }}" \
+                    http://{{ include "holos.fullname" . }}-writer:{{ .Values.server.port }}/backup
+                  cd {{ .Values.shared.mountPath }}/checkpoints
+                  ls -1d holos-* | grep -v '\.tmp$' | sort | head -n -{{ .Values.backup.keep }} | xargs -r rm -rf
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              volumeMounts:
+                - name: shared
+                  mountPath: {{ .Values.shared.mountPath }}
+          volumes:
+            - name: shared
+              persistentVolumeClaim:
+                claimName: {{ include "holos.fullname" . }}-shared
+{{- end }}

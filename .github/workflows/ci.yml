@@ -228,3 +228,37 @@ jobs:
             git clone --depth 1 "https://github.com/pwin/$repo.git" "consumers/$repo"
           done
       - run: python scripts/check_pins.py --repos consumers
+
+  # The Azure deployment templates (deploy/azure): the Helm chart linted and rendered in
+  # each shape it supports, every render checked against the Kubernetes schemas, and the
+  # Container Apps Bicep compiled. Helm and the Azure CLI come with the runner.
+  deploy-templates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Helm chart
+        run: |
+          set -euo pipefail
+          chart=deploy/azure/aks/holos
+          helm lint "$chart"
+          for values in \
+              "" \
+              "--set shared.enabled=true --set replicas.enabled=true" \
+              "--set shared.enabled=true --set replicas.enabled=true --set backup.enabled=true --set identity.mode=forwarded --set server.placetime=true" \
+              "--set store.storageClassName=azure-netapp-files --set networkPolicy.enabled=false"; do
+            # Word splitting of $values is intended: it is a list of flags.
+            # shellcheck disable=SC2086
+            helm template t "$chart" $values > rendered.yaml
+            docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 \
+              -strict -summary -kubernetes-version 1.31.0 - < rendered.yaml
+          done
+          # The combinations the chart refuses must stay refused. (Not `! helm …`: errexit
+          # ignores a negated command, so that form could never fail the step.)
+          for refused in "backup.enabled=true" "replicas.enabled=true" "identity.mode=anything"; do
+            if helm template t "$chart" --set "$refused" > /dev/null 2>&1; then
+              echo "::error::the chart accepted --set $refused, which it must refuse"
+              exit 1
+            fi
+          done
+      - name: Container Apps Bicep
+        run: az bicep build --file deploy/azure/containerapps/main.bicep --stdout > /dev/null

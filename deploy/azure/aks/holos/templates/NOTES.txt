@@ -1,0 +1,19 @@
+HOLOS is deployed as {{ include "holos.fullname" . }}.
+
+Writer:   {{ include "holos.fullname" . }}-writer:{{ .Values.service.port }}  (store on {{ .Values.store.storageClassName }})
+{{- if .Values.replicas.enabled }}
+Replicas: {{ include "holos.fullname" . }}-replicas:{{ .Values.service.port }}  ({{ .Values.replicas.count }} pods, newest checkpoint, read-only)
+{{- end }}
+{{- if .Values.shared.enabled }}
+Shared:   {{ .Values.shared.storageClassName }} mounted at {{ .Values.shared.mountPath }}
+{{- end }}
+Identity: {{ .Values.identity.mode }}
+
+Try it:
+  kubectl port-forward svc/{{ include "holos.fullname" . }}-writer 7878:{{ .Values.service.port }}
+  curl -s 'http://127.0.0.1:7878/query?query=ASK%7B%7D'
+{{- if .Values.replicas.enabled }}
+
+Replicas need a checkpoint before they can start; until the first backup runs, take one:
+  kubectl create job --from=cronjob/{{ include "holos.fullname" . }}-backup first-checkpoint
+{{- end }}

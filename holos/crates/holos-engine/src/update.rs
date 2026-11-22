@@ -505,10 +505,13 @@ fn percent_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
+    // On bytes, not on `&str` slices: `%` followed by a multi-byte character would put a
+    // slice boundary inside it, and slicing there panics.
+    let hex = |b: u8| char::from(b).to_digit(16);
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(byte) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
-                out.push(byte);
+            if let (Some(hi), Some(lo)) = (hex(bytes[i + 1]), hex(bytes[i + 2])) {
+                out.push(u8::try_from(hi * 16 + lo).unwrap_or(b'?'));
                 i += 3;
                 continue;
             }

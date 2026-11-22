@@ -13,6 +13,7 @@ engine and the tarka mapper, built, versioned and released together. It implemen
 | [`crates/semops-checks/`](crates/semops-checks/) | The ontology quality check registry (61 checks, their SHACL shapes, SPARQL queries and repair templates) compiled in, and a runner for it on HOLOS | [pwin/consolidated-ontology-quality-suite-python](https://github.com/pwin/consolidated-ontology-quality-suite-python) 0.28.0's `resources/`, and its merge rules ported |
 | [`crates/semops-functions/`](crates/semops-functions/) | The SPARQL extension functions every evaluator registers: XPath `fn:` and `math:`, Jena `afn:` and property functions, SPIN `spif:` | HOLOS's and tarka's function code, merged and extended |
 | [`crates/semops-placetime/`](crates/semops-placetime/) | URIs for calendar intervals, instants and WGS84 points, each described in RDF from the URI alone, in the reference.data.gov.uk patterns; served by `holos-server --placetime` | A Rust rewrite of [epimorphics/IntervalServer](https://github.com/epimorphics/IntervalServer), with points added |
+| [`deploy/azure/`](deploy/azure/) | Helm chart for AKS, Bicep for Container Apps, the API Management identity policy, and the guide to Azure hosting and NFS storage | — |
 | [`vendor/`](vendor/) | The two patched Oxigraph crates every engine builds against | One copy of what HOLOS and SHACL_Engine each vendored |
 | [`docs/decisions/`](docs/decisions/) | Why the workspace is laid out as it is, what it is called, and what it must be able to do | — |
 | [`versions.toml`](versions.toml) | Which engine releases the editor, extension and suite must use until the workspace ships its own packages | — |
@@ -48,6 +49,13 @@ natively, compiled into the command, with the same findings as
 gate. [docs/decisions/0005](docs/decisions/0005-check-registry.md) says how it was held to
 the suite's output.
 
+On Azure the same image runs on AKS (a writer on a managed disk or Azure NetApp Files, read
+replicas sharing checkpoints on an NFS volume) or on Container Apps over an Azure Files NFS
+share, with Entra ID at the edge through built-in authentication or API Management.
+[deploy/azure/README.md](deploy/azure/README.md) helps choose, and
+[docs/decisions/0006](docs/decisions/0006-azure-nfs-and-hardening.md) records the storage
+rules and the security fixes made along the way.
+
 ## Build and test
 
 Rust 1.90 or later, a C++ toolchain and libclang (for RocksDB).
@@ -76,7 +84,7 @@ wheel on PyPI (`import semops_system`), the `semops-wasm` npm packages and the
 | 1. Align | `versions.toml` and `scripts/check_pins.py` are in place. The editor, extension and suite are still one engine release behind |
 | 2. One workspace | The three engines are in one workspace with one vendor copy and one CI, and the image builds and passes its smoke test. The check registry is a crate, `semops-checks` |
 | 3. One artifact: `semops` command, `semops-system` wheel, one WASM package, OCI image | `semops-system` 0.29.0.dev1 is on PyPI as a bridge that pins the three engine wheels; the `semops` command exists with one subcommand, `check`; the native wheel, WASM package and image are not started |
-| 4. Azure, one SHACL validator, one function library | The function library is done, and the native validator checks SHACL-SPARQL through the adapted engine. One validator and Azure are not started |
+| 4. Azure, one SHACL validator, one function library | The function library is done, and the native validator checks SHACL-SPARQL through the adapted engine. Azure has deployment templates (AKS, Container Apps, API Management) checked in CI but not yet deployed; Blob URLs, telemetry and `azd` are to do. One validator is not started |
 
 ## Licence
 

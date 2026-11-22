@@ -1,0 +1,108 @@
+{{- if .Values.writer.enabled }}
+{{- if and .Values.backup.enabled (not .Values.shared.enabled) }}
+{{- fail "backup.enabled needs shared.enabled: checkpoints are written to the shared volume" }}
+{{- end }}
+{{- if and .Values.replicas.enabled (not .Values.shared.enabled) }}
+{{- fail "replicas.enabled needs shared.enabled: replicas open a checkpoint on the shared volume" }}
+{{- end }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "holos.fullname" . }}-writer
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: writer
+spec:
+  # Never more than one: RocksDB admits one writer per store, and two pods sharing a volume
+  # that does not keep its locks on the server would corrupt it.
+  replicas: 1
+  serviceName: {{ include "holos.fullname" . }}-writer
+  # A replacement starts only after the old pod has gone, so the two never hold the store
+  # at once.
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: writer
+  template:
+    metadata:
+      labels:
+        {{- include "holos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: writer
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: holos
+          image: {{ include "holos.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- include "holos.serverArgs" . | nindent 12 }}
+            - --store
+            - /var/lib/holos/store
+            {{- if .Values.backup.enabled }}
+            - --backup-dir
+            - {{ printf "%s/checkpoints" .Values.shared.mountPath | quote }}
+            - --backup-role
+            - {{ .Values.backup.role | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.port }}
+          {{- include "holos.probes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.writer.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            # Spill files and RocksDB's scratch go to the writable emptyDir, not the
+            # read-only root filesystem.
+            - name: TMPDIR
+              value: /tmp
+          volumeMounts:
+            - name: store
+              mountPath: /var/lib/holos
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.shared.enabled }}
+            - name: shared
+              mountPath: {{ .Values.shared.mountPath }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.shared.enabled }}
+        - name: shared
+          persistentVolumeClaim:
+            claimName: {{ include "holos.fullname" . }}-shared
+        {{- end }}
+      {{- with .Values.writer.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.writer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.writer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: store
+        labels:
+          {{- include "holos.labels" . | nindent 10 }}
+      spec:
+        accessModes: [{{ .Values.store.accessMode | quote }}]
+        storageClassName: {{ .Values.store.storageClassName | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.store.size }}
+{{- end }}

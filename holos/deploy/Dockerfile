@@ -26,7 +26,7 @@ COPY . .
 
 # `release-abort` is the release profile with `panic = "abort"`, the setting these two
 # binaries have always shipped with (see the workspace Cargo.toml).
-RUN cargo build --locked --profile release-abort -p holos-cli -p holos-server
+RUN cargo build --locked --profile release-abort -p holos-cli -p holos-server -p semops
 
 # ---- runtime --------------------------------------------------------------
 FROM debian:bookworm-slim
@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=build /src/target/release-abort/holos        /usr/local/bin/holos
 COPY --from=build /src/target/release-abort/holos-server /usr/local/bin/holos-server
+COPY --from=build /src/target/release-abort/semops       /usr/local/bin/semops
 COPY holos/deploy/smoke.sh /usr/local/bin/holos-smoke
 COPY holos/examples /opt/holos/examples
 

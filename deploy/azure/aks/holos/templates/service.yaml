@@ -1,0 +1,41 @@
+{{- if .Values.writer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "holos.fullname" . }}-writer
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: writer
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: writer
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+    # The port the backup job and in-cluster clients use directly.
+    - name: server
+      port: {{ .Values.server.port }}
+      targetPort: http
+{{- end }}
+{{- if .Values.replicas.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "holos.fullname" . }}-replicas
+  labels:
+    {{- include "holos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: replica
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: replica
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+{{- end }}
