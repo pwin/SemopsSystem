@@ -13,6 +13,13 @@ description = "WebAssembly bindings for the HOLOS RDF 1.2 store and SPARQL 1.2 e
 # `cargo test --workspace` cover it on a native target too.
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["start"]
+# Installs the panic hook when the module loads. semops-wasm, which links this crate with
+# others into one module, turns it off and installs the hook itself: a module has one start
+# function.
+start = []
+
 [dependencies]
 # Default features, which means no RocksDB: `holos-store`'s `rocksdb` feature is opt-in and
 # everything that could not cross to wasm -- tempfile, the scoped sort threads, the

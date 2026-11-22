@@ -43,8 +43,9 @@ use oxrdfio::{RdfFormat, RdfSerializer};
 use spareval::QueryResults;
 use wasm_bindgen::prelude::*;
 
-/// Installs the panic hook. Called by wasm-bindgen when the module is instantiated.
-#[wasm_bindgen(start)]
+/// Installs the panic hook. Called by wasm-bindgen when the module is instantiated, unless
+/// the `start` feature is off and a module that links this crate installs it.
+#[cfg_attr(feature = "start", wasm_bindgen(start))]
 pub fn start() {
     console_error_panic_hook::set_once();
 }

@@ -9,7 +9,7 @@ install worked.
 | [From source](#from-source) | All five commands: `holos`, `holos-server`, `semops`, `shacl`, `tarka` | A workstation or build server with Rust, and the newest version |
 | [A container image](#container) | `semops`, with `holos-server`, `holos`, `shacl` and `tarka` as links to it | Servers, Kubernetes, Azure |
 | [Python](#python) | The store, the validator and the mapper as Python modules | Notebooks, scripts, data platforms |
-| [JavaScript and WebAssembly](#javascript) | The store and the validator for Node and the browser | Web applications, editors |
+| [JavaScript and WebAssembly](#javascript) | The store, the validator and the quality checks for Node and the browser | Web applications, editors |
 | [Release binaries](#release-binaries) | Each engine's commands, prebuilt | A machine with no Rust toolchain |
 | [As a service](#service) | `holos-server` started by systemd or Windows | A long-running endpoint on one machine |
 | [On Azure](#azure-install) | The server on AKS or Container Apps | Cloud deployments |
@@ -159,7 +159,37 @@ The engines are also on PyPI separately: `pip install holosdb`, `pip install sha
 
 ## JavaScript and WebAssembly {#javascript}
 
-The store and the validator are on npm, in a browser build and a Node build:
+`semops-wasm` puts the store, the validator and the quality checks in one WebAssembly
+module, in a build for bundlers (`semops-wasm`) and a build for Node (`semops-wasm-node`).
+It is built in this workspace and is not on npm yet. Build it, and install the Node build
+into a project:
+
+```sh
+node crates/semops-wasm/build.mjs
+npm install /path/to/SemopsSystem/crates/semops-wasm/pkg-node
+```
+
+The quality checks then run in the process, as `semops check` runs them:
+
+```js
+const fs = require('node:fs');
+const semops = require('semops-wasm-node');
+const run = semops.check(fs.readFileSync('shop.ttl', 'utf8'), 'turtle');
+for (const f of run.findings) console.log(f.severity, f.checkId, f.focusNode);
+console.log(`${run.findings.length} findings, complete: ${run.complete}`);
+```
+
+```{.output}
+Warning QUA-001 https://example.org/shop#Bookshop
+Warning QUA-004 https://example.org/shop
+…
+Info QUA-007 https://example.org/shop
+10 findings, complete: true
+```
+
+On the same file, `semops check` finds the same ten. `Store` and the validator's
+`Validator`, `Report` and `validateTurtle` keep the names they have in the engines' own
+packages, which are on npm now:
 
 ```sh
 npm install holos-wasm        # the store, for the browser and bundlers
@@ -168,8 +198,9 @@ npm install shacl-wasm        # the validator, for the browser
 npm install shacl-wasm-node   # the validator, for Node.js
 ```
 
-They run entirely in the page or the process, with no server. The Turtle Editor Viewer the
-Semantechs courses use is built on them. Each package's `.d.ts` file is its reference.
+All of them run entirely in the page or the process, with no server. The Turtle Editor
+Viewer the Semantechs courses use is built on the engines' packages. Each package's `.d.ts`
+file is its reference.
 
 ## Release binaries {#release-binaries}
 

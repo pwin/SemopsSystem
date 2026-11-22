@@ -211,6 +211,18 @@ jobs:
         run: node holos/crates/holos-wasm/tests/smoke.cjs
       - name: Build shacl-wasm
         run: node shacl/crates/shacl-wasm/build.mjs
+      # The consolidated package: both engines and the quality checks in one module.
+      - name: Build semops-wasm (both targets)
+        run: node crates/semops-wasm/build.mjs
+      - name: Smoke-test the semops-wasm node package
+        run: node crates/semops-wasm/tests/smoke.cjs
+      - name: Keep the semops-wasm packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: semops-wasm
+          path: |
+            crates/semops-wasm/pkg-bundler/
+            crates/semops-wasm/pkg-node/
 
   # Phase 1's gate, reported rather than enforced until the consumers have caught up:
   # the editor, the VS Code extension and the suite must run the engine releases in

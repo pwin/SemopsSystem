@@ -13,6 +13,10 @@ dist/
 
 # Node
 node_modules/
+# wasm-pack output, built by crates/semops-wasm/build.mjs and published from there
+crates/semops-wasm/pkg-*/
+# An npm token ends up in an .npmrc, and a committed token is a published one
+.npmrc
 
 # Editors and operating systems
 .vscode/

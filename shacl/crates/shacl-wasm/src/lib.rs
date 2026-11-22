@@ -29,7 +29,8 @@ use wasm_bindgen::prelude::*;
 /// Improves panic reporting from a bare `RuntimeError: unreachable` to the real
 /// Rust panic message and stack on `console.error`. Runs automatically on module
 /// load; the alternative is a genuinely undebuggable failure mode.
-#[wasm_bindgen(start)]
+// Without the `start` feature, a module that links this crate installs the hook itself.
+#[cfg_attr(feature = "start", wasm_bindgen(start))]
 pub fn start() {
     console_error_panic_hook::set_once();
 }
