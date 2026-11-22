@@ -45,6 +45,7 @@ members = [
     "crates/semops-checks",
     "crates/semops-functions",
     "crates/semops-placetime",
+    "crates/semops-wasm",
     # --- shared
     # Members, not only patches: that is what runs their own tests (82 in oxsdatatypes,
     # 32 in spareval), the only thing guarding the changes made to them. CI keeps clippy off
@@ -89,6 +90,7 @@ default-members = [
     "crates/semops-checks",
     "crates/semops-functions",
     "crates/semops-placetime",
+    "crates/semops-wasm",
     "vendor/oxsdatatypes",
     "vendor/spareval",
 ]

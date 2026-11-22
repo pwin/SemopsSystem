@@ -1,0 +1,43 @@
+[package]
+name = "semops-wasm"
+description = "SemOps System for WebAssembly: the HOLOS store and SPARQL 1.2 engine, the SHACL engine and the ontology quality checks in one package"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+# Published to npm by build.mjs, as semops-wasm (for bundlers) and semops-wasm-node.
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The two engines' bindings, linked in whole: their classes and functions are this
+# package's, under the names they already have. Each one's `start` is off, because a module
+# has one start function, and this crate's installs the panic hook for both.
+holos-wasm = { path = "../../holos/crates/holos-wasm", default-features = false }
+shacl-wasm = { path = "../../shacl/crates/shacl-wasm", default-features = false }
+# The quality checks: the registry, its queries and shapes compiled in, and the runner,
+# which works on triples in memory and needs nothing a browser lacks.
+semops-checks.workspace = true
+oxrdf.workspace = true
+oxrdfio.workspace = true
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+
+# As in holos-wasm and shacl-wasm: getrandom needs a source on wasm32-unknown-unknown (with
+# the cfg set in .cargo/config.toml), and SPARQL's NOW() needs oxsdatatypes' JavaScript clock.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+oxsdatatypes = { version = "0.2", features = ["js"] }
+
+# As in holos-wasm and shacl-wasm: Rust's wasm32 target emits bulk-memory, sign-extension and
+# non-trapping float-to-int instructions, which the binaryen wasm-pack downloads rejects
+# unless told they are allowed. Every runtime this targets (Node 16+, current browsers) has
+# them.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O', '--enable-bulk-memory', '--enable-sign-ext', '--enable-nontrapping-float-to-int']

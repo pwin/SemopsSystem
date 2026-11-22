@@ -4009,6 +4009,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "semops-wasm"
+version = "0.29.0"
+dependencies = [
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "holos-wasm",
+ "oxrdf",
+ "oxrdfio",
+ "oxsdatatypes",
+ "semops-checks",
+ "serde",
+ "serde-wasm-bindgen",
+ "shacl-wasm",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "semver"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
