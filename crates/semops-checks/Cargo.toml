@@ -11,10 +11,11 @@ build = "build.rs"
 
 [features]
 default = ["run"]
-# The runner: loads RDF, runs the portable checks on HOLOS's engine, checks literals, and
-# merges the findings as the Python suite does. Without it the crate is the embedded data
+# The runner: loads RDF, runs the checks (the portable queries on HOLOS's engine, the shapes
+# on the SHACL engine, or both), checks literals, and merges the findings as the Python
+# suite does. Without it the crate is the embedded data
 # and a typed registry, for a build (WASM, a Python wheel) that brings its own engine.
-run = ["dep:holos-engine", "dep:holos-store", "dep:holos-security", "dep:oxrdfio", "dep:spareval", "dep:oxsdatatypes"]
+run = ["dep:holos-engine", "dep:holos-store", "dep:holos-security", "dep:oxrdfio", "dep:spareval", "dep:oxsdatatypes", "dep:shacl"]
 
 [dependencies]
 # Both already in the tree (geojson, the WASM crates), so no new supply chain.
@@ -27,3 +28,5 @@ holos-security = { workspace = true, optional = true }
 oxrdfio = { workspace = true, optional = true }
 spareval = { workspace = true, optional = true }
 oxsdatatypes = { workspace = true, optional = true }
+# The SHACL arm, SHACL_Engine, as the suite runs it.
+shacl = { workspace = true, optional = true }

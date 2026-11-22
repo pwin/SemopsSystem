@@ -80,6 +80,22 @@ fn json_and_csv_carry_every_finding() {
 }
 
 #[test]
+fn each_engine_finds_what_the_suite_finds_with_it() {
+    let domain = fixture("ontology/domain.ttl");
+    let domain = domain.to_str().expect("path");
+    for engine in ["both", "sparql", "shacl"] {
+        let (code, stdout, stderr) = semops(&["check", domain, "--engine", engine]);
+        assert_eq!(code, 1, "{engine}: {stderr}");
+        let expected = if engine == "shacl" {
+            "54 findings:"
+        } else {
+            "64 findings:"
+        };
+        assert!(stdout.contains(expected), "{engine}: {stdout}");
+    }
+}
+
+#[test]
 fn a_file_that_cannot_be_read_is_exit_2() {
     let (code, _, stderr) = semops(&["check", "no-such-file.ttl"]);
     assert_eq!(code, 2);

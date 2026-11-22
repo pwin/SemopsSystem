@@ -25,9 +25,9 @@ enum Command {
     /// Run the ontology quality checks over an ontology and its data.
     ///
     /// The files are read into one graph, so declarations in the ontology are checked
-    /// against their use in the data and the other way round. Every check runs in its
-    /// portable SPARQL formulation, as `ontology-suite check --engine sparql` runs it, with
-    /// the same findings.
+    /// against their use in the data and the other way round. Each check has a SHACL shape
+    /// and a portable SPARQL query; --engine picks which run, as `ontology-suite check
+    /// --engine` does, with the same findings.
     ///
     /// Exit status: 0 when nothing at or above --fail-on was found, 1 when something was,
     /// 2 when the run could not be made or a check failed to execute. A check that fails
@@ -43,6 +43,12 @@ enum Command {
         /// The least severe finding that fails the run.
         #[arg(long, value_enum, default_value_t = FailOn::Violation)]
         fail_on: FailOn,
+        /// Which formulation of the checks runs: the shapes on the SHACL engine, the
+        /// portable queries on HOLOS, or both merged. `both` and `sparql` find the same
+        /// things, and `both` cross-checks the two formulations; `shacl` alone misses the
+        /// checks that have only a query.
+        #[arg(long, value_enum, default_value_t = EngineArg::Both)]
+        engine: EngineArg,
         /// Write the report here rather than to standard output.
         #[arg(long)]
         out: Option<PathBuf>,
@@ -60,6 +66,31 @@ enum Format {
     Json,
     /// The suite's `full_results.csv` columns.
     Csv,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum EngineArg {
+    Both,
+    Sparql,
+    Shacl,
+}
+
+impl From<EngineArg> for run::Engine {
+    fn from(engine: EngineArg) -> Self {
+        match engine {
+            EngineArg::Both => Self::Both,
+            EngineArg::Sparql => Self::Sparql,
+            EngineArg::Shacl => Self::Shacl,
+        }
+    }
+}
+
+/// How `semops check` was asked to run and report.
+struct Options {
+    format: Format,
+    fail_on: FailOn,
+    out: Option<PathBuf>,
+    engine: run::Engine,
 }
 
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -99,13 +130,22 @@ fn run_cli() -> Result<ExitCode> {
             files,
             format,
             fail_on,
+            engine,
             out,
             list,
         } => {
             if list {
                 return list_checks().map(|()| ExitCode::SUCCESS);
             }
-            check(&files, format, fail_on, out)
+            check(
+                &files,
+                Options {
+                    format,
+                    fail_on,
+                    out,
+                    engine: engine.into(),
+                },
+            )
         }
     }
 }
@@ -129,18 +169,20 @@ fn list_checks() -> Result<()> {
     Ok(())
 }
 
-fn check(
-    files: &[PathBuf],
-    format: Format,
-    fail_on: FailOn,
-    out: Option<PathBuf>,
-) -> Result<ExitCode> {
+fn check(files: &[PathBuf], options: Options) -> Result<ExitCode> {
+    let Options {
+        format,
+        fail_on,
+        out,
+        engine,
+    } = options;
     if files.is_empty() {
         bail!("no files to check");
     }
     let paths: Vec<&std::path::Path> = files.iter().map(PathBuf::as_path).collect();
     let triples = run::load(&paths)?;
-    let report = run::check(&triples)?;
+    let registry = semops_checks::Registry::builtin();
+    let report = run::check_with(&triples, registry, &semops_checks::queries(), engine)?;
 
     let mut buffer = Vec::new();
     match format {
@@ -210,12 +252,11 @@ fn write_text(out: &mut impl Write, report: &Run) -> Result<()> {
     let count = |s: &str| report.findings.iter().filter(|f| f.severity == s).count();
     writeln!(
         out,
-        "{} findings: {} Violation, {} Warning, {} Info ({} checks ran)",
+        "{} findings: {} Violation, {} Warning, {} Info",
         report.findings.len(),
         count("Violation"),
         count("Warning"),
         count("Info"),
-        report.queries.len()
     )?;
     Ok(())
 }

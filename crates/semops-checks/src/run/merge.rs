@@ -102,7 +102,7 @@ fn collection<'a>(graph: &'a Graph, head: TermRef<'a>) -> Vec<TermRef<'a>> {
 
 /// A `sh:resultPath` value as a SPARQL property path: a blank-node path structure rendered
 /// rather than named by its label, which changes between runs.
-fn path_expression(graph: &Graph, node: TermRef<'_>, depth: usize) -> String {
+pub(super) fn path_expression(graph: &Graph, node: TermRef<'_>, depth: usize) -> String {
     let Some(subject) = as_subject(node).filter(|s| s.is_blank_node() && depth <= 10) else {
         return text(node);
     };
@@ -164,7 +164,7 @@ fn without_blank_label(message: &str, label: &str) -> String {
 
 /// Fills in a message's `{$this}`, `{$value}` and `{$path}`, and keeps a blank focus node's
 /// label out of it.
-fn substitute(
+pub(super) fn substitute(
     message: &str,
     focus: Option<&str>,
     path: Option<&str>,
@@ -201,7 +201,7 @@ fn substitute(
     message
 }
 
-fn severity_label(iri: &str) -> String {
+pub(super) fn severity_label(iri: &str) -> String {
     match iri.strip_prefix(SH) {
         Some(local @ ("Violation" | "Warning" | "Info")) => local.to_owned(),
         _ => iri.to_owned(),

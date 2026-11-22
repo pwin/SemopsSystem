@@ -7,9 +7,10 @@
 //! formulations ([`shapes`], [`queries`]) and resolves a validation result back to the check
 //! that produced it ([`Registry::resolve_check_id`]).
 //!
-//! With the default `run` feature, [`run`] also runs the portable formulation on HOLOS's
-//! engine, checks literals against their datatypes, and merges the findings as the Python
-//! suite does, so `semops check` and `ontology-suite --engine sparql` report the same rows.
+//! With the default `run` feature, [`run`] also runs the checks (the portable queries on
+//! HOLOS's engine, the shapes on the SHACL engine, or both), checks literals against their
+//! datatypes, and merges the findings as the Python suite does, so `semops check` and
+//! `ontology-suite check` report the same rows under the same `--engine`.
 //! `PROVENANCE.md` records which suite commit the files come from.
 
 use serde::Deserialize;

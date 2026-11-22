@@ -44,7 +44,7 @@ changed from IntervalServer and the licence position.
 
 `semops check ontology.ttl data.ttl` runs the ontology quality suite's 61-check registry
 natively, compiled into the command, with the same findings as
-`ontology-suite check --engine sparql` and no Python, and exits 1 on a violation for a CI
+`ontology-suite check` (any `--engine`) and no Python, and exits 1 on a violation for a CI
 gate. [docs/decisions/0005](docs/decisions/0005-check-registry.md) says how it was held to
 the suite's output.
 

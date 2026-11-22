@@ -16,7 +16,8 @@ for f in &report.findings {
 }
 ```
 
-The findings are the ones `ontology-suite check --engine sparql` reports, held to the suite's
+The findings are the ones `ontology-suite check` reports with the same `--engine` (the portable
+queries on HOLOS, the shapes on the SHACL engine, or both), held to the suite's
 own output by `tests/parity.rs`. `semops check` is the command-line front end.
 
 Without the `run` feature the crate is the embedded files and a typed registry

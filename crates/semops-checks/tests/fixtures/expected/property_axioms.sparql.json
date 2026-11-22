@@ -6,7 +6,7 @@
   "focus_is_blank": false,
   "path": "http://www.w3.org/2002/07/owl#inverseOf",
   "value": "https://example.org/axioms/hasChild, https://example.org/axioms/parentOf",
-  "message": "Property https://example.org/axioms/hasParent has two distinct declared inverses (https://example.org/axioms/parentOf and https://example.org/axioms/hasChild), which is contradictory since an owl:inverseOf pairing must be unique.",
+  "message": "Property https://example.org/axioms/hasParent has two distinct declared inverses (https://example.org/axioms/hasChild and https://example.org/axioms/parentOf), which is contradictory since an owl:inverseOf pairing must be unique.",
   "sources": [
    "sparql"
   ]

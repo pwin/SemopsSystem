@@ -3973,6 +3973,7 @@ dependencies = [
  "oxsdatatypes",
  "serde",
  "serde_json",
+ "shacl",
  "spareval",
 ]
 

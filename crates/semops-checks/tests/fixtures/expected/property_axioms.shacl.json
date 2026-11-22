@@ -1,0 +1,362 @@
+[
+ {
+  "check_id": "DAT-002",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2000/01/rdf-schema#domain",
+  "value": "https://example.org/axioms/NeverDeclared",
+  "message": "https://example.org/axioms/worksAt references an IRI (https://example.org/axioms/NeverDeclared) that is never used as a subject nor as a class.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Person",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/Person",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Place",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/Place",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasChild",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/hasChild",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/hasParent",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/parentOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/parentOf",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/partOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/partOf",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/sibling",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/sibling",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/snake_case",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-009",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+  "value": "https://example.org/axioms/worksAt",
+  "message": "Term must have at least one skos:prefLabel, and at most one per language.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Person",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/Person",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Place",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/Place",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/Vehicle",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/Vehicle",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasChild",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/hasChild",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/hasParent",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/parentOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/parentOf",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/partOf",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/partOf",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/sibling",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/sibling",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/snake_case",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "QUA-010",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/worksAt",
+  "focus_is_blank": false,
+  "path": "http://www.w3.org/2004/02/skos/core#definition",
+  "value": "https://example.org/axioms/worksAt",
+  "message": "Term must have at least one skos:definition.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasChild",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hasChild",
+  "message": "Property https://example.org/axioms/hasChild declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hasParent",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hasParent",
+  "message": "Property https://example.org/axioms/hasParent declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/marriedTo",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/marriedTo",
+  "message": "Property https://example.org/axioms/marriedTo declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "STR-003",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/parentOf",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/parentOf",
+  "message": "Property https://example.org/axioms/parentOf declares neither rdfs:domain/range nor gist-style domainIncludes/rangeIncludes annotations, weakening structural precision.",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/hyphen-ated",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/hyphen-ated",
+  "message": "The local name of class https://example.org/axioms/hyphen-ated does not follow UpperCamelCase (PascalCase).",
+  "sources": [
+   "shacl"
+  ]
+ },
+ {
+  "check_id": "STY-001",
+  "severity": "Warning",
+  "focus_node": "https://example.org/axioms/snake_case",
+  "focus_is_blank": false,
+  "path": null,
+  "value": "https://example.org/axioms/snake_case",
+  "message": "The local name of class https://example.org/axioms/snake_case does not follow UpperCamelCase (PascalCase).",
+  "sources": [
+   "shacl"
+  ]
+ }
+]

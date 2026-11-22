@@ -3088,691 +3088,7 @@
  {
   "check_id": "STY-003",
   "severity": "Info",
-  "focus_node": "N03e74c3f026144658569e45933c73df3",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 02",
-  "message": "Label 'component 02' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N0aaff682afa2438e82609a19fff50cc1",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 07",
-  "message": "Label 'component 07' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N0ab950ec248e4bd7837a851fde33e6e9",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 18",
-  "message": "Label 'component 18' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N0ba5130165fb4a2cad14dd00bb8759fd",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 47",
-  "message": "Label 'component 47' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N1366f24f4243456b808eda153cace0cb",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 32",
-  "message": "Label 'component 32' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N1b461fb67da0424ba895bc837684dfa1",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 21",
-  "message": "Label 'component 21' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N1c3229e66775456fa13b3c36aa40243a",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 24",
-  "message": "Label 'component 24' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N1e685c7d3f534aeba535994e3b3ac0ac",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 16",
-  "message": "Label 'component 16' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N201fe8cffdf04c0f8fa92d65440f7ac1",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 30",
-  "message": "Label 'component 30' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N227d935cf9374cd8bdde912e1e48384c",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 06",
-  "message": "Label 'component 06' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N2491808a720241db8aee67e687f3c5db",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 05",
-  "message": "Label 'component 05' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N260b61c601f642ce8bd10f780d6bd106",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 13",
-  "message": "Label 'component 13' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N271c8c2c1d964271ba863f679407a913",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 51",
-  "message": "Label 'component 51' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N29cf23ac90c844fd85ccfd78794a8e0e",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 15",
-  "message": "Label 'component 15' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N3181d9ff48a946c0b8f8ef57d2d971e1",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 34",
-  "message": "Label 'component 34' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N36004ab1c25345198de7e68b54c52dcb",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 27",
-  "message": "Label 'component 27' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N37a57e6388f64ee594d2a89843363dbf",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 10",
-  "message": "Label 'component 10' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N3a8d650166ae417a8d0cd87eb654ef1d",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 48",
-  "message": "Label 'component 48' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N3e87e314a6dd45f48de7ef8f7b1694be",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 04",
-  "message": "Label 'component 04' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N4322dd3bb4cf425b8f451c84cb7dca31",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 23",
-  "message": "Label 'component 23' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N461f64e70a5e438ab343e640eb05b6aa",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 14",
-  "message": "Label 'component 14' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N480219c443ef41ca8cd22e4f2607283b",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 56",
-  "message": "Label 'component 56' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N5214499863104f1495a6bde57d938cfa",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 49",
-  "message": "Label 'component 49' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N52b6d7e16f64473192f4e43948d5d8db",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 28",
-  "message": "Label 'component 28' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N58f6d0f766d540409d7da5a9c521c341",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 52",
-  "message": "Label 'component 52' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N58fb48f1f95d4bdc928f40c41dfe38c9",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 09",
-  "message": "Label 'component 09' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N63a58c50b18a471db16fc957d332feec",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 53",
-  "message": "Label 'component 53' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N661aa60613d149688178edb6ef23ad9f",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 50",
-  "message": "Label 'component 50' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N668875f69f5f4972b0190c465b797c82",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 42",
-  "message": "Label 'component 42' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N6741523cdea74b88b2790ab88fa557b7",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 46",
-  "message": "Label 'component 46' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N6fc971db17cc43a2a7255be0d3d5f129",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 58",
-  "message": "Label 'component 58' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N7677c9e389ab417095fbfa37d4cc19d1",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 03",
-  "message": "Label 'component 03' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N7e4ffe95ec3044ac9b157016268b0f09",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 57",
-  "message": "Label 'component 57' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N8480c9d3e6ac4161a2588115813ba6e4",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 60",
-  "message": "Label 'component 60' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N872c37b05e234ffcaa16d43b0527be8c",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 01",
-  "message": "Label 'component 01' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N8a9fe490e1d049ff830aa315cbdcf2ac",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 17",
-  "message": "Label 'component 17' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N8c33d8e59e47445e84f489b036eb9fd3",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 25",
-  "message": "Label 'component 25' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N8cb50c7421c5414cb84978ac1eab105a",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 44",
-  "message": "Label 'component 44' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N8dbb8cec471c405cb846e3a90dc0ddc0",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 54",
-  "message": "Label 'component 54' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N939ad7b017664f90ae998baeebdc2660",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 35",
-  "message": "Label 'component 35' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N97ec128ac27447ff9fdb16eefc5aa9bd",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 11",
-  "message": "Label 'component 11' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N9818e3bffbfc41e480d2a62e869fd4f9",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 12",
-  "message": "Label 'component 12' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N9c40b180d75e4f538046171636ee9fb6",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 38",
-  "message": "Label 'component 38' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "N9ebfca4dd0aa4a9788e996332d0fe0b0",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 39",
-  "message": "Label 'component 39' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Na3c079ecd85c40a3aaeea85a0384aa4b",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 41",
-  "message": "Label 'component 41' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Na5641cac236d4ca0a6675fd466f44580",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 33",
-  "message": "Label 'component 33' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Na96647e551ff46fba7012855bf586dcf",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 19",
-  "message": "Label 'component 19' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Nb4aa2326d2ad4576bfe34c755899a6f9",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 31",
-  "message": "Label 'component 31' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Nbf5998a6b03a463f8922d67f28aa390c",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 45",
-  "message": "Label 'component 45' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Nc367aa8c866c44e09f79c8fc83352a31",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 20",
-  "message": "Label 'component 20' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Nc480d4b2cfdf45d4bbbe5bb0f9f6ebcc",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 36",
-  "message": "Label 'component 36' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Nca56fb558b864590a56a506df06b475f",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 37",
-  "message": "Label 'component 37' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Ndad740c8827c4d9dba1e0e5da4f27f83",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 08",
-  "message": "Label 'component 08' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Ndbfd3b2f153d4807a768db5d7781ff42",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 59",
-  "message": "Label 'component 59' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Nde1b3c9891bc446bb980707d88e69336",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 40",
-  "message": "Label 'component 40' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Ndfba109120ed474e95b55639fbdf4669",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 43",
-  "message": "Label 'component 43' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Ne691636edef74681a91cfcfe4a58f2ce",
-  "focus_is_blank": true,
-  "path": null,
-  "value": "component 55",
-  "message": "Label 'component 55' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
-  "sources": [
-   "sparql"
-  ]
- },
- {
-  "check_id": "STY-003",
-  "severity": "Info",
-  "focus_node": "Ne89102fcb5f240f68b3c482e6e29ce52",
+  "focus_node": "N07496ac82bca40929a6096307915e4a5",
   "focus_is_blank": true,
   "path": null,
   "value": "component 22",
@@ -3784,7 +3100,667 @@
  {
   "check_id": "STY-003",
   "severity": "Info",
-  "focus_node": "Nf7dad15bb23b45779d9d3708f00e8887",
+  "focus_node": "N09344184d1ad43ddbe0f8a79ea11bd6c",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 56",
+  "message": "Label 'component 56' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N0a18647a5b21458885922135f2a9a38e",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 51",
+  "message": "Label 'component 51' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N0f60729d6bd84865a4ce2ad8638a9a78",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 27",
+  "message": "Label 'component 27' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N10a6baa26c8f4d30970b208b30928c90",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 16",
+  "message": "Label 'component 16' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N12144b1710b64afebfd7630685d7d753",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 59",
+  "message": "Label 'component 59' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1514b2c4a12e48809a890f67a392584c",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 49",
+  "message": "Label 'component 49' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1b81be50145f4d748eddb866d48f6053",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 41",
+  "message": "Label 'component 41' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1ba7c87fb9d0487f96bc2131b7f0928a",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 50",
+  "message": "Label 'component 50' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N1e1b2874cc6847d78e950597db387d8b",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 09",
+  "message": "Label 'component 09' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N2cc09f9f80e54751ac9a977de3ea8c13",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 14",
+  "message": "Label 'component 14' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3581e753a45d40bab35a5e53e8c903e5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 21",
+  "message": "Label 'component 21' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3aac52840a904f5e9f3416e0b8892010",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 01",
+  "message": "Label 'component 01' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3c03e3d3217944928c55152ed977cbb6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 04",
+  "message": "Label 'component 04' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N3dd9c94ef0d446b4913e0dfb81549486",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 08",
+  "message": "Label 'component 08' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N462b7f6810184fd08d6bfdb383f2a9ef",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 55",
+  "message": "Label 'component 55' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N49094f10228f46d3af825697b3222faa",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 33",
+  "message": "Label 'component 33' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N4adb25cf30d5442bb20f253cc83ca96d",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 30",
+  "message": "Label 'component 30' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N4b6bb8f155b34d8b81185cdae40afd24",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 26",
+  "message": "Label 'component 26' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N537d58e14c7848648e4bffd0d9ef4638",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 19",
+  "message": "Label 'component 19' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N55a952bdbc774daea6aaa692c9e4376c",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 32",
+  "message": "Label 'component 32' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N5a089ab1c9c14eb199ccee7dbbe76082",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 06",
+  "message": "Label 'component 06' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N6111719342814a6bbcb458891b5bc9bb",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 12",
+  "message": "Label 'component 12' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N67a1b62650594ed3a4fb3f000e2a2809",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 05",
+  "message": "Label 'component 05' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N7edaef7909cb45eea24c94515fa6a9df",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 44",
+  "message": "Label 'component 44' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N80a91960043541dd82917a8d2ff9ff15",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 53",
+  "message": "Label 'component 53' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8b0677629dae4bd9a3655d4196221759",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 54",
+  "message": "Label 'component 54' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8d435d4d962043b2adf7bcf995386572",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 28",
+  "message": "Label 'component 28' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8dd542278e0641c4ae654e4e794cb893",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 34",
+  "message": "Label 'component 34' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8f58fe261f424e448ad77aae10df7ba6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 39",
+  "message": "Label 'component 39' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N8f73dc0870aa4dbe8b340cc25366e6ff",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 48",
+  "message": "Label 'component 48' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N93e856744c2d43c8876cb61d4cda1003",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 37",
+  "message": "Label 'component 37' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9440d63f1f024dc2b7bda7d3cdbe6733",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 07",
+  "message": "Label 'component 07' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9614d9d57e1f4921aeeb4bbb4fef50ff",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 24",
+  "message": "Label 'component 24' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9775fe98f01d48b8851e0b3cdf1fa1b5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 15",
+  "message": "Label 'component 15' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N99c98a8d254e4bbfb4e6fa11c797e2cf",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 02",
+  "message": "Label 'component 02' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "N9d892c320816417594783430ae4a1d00",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 57",
+  "message": "Label 'component 57' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Na65baef8fb7e4bdf96fd5b01583e065d",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 40",
+  "message": "Label 'component 40' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Na79000fba46840c1bbe3c2ac56576596",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 31",
+  "message": "Label 'component 31' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Na952c99a62a94a628dacf0ea7daa151b",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 18",
+  "message": "Label 'component 18' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nb07da8f7da3c415ab5c121519ea25cf9",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 60",
+  "message": "Label 'component 60' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nb771e8d494904298815c37178e5ea85e",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 38",
+  "message": "Label 'component 38' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nbf92d4b5df8e4c69a0a6bde4a088d1c6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 43",
+  "message": "Label 'component 43' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc001cab6e83c4b9ebadf3b47d1eba3d3",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 46",
+  "message": "Label 'component 46' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc1edb4cd9adb4761a49554fc2d4937be",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 58",
+  "message": "Label 'component 58' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc27f1d0e9a1d4c0a9a7c2748a7bf2a4a",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 45",
+  "message": "Label 'component 45' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc3e12875774f419d93136ccacc0691e8",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 17",
+  "message": "Label 'component 17' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc71bd0bb642b41d1944fbf7d3c7ee658",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 42",
+  "message": "Label 'component 42' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nc8fc93500a224b868024067ed0a6ddb2",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 03",
+  "message": "Label 'component 03' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Ncb477917cf3a4efba621541d69e5cb74",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 36",
+  "message": "Label 'component 36' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nce321b802a5743c2b58045f42bf1a503",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 13",
+  "message": "Label 'component 13' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Ncf9039750f874bcab9bb8481ad20eb62",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 23",
+  "message": "Label 'component 23' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd5b2b45ed34d433bb54a68e27b5231b7",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 35",
+  "message": "Label 'component 35' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd6737d3a5ef14919ad4ccf5e46a30cf6",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 25",
+  "message": "Label 'component 25' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd79f415b0f2443eda50ce93da3330ab4",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 10",
+  "message": "Label 'component 10' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nd9ea6e027e7e479e9e853f120b7affa5",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 11",
+  "message": "Label 'component 11' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Neada241112a84ab8993ec502553dea52",
   "focus_is_blank": true,
   "path": null,
   "value": "component 29",
@@ -3796,11 +3772,35 @@
  {
   "check_id": "STY-003",
   "severity": "Info",
-  "focus_node": "Nff69a2605a0a4285a6cc0b511c9a2c2b",
+  "focus_node": "Nf667c683b79a4b4e80d8d5e01f6b5a27",
   "focus_is_blank": true,
   "path": null,
-  "value": "component 26",
-  "message": "Label 'component 26' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "value": "component 20",
+  "message": "Label 'component 20' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nfc6b3564fdab48dba4d05836d47eed55",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 52",
+  "message": "Label 'component 52' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
+  "sources": [
+   "sparql"
+  ]
+ },
+ {
+  "check_id": "STY-003",
+  "severity": "Info",
+  "focus_node": "Nfe6e81a77e2a485eb0898d22bf0fa258",
+  "focus_is_blank": true,
+  "path": null,
+  "value": "component 47",
+  "message": "Label 'component 47' on [a blank node] has no language tag; add e.g. @en for internationalisation clarity.",
   "sources": [
    "sparql"
   ]
