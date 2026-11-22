@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# The Azure Developer CLI template for SemOps System's Container Apps option: `azd up`
+# provisions deploy/azure/containerapps/main.bicep (a virtual network, an Azure Files NFS 4.1
+# share, a Container Apps environment and the semops image, with Entra ID sign-in when an
+# application id is given) into a resource group azd asks for.
+#
+# There is no code to build: the app runs the published image, so `azd provision` and
+# `azd up` do the same thing. deploy/azure/README.md has the options and what to do before
+# the first deployment.
+name: semops
+metadata:
+  template: semops-containerapps@0.29.0
+infra:
+  provider: bicep
+  path: deploy/azure/containerapps
+  module: main

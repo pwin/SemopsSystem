@@ -109,6 +109,30 @@ az deployment group create -g semops -f deploy/azure/containerapps/main.bicep \
   -p namePrefix=semops mode=replica entraClientId=<app registration client id>
 ```
 
+With the Azure Developer CLI, the repository root is an `azd` template for the same
+deployment. `azd up` asks for a subscription, a region and a resource group, and provisions
+the Bicep with the values below:
+
+```sh
+azd init -e semopsdev        # the environment name prefixes every resource: letters and digits, 3 to 12
+azd env set SEMOPS_MODE replica
+azd env set ENTRA_CLIENT_ID <app registration client id>
+azd up
+```
+
+| Variable | Bicep parameter | Default |
+| --- | --- | --- |
+| `AZURE_ENV_NAME` | `namePrefix` | (the environment name) |
+| `AZURE_LOCATION` | `location` | (asked for) |
+| `SEMOPS_IMAGE` | `image` | `ghcr.io/pwin/semops:0.29.0` |
+| `SEMOPS_MODE` | `mode` | `replica` |
+| `SEMOPS_SNAPSHOT_FILE` | `snapshotFile` | `snapshots/latest.nq.gz` |
+| `ENTRA_CLIENT_ID` | `entraClientId` | empty: no sign-in |
+
+Until a release publishes the image, set `SEMOPS_IMAGE` to one you have pushed to a registry
+the environment can pull from. `azd env get-values` shows the deployment's outputs,
+`ENDPOINT` among them.
+
 The template builds a virtual network, a premium FileStorage account with an NFS 4.1 share
 reachable only from the Container Apps subnet (no public access, account keys off), a
 VNet-integrated environment with the share mounted, and the app. Ingress is HTTPS-only.

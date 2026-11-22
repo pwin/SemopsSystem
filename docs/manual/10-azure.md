@@ -58,6 +58,11 @@ az deployment group create -g semops -f deploy/azure/containerapps/main.bicep \
   -p namePrefix=semops mode=replica entraClientId=<application id>
 ```
 
+The repository is also an `azd` template for the same deployment: `azd up` from its root
+asks for a subscription, a region and a resource group, then provisions it.
+`deploy/azure/README.md` lists the environment values it reads, such as `SEMOPS_MODE` and
+`ENTRA_CLIENT_ID`.
+
 The template builds a virtual network, a premium storage account with an NFS 4.1 share
 that only the Container Apps subnet can reach (no public access, account keys turned off),
 the environment, and the app with HTTPS-only ingress. The share starts empty and owned by
