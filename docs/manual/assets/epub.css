@@ -1,0 +1,23 @@
+/* The EPUB edition. Reading systems apply their own fonts and sizes; this sets structure
+   and the house colours, and leaves the reader in charge of the rest. */
+body { line-height: 1.5; }
+h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; line-height: 1.2; }
+h1 { font-size: 1.8em; margin: 0 0 .6em; }
+h2 { font-size: 1.35em; margin: 1.6em 0 .4em; padding-top: .4em; border-top: 2px solid #191d24; }
+h3 { font-size: 1.1em; margin: 1.2em 0 .3em; }
+h4 { font-size: .8em; letter-spacing: .08em; text-transform: uppercase; color: #6f7784; }
+a { color: #c8006e; }
+code { font-family: "Cascadia Mono", Consolas, monospace; font-size: .9em; }
+pre { font-family: "Cascadia Mono", Consolas, monospace; font-size: .78em; line-height: 1.4; white-space: pre-wrap; background: #f4f3ee; border: 1px solid #e2e1d8; padding: .6em .8em; }
+pre code { font-size: 1em; }
+table { border-collapse: collapse; width: 100%; font-size: .88em; margin: .8em 0 1.2em; }
+th, td { text-align: left; padding: .35em .5em; border-bottom: 1px solid #d8d7cf; vertical-align: top; }
+th { font-size: .78em; text-transform: uppercase; letter-spacing: .06em; color: #6f7784; }
+div.note, div.warning, div.tip { margin: 1em 0; padding: .5em .8em; border-left: 3px solid #c8006e; background: #fbe9f2; }
+div.warning { border-left-color: #9a6b00; background: #fbf1dc; }
+div.tip { border-left-color: #4a6b3d; background: #eaf0e6; }
+div.facts { margin: .6em 0 1em; }
+div.fact { margin: .2em 0; }
+div.fact strong { font-family: "Cascadia Mono", Consolas, monospace; }
+img.logo { width: 4em; height: 4em; }
+div.standfirst p { font-size: 1.05em; }

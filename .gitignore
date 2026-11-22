@@ -26,3 +26,6 @@ desktop.ini
 *.env.local
 .env
 .env.*
+
+# The manual's editions are built, not committed: python docs/manual/build.py
+docs/manual/build/

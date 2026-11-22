@@ -1,0 +1,40 @@
+# What is not finished {#not-finished}
+
+SemOps System follows a plan with four phases, set out in the proposal it was built from.
+This chapter lists the parts of that plan this version does not have, so you can tell a
+gap from a mistake, and says what to use meanwhile.
+
+## Packaging
+
+| Not yet | Meanwhile |
+|---|---|
+| A published container image, `ghcr.io/pwin/semops` | Build the image from `holos/deploy/Dockerfile` and push it to your own registry |
+| A native Python wheel built from this workspace | `pip install semops-system`, the bridge to the separately released engines: it lacks `semops check` and the changes of this version |
+| One WebAssembly package for the whole toolchain | `holos-wasm` and `shacl-wasm`, separately |
+| SemOps System's own release binaries, and installers (winget, Homebrew, `.deb`, `.rpm`) | Build from source, or the engines' own release binaries |
+| `semops serve`, `semops load`, `semops query`, `semops validate`, `semops map` | The engines' commands: `holos-server`, `holos`, `shacl`, `tarka` |
+
+## Checks and validation
+
+| Not yet | Meanwhile |
+|---|---|
+| The suite's Python-only checks in `semops check`: reasoner-backed checks, version comparison, TARQL analysis (17 of the 61) | The Ontology Quality Suite, `pip install ontology-quality-suite` |
+| `semops check --inference rdfs`, severity policies, repairs, HTML reports | The suite |
+| One SHACL validator: HOLOS still carries two, beside the `shacl` command | Each works, and they agree on the W3C suites |
+| User-defined SHACL-AF functions (`sh:SPARQLFunction`) | Write the logic into the constraint's query |
+
+## Azure
+
+| Not yet | Meanwhile |
+|---|---|
+| A deployment of the templates to a subscription | The templates are linted and schema-checked in CI; the first deployment confirms resource versions |
+| Reading `abfss://` and Blob Storage URLs directly | Mount Blob Storage over NFS, or copy the files in |
+| Checkpoint upload to Blob Storage, with lifecycle rules | Checkpoints on an NFS share, which Blob NFS can hold |
+| OpenTelemetry export to Azure Monitor | Container logs to Log Analytics |
+| An `azd` template, an Azure Pipelines task, JUnit and SARIF output from `semops check` | The Helm chart and the Bicep template; `semops check --format csv` or `json` |
+
+## Security
+
+The RDF/XML parser waits for a release built on a fixed `quick-xml`; until then the server
+refuses the documents that would trigger its two defects. [Security](09-security.md#known-weaknesses)
+has the detail.

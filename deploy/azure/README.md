@@ -179,8 +179,8 @@ What is left to the operator:
 - The Bicep is compiled only by the CI job. It was not compiled on the machine these
   templates were written on.
 - **Neither template has been deployed to an Azure subscription yet.** The first deployment
-  is where resource API versions and regional availability get confirmed, notably Container
-  Apps' NFS volume support in your region.
+  is where resource API versions and regional availability get confirmed, Container Apps'
+  NFS volume support in your region among them.
 - The server's NFS behaviour (the lock check, read-only open, two servers sharing one
   checkpoint) is covered by the workspace's tests and was exercised on a local disk. It has
   not been run against an Azure NFS share.
