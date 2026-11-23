@@ -178,12 +178,11 @@ The engines are also on PyPI separately: `pip install holosdb`, `pip install sha
 
 `semops-wasm` puts the store, the validator and the quality checks in one WebAssembly
 module, in a build for bundlers (`semops-wasm`) and a build for Node (`semops-wasm-node`).
-It is built in this workspace and is not on npm yet. Build it, and install the Node build
-into a project:
+Both are on npm, published with provenance from this repository's release:
 
 ```sh
-node crates/semops-wasm/build.mjs
-npm install /path/to/SemopsSystem/crates/semops-wasm/pkg-node
+npm install semops-wasm        # for the browser and bundlers
+npm install semops-wasm-node   # for Node.js, including the VS Code extension host
 ```
 
 The quality checks then run in the process, as `semops check` runs them:
