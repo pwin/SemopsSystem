@@ -48,8 +48,9 @@ two packages as a workflow artifact.
 
 ## Not done
 
-- **Publishing to npm.** The packages are built and tested, not published. Publishing
-  needs an npm account and token, which the repository does not have.
+- **Publishing to npm.** `.github/workflows/npm.yml` publishes both packages, with
+  provenance, when run by hand with the repository secret `NPM_TOKEN` set. It has not been
+  run for real yet.
 - **Old names as shims.** 0002 keeps `holos-wasm`, `shacl-wasm` and their `-node` builds as
   shims over `semops-wasm` for two minor releases. That follows the first npm publish.
 - **Mapping in the browser.** tarka's TARQL and OTTR mapping is not in the module yet.

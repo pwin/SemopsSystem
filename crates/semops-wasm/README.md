@@ -52,4 +52,15 @@ node crates/semops-wasm/tests/smoke.cjs      # runs the Node build
 
 It needs Rust with the `wasm32-unknown-unknown` target, and wasm-pack.
 
+## Publishing
+
+`.github/workflows/npm.yml` builds both packages at the workspace version, smoke-tests the
+Node one, and publishes them with npm provenance. Run it by hand from the Actions tab; it
+does a dry run unless that box is unticked. It needs an npm token that can publish both
+packages, as the repository secret `NPM_TOKEN`:
+
+```sh
+gh secret set NPM_TOKEN --repo pwin/SemopsSystem
+```
+
 MIT OR Apache-2.0.
