@@ -23,6 +23,10 @@ pub mod run;
 /// Version comparison: the suite's `version-diff`, over triples. Needs no engine.
 pub mod diff;
 
+/// Repairs: each check's quick fix, run against a document. Needs the runner's engines.
+#[cfg(feature = "run")]
+pub mod repair;
+
 /// The release and commit of the Python suite the embedded files come from.
 pub const SUITE: &str = "ontology-quality-suite 0.28.0 (d9300e6)";
 

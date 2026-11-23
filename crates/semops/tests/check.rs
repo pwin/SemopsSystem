@@ -209,3 +209,39 @@ fn diff_suggests_a_bump_and_gates_on_it() {
     let (code, _, stderr) = semops(&["diff", &v1, "no-such-file.ttl"]);
     assert_eq!(code, 2, "{stderr}");
 }
+
+#[test]
+fn repair_appends_what_it_adds_and_rewrites_only_when_it_must() {
+    let dir = std::env::temp_dir().join(format!("semops-repair-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../semops-checks/tests/fixtures/repair/shop.ttl");
+    let file = dir.join("shop.ttl");
+    std::fs::copy(&source, &file).expect("copy");
+    let file = file.to_str().expect("path");
+
+    // Only the labels: insert repairs, appended after the file's own text, untouched.
+    let (code, out, err) = semops(&["repair", file, "--check", "QUA-001"]);
+    assert_eq!(code, 0, "{err}");
+    let original = std::fs::read_to_string(&source).expect("read");
+    assert!(
+        out.replace("\r\n", "\n")
+            .starts_with(&original.replace("\r\n", "\n"))
+    );
+    assert!(out.contains("rdfs:label \"Bookshop\"@en"), "{out}");
+    assert!(err.contains("2 repairs: 2 insert, 0 replace"), "{err}");
+
+    // Every repair, written back: STY-003 replaces a label, so the file is rewritten, and
+    // the checks it fixed no longer fire.
+    let (code, _, err) = semops(&["repair", file, "--write"]);
+    assert_eq!(code, 0, "{err}");
+    assert!(err.contains("written out whole"), "{err}");
+    let (_, json, _) = semops(&["check", file, "--format", "json"]);
+    let findings: Vec<serde_json::Value> = serde_json::from_str(&json).expect("JSON");
+    for fixed in ["QUA-001", "QUA-002", "QUA-007", "STY-003", "LOG-003"] {
+        assert!(
+            !findings.iter().any(|f| f["check_id"] == fixed),
+            "{fixed} still fires after its repair"
+        );
+    }
+}

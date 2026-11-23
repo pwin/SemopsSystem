@@ -1,0 +1,220 @@
+[
+  {
+    "check_id": "LOG-003",
+    "focus_node": "https://example.org/shop#Cafe",
+    "path": "http://www.w3.org/2002/07/owl#equivalentClass",
+    "value": "https://example.org/shop#Shop",
+    "kind": "replace",
+    "title": "Remove the redundant axiom (per project policy)",
+    "added": [],
+    "removed": [
+      "<https://example.org/shop#Cafe> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://example.org/shop#Shop> ."
+    ]
+  },
+  {
+    "check_id": "QUA-001",
+    "focus_node": "https://example.org/shop#Bookshop",
+    "path": null,
+    "value": "https://example.org/shop#Bookshop",
+    "kind": "insert",
+    "title": "Add a label derived from the local name",
+    "added": [
+      "<https://example.org/shop#Bookshop> <http://www.w3.org/2000/01/rdf-schema#label> \"Bookshop\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-001",
+    "focus_node": "https://example.org/shop#openingHours",
+    "path": null,
+    "value": "https://example.org/shop#openingHours",
+    "kind": "insert",
+    "title": "Add a label derived from the local name",
+    "added": [
+      "<https://example.org/shop#openingHours> <http://www.w3.org/2000/01/rdf-schema#label> \"opening Hours\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-002",
+    "focus_node": "https://example.org/shop",
+    "path": null,
+    "value": "https://example.org/shop",
+    "kind": "insert",
+    "title": "Add owl:versionInfo from project standards",
+    "added": [
+      "<https://example.org/shop> <http://www.w3.org/2002/07/owl#versionInfo> \"0.1.0\" ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop> <http://www.w3.org/2004/02/skos/core#prefLabel> \"shop\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#Bookshop",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#Bookshop",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#Bookshop> <http://www.w3.org/2004/02/skos/core#prefLabel> \"Bookshop\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#Item",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#Item",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#Item> <http://www.w3.org/2004/02/skos/core#prefLabel> \"Item\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#Stationer",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#Stationer",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#Stationer> <http://www.w3.org/2004/02/skos/core#prefLabel> \"Stationer\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#inkwell",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#inkwell",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#inkwell> <http://www.w3.org/2004/02/skos/core#prefLabel> \"inkwell\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#openingHours",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#openingHours",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#openingHours> <http://www.w3.org/2004/02/skos/core#prefLabel> \"opening Hours\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#pen",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#pen",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#pen> <http://www.w3.org/2004/02/skos/core#prefLabel> \"pen\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-004",
+    "focus_node": "https://example.org/shop#stocks",
+    "path": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "value": "https://example.org/shop#stocks",
+    "kind": "insert",
+    "title": "Add a skos:prefLabel derived from the local name",
+    "added": [
+      "<https://example.org/shop#stocks> <http://www.w3.org/2004/02/skos/core#prefLabel> \"stocks\"@en ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "QUA-007",
+    "focus_node": "https://example.org/shop",
+    "path": null,
+    "value": "https://example.org/shop",
+    "kind": "insert",
+    "title": "Add owl:versionIRI",
+    "added": [
+      "<https://example.org/shop> <http://www.w3.org/2002/07/owl#versionIRI> <https://example.org/shop/0.1.0> ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "STR-001",
+    "focus_node": "https://example.org/shop#inkwell",
+    "path": null,
+    "value": "https://example.org/shop#Stationer",
+    "kind": "insert",
+    "title": "Declare the undeclared class",
+    "added": [
+      "<https://example.org/shop#Stationer> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "STR-002",
+    "focus_node": "https://example.org/shop#inkwell",
+    "path": "https://example.org/shop#stocks",
+    "value": "https://example.org/shop#inkwell",
+    "kind": "insert",
+    "title": "Declare the undeclared property (as rdf:Property)",
+    "added": [
+      "<https://example.org/shop#stocks> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "STR-007",
+    "focus_node": "https://example.org/shop#stocks",
+    "path": null,
+    "value": "https://example.org/shop#inkwell, https://example.org/shop#pen",
+    "kind": "insert",
+    "title": "Declare the predicate (as rdf:Property)",
+    "added": [
+      "<https://example.org/shop#stocks> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "STR-008",
+    "focus_node": "https://example.org/shop#sells",
+    "path": "http://www.w3.org/2000/01/rdf-schema#range",
+    "value": "https://example.org/shop#Item",
+    "kind": "insert",
+    "title": "Declare the range value as a class",
+    "added": [
+      "<https://example.org/shop#Item> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> ."
+    ],
+    "removed": []
+  },
+  {
+    "check_id": "STY-003",
+    "focus_node": "https://example.org/shop#Shop",
+    "path": null,
+    "value": "Shop",
+    "kind": "replace",
+    "title": "Add the project's default language tag",
+    "added": [
+      "<https://example.org/shop#Shop> <http://www.w3.org/2000/01/rdf-schema#label> \"Shop\"@en ."
+    ],
+    "removed": [
+      "<https://example.org/shop#Shop> <http://www.w3.org/2000/01/rdf-schema#label> \"Shop\" ."
+    ]
+  }
+]
