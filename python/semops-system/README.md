@@ -73,9 +73,11 @@ INSERT { ?s ?p ?o {| ex:source ex:spreadsheet |} } WHERE { ?s ?p ?o }
 
 ## Releases
 
-0.29.0 is the first native release. The 0.29.0.dev1 bridge before it installed three
-separately released engines (holosdb 0.27.0, shacl 0.3.9 and tarka-rdf 0.3.1) under these
-names. Code written against the bridge keeps working.
+- 0.30.0 installs the `semops` command, which now has `diff` and `repair`.
+- 0.29.0 was the first native release.
+- 0.29.0.dev1 was a bridge that installed three separately released engines (holosdb
+  0.27.0, shacl 0.3.9 and tarka-rdf 0.3.1) under these names. Code written against it keeps
+  working.
 
 Wheels are built for Linux (x86_64 and aarch64, glibc 2.28 or later), macOS (Apple Silicon
 and Intel) and Windows (x64), each for every CPython from 3.11. On other platforms, pip

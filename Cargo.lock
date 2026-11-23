@@ -1390,7 +1390,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "holos-bench"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "geo",
@@ -1410,11 +1410,11 @@ dependencies = [
 
 [[package]]
 name = "holos-build"
-version = "0.29.0"
+version = "0.30.0"
 
 [[package]]
 name = "holos-cli"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "fs4",
@@ -1434,7 +1434,7 @@ dependencies = [
 
 [[package]]
 name = "holos-conformance"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "holos-core",
@@ -1453,7 +1453,7 @@ dependencies = [
 
 [[package]]
 name = "holos-core"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "oxrdf",
  "oxsdatatypes",
@@ -1463,7 +1463,7 @@ dependencies = [
 
 [[package]]
 name = "holos-engine"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "flate2",
  "geo",
@@ -1493,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "holos-holon"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-core",
  "holos-engine",
@@ -1509,7 +1509,7 @@ dependencies = [
 
 [[package]]
 name = "holos-python"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-core",
  "holos-engine",
@@ -1527,7 +1527,7 @@ dependencies = [
 
 [[package]]
 name = "holos-security"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-core",
  "holos-store",
@@ -1537,7 +1537,7 @@ dependencies = [
 
 [[package]]
 name = "holos-server"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "fs4",
@@ -1560,7 +1560,7 @@ dependencies = [
 
 [[package]]
 name = "holos-shacl"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-core",
  "holos-shacl-engine",
@@ -1576,7 +1576,7 @@ dependencies = [
 
 [[package]]
 name = "holos-shacl-engine"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "flate2",
@@ -1595,7 +1595,7 @@ dependencies = [
 
 [[package]]
 name = "holos-stats"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-core",
  "holos-engine",
@@ -1610,7 +1610,7 @@ dependencies = [
 
 [[package]]
 name = "holos-store"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-core",
  "oxrdf",
@@ -1622,7 +1622,7 @@ dependencies = [
 
 [[package]]
 name = "holos-wasm"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom 0.3.4",
@@ -3954,7 +3954,7 @@ dependencies = [
 
 [[package]]
 name = "semops"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3972,7 +3972,7 @@ dependencies = [
 
 [[package]]
 name = "semops-checks"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "holos-security",
@@ -3988,7 +3988,7 @@ dependencies = [
 
 [[package]]
 name = "semops-functions"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "getrandom 0.3.4",
  "oxrdf",
@@ -4002,7 +4002,7 @@ dependencies = [
 
 [[package]]
 name = "semops-placetime"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "oxrdf",
  "oxrdfio",
@@ -4011,7 +4011,7 @@ dependencies = [
 
 [[package]]
 name = "semops-python"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-python",
  "oxrdf",
@@ -4027,7 +4027,7 @@ dependencies = [
 
 [[package]]
 name = "semops-wasm"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom 0.3.4",
@@ -4171,7 +4171,7 @@ dependencies = [
 
 [[package]]
 name = "shacl"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "flate2",
@@ -4191,7 +4191,7 @@ dependencies = [
 
 [[package]]
 name = "shacl-cli"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -4203,7 +4203,7 @@ dependencies = [
 
 [[package]]
 name = "shacl-python"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "pyo3",
  "shacl",
@@ -4211,7 +4211,7 @@ dependencies = [
 
 [[package]]
 name = "shacl-wasm"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom 0.3.4",
@@ -4573,7 +4573,7 @@ checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "tarka"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "rayon",
@@ -4587,7 +4587,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-bottr"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "tarka",
@@ -4601,7 +4601,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-cli"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -4616,7 +4616,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-core"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "thiserror 2.0.20",
@@ -4624,7 +4624,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-io"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "csv",
  "flate2",
@@ -4636,7 +4636,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-ottr"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "tarka-core",
@@ -4646,7 +4646,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-polars"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "chrono",
  "holos-engine",
@@ -4660,7 +4660,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-python"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "pyo3",
@@ -4673,7 +4673,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-shacl"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "shacl",
@@ -4685,7 +4685,7 @@ dependencies = [
 
 [[package]]
 name = "tarka-tarql"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "holos-engine",
  "regex",

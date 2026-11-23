@@ -103,7 +103,7 @@ default-members = [
 # number above every component it replaces (holosdb 0.27.0, shacl 0.3.9, tarka-rdf 0.3.1,
 # ontology-quality-suite 0.28.0), so each old name can carry on as a shim without its
 # version going backwards.
-version = "0.29.0"
+version = "0.30.0"
 # The default for crates that inherit it. HOLOS's crates are edition 2021 and say so in
 # their own manifests; SHACL_Engine's and tarka's are 2024 and inherit this.
 edition = "2024"
@@ -150,37 +150,37 @@ wkt = "0.14"
 geojson = "0.24"
 
 # --- internal: HOLOS
-holos-build = { path = "holos/crates/holos-build", version = "0.29.0" }
-holos-core = { path = "holos/crates/holos-core", version = "0.29.0" }
-holos-store = { path = "holos/crates/holos-store", version = "0.29.0" }
-holos-engine = { path = "holos/crates/holos-engine", version = "0.29.0" }
-holos-security = { path = "holos/crates/holos-security", version = "0.29.0" }
-holos-conformance = { path = "holos/crates/holos-conformance", version = "0.29.0" }
-holos-shacl = { path = "holos/crates/holos-shacl", version = "0.29.0" }
-holos-shacl-engine = { path = "holos/crates/holos-shacl-engine", version = "0.29.0" }
-holos-holon = { path = "holos/crates/holos-holon", version = "0.29.0" }
-holos-stats = { path = "holos/crates/holos-stats", version = "0.29.0" }
-holos-cli = { path = "holos/crates/holos-cli", version = "0.29.0" }
-holos-server = { path = "holos/crates/holos-server", version = "0.29.0" }
-shacl-cli = { path = "shacl/crates/shacl-cli", version = "0.29.0" }
-tarka-cli = { path = "tarka/crates/tarka-cli", version = "0.29.0" }
+holos-build = { path = "holos/crates/holos-build", version = "0.30.0" }
+holos-core = { path = "holos/crates/holos-core", version = "0.30.0" }
+holos-store = { path = "holos/crates/holos-store", version = "0.30.0" }
+holos-engine = { path = "holos/crates/holos-engine", version = "0.30.0" }
+holos-security = { path = "holos/crates/holos-security", version = "0.30.0" }
+holos-conformance = { path = "holos/crates/holos-conformance", version = "0.30.0" }
+holos-shacl = { path = "holos/crates/holos-shacl", version = "0.30.0" }
+holos-shacl-engine = { path = "holos/crates/holos-shacl-engine", version = "0.30.0" }
+holos-holon = { path = "holos/crates/holos-holon", version = "0.30.0" }
+holos-stats = { path = "holos/crates/holos-stats", version = "0.30.0" }
+holos-cli = { path = "holos/crates/holos-cli", version = "0.30.0" }
+holos-server = { path = "holos/crates/holos-server", version = "0.30.0" }
+shacl-cli = { path = "shacl/crates/shacl-cli", version = "0.30.0" }
+tarka-cli = { path = "tarka/crates/tarka-cli", version = "0.30.0" }
 
 # --- internal: SHACL_Engine. tarka took it by git tag with `rdf-12` on and `parallel` off;
 # the same choice, now by path. The crates.io crate called `shacl` is another project.
-shacl = { path = "shacl/crates/shacl", version = "0.29.0", default-features = false, features = ["rdf-12"] }
+shacl = { path = "shacl/crates/shacl", version = "0.30.0", default-features = false, features = ["rdf-12"] }
 
 # --- internal: tarka
-tarka-core = { path = "tarka/crates/tarka-core", version = "0.29.0" }
-tarka-io = { path = "tarka/crates/tarka-io", version = "0.29.0" }
-tarka-tarql = { path = "tarka/crates/tarka-tarql", version = "0.29.0" }
-semops-checks = { path = "crates/semops-checks", version = "0.29.0" }
-semops-functions = { path = "crates/semops-functions", version = "0.29.0" }
-semops-placetime = { path = "crates/semops-placetime", version = "0.29.0" }
-tarka-ottr = { path = "tarka/crates/tarka-ottr", version = "0.29.0" }
-tarka = { path = "tarka/crates/tarka", version = "0.29.0" }
-tarka-polars = { path = "tarka/crates/tarka-polars", version = "0.29.0" }
-tarka-shacl = { path = "tarka/crates/tarka-shacl", version = "0.29.0" }
-tarka-bottr = { path = "tarka/crates/tarka-bottr", version = "0.29.0" }
+tarka-core = { path = "tarka/crates/tarka-core", version = "0.30.0" }
+tarka-io = { path = "tarka/crates/tarka-io", version = "0.30.0" }
+tarka-tarql = { path = "tarka/crates/tarka-tarql", version = "0.30.0" }
+semops-checks = { path = "crates/semops-checks", version = "0.30.0" }
+semops-functions = { path = "crates/semops-functions", version = "0.30.0" }
+semops-placetime = { path = "crates/semops-placetime", version = "0.30.0" }
+tarka-ottr = { path = "tarka/crates/tarka-ottr", version = "0.30.0" }
+tarka = { path = "tarka/crates/tarka", version = "0.30.0" }
+tarka-polars = { path = "tarka/crates/tarka-polars", version = "0.30.0" }
+tarka-shacl = { path = "tarka/crates/tarka-shacl", version = "0.30.0" }
+tarka-bottr = { path = "tarka/crates/tarka-bottr", version = "0.30.0" }
 
 # --- everything else
 anyhow = "1"

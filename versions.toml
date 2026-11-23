@@ -10,8 +10,9 @@
 # When a component releases, change its version here first, then bring the consumers up to it.
 
 [platform]
-# The workspace version (Cargo.toml). Nothing has been published under it yet.
-version = "0.29.0"
+# The workspace version (Cargo.toml). semops-system 0.29.0 was the first release published
+# under it, to PyPI.
+version = "0.30.0"
 pypi = "semops-system"
 
 [engines.holos]
