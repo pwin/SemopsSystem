@@ -85,9 +85,9 @@ shacl --version
 ```
 
 ```{.output}
-semops 0.29.0
-holos-server 0.29.0 (<commit>)
-shacl 0.29.0
+semops 0.30.0
+holos-server 0.30.0 (<commit>)
+shacl 0.30.0
 ```
 
 ## A container image {#container}
@@ -97,13 +97,13 @@ as links to it. It runs the server as a non-root user (uid 10001), and keeps its
 the volume `/var/lib/holos`. Build it from the workspace root:
 
 ```sh
-docker build -f holos/deploy/Dockerfile -t semops:0.29.0 .
+docker build -f holos/deploy/Dockerfile -t semops:0.30.0 .
 ```
 
 Run the server, with its store in a named volume:
 
 ```sh
-docker run -d --name semops -p 7878:7878 -v semops-data:/var/lib/holos semops:0.29.0
+docker run -d --name semops -p 7878:7878 -v semops-data:/var/lib/holos semops:0.30.0
 curl -s http://127.0.0.1:7878/health
 ```
 
@@ -115,7 +115,7 @@ Run the other commands from the same image by replacing the entry point. This ch
 ontology in the current directory:
 
 ```sh
-docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.29.0 check ontology.ttl
+docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.30.0 check ontology.ttl
 ```
 
 `holos/deploy/docker-compose.yml` runs the server behind a front door that sets the
@@ -161,7 +161,7 @@ install the counting allocator that needs. Run a server from the binary or the i
 
 There are wheels for Linux (x86_64 and aarch64), macOS (Apple Silicon and Intel) and
 Windows (x64). Elsewhere pip builds from the source distribution, which needs Rust, a C++
-compiler and libclang. 0.29.0 is the first native release. The 0.29.0.dev1 release before
+compiler and libclang. 0.29.0 was the first native release. The 0.29.0.dev1 release before
 it was a bridge to the separately released engines, and code written against it keeps
 working.
 

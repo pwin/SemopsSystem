@@ -6,7 +6,7 @@ description: >-
   RWX NFS volume, and scheduled checkpoints.
 type: application
 version: 0.1.0
-appVersion: "0.29.0"
+appVersion: "0.30.0"
 keywords: [rdf, sparql, shacl, triplestore, azure, aks, nfs]
 home: https://github.com/pwin/SemopsSystem
 sources:

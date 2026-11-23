@@ -44,7 +44,7 @@ Commands are shown on their own, without a prompt. Where the output matters it f
 a box with a dashed edge, trimmed where it is long:
 
 ```{.output}
-holos-server 0.29.0 (<commit>) listening on http://127.0.0.1:7878
+holos-server 0.30.0 (<commit>) listening on http://127.0.0.1:7878
 ```
 
 File paths are relative to the root of the workspace, the directory you cloned. Where a

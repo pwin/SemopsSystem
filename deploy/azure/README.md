@@ -124,7 +124,7 @@ azd up
 | --- | --- | --- |
 | `AZURE_ENV_NAME` | `namePrefix` | (the environment name) |
 | `AZURE_LOCATION` | `location` | (asked for) |
-| `SEMOPS_IMAGE` | `image` | `ghcr.io/pwin/semops:0.29.0` |
+| `SEMOPS_IMAGE` | `image` | `ghcr.io/pwin/semops:0.30.0` |
 | `SEMOPS_MODE` | `mode` | `replica` |
 | `SEMOPS_SNAPSHOT_FILE` | `snapshotFile` | `snapshots/latest.nq.gz` |
 | `ENTRA_CLIENT_ID` | `entraClientId` | empty: no sign-in |
