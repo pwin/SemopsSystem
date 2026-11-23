@@ -10,14 +10,16 @@ install worked.
 | [A container image](#container) | `semops`, with `holos-server`, `holos`, `shacl` and `tarka` as links to it | Servers, Kubernetes, Azure |
 | [Python](#python) | The store, the validator and the mapper as Python modules | Notebooks, scripts, data platforms |
 | [JavaScript and WebAssembly](#javascript) | The store, the validator and the quality checks for Node and the browser | Web applications, editors |
-| [Release binaries](#release-binaries) | Each engine's commands, prebuilt | A machine with no Rust toolchain |
+| [Release binaries](#release-binaries) | The `semops` binary, prebuilt, with the engines' command names as links | A machine with no Rust toolchain |
 | [As a service](#service) | `holos-server` started by systemd or Windows | A long-running endpoint on one machine |
 | [On Azure](#azure-install) | The server on AKS or Container Apps | Cloud deployments |
 
 ::: note
-The container image and the release binaries lag behind a build from source. [What is not finished](12-not-finished.md) lists what each one is missing. The
-command `semops`, the security settings in [chapter 9](09-security.md) and the Azure
-templates are in this workspace only.
+The release binaries, the container image and the Python package are all built from one
+tagged release of this workspace, 0.30.0 at the time of writing, so they agree with each
+other. A build from source has whatever has been merged since. The npm packages and the
+Azure templates come from the repository for now; [What is not finished](12-not-finished.md)
+says what is still to come.
 :::
 
 ## From source {#from-source}
@@ -121,11 +123,15 @@ docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.30.0 check
 `holos/deploy/docker-compose.yml` runs the server behind a front door that sets the
 identity headers, as [chapter 9](09-security.md) describes.
 
-::: note
 Each SemOps System release publishes the image as `ghcr.io/pwin/semops`, for amd64 and
-arm64, tagged with the version. No release has been made yet, so until the first one, build
-the image yourself and push it to your own registry for Kubernetes or Azure.
-:::
+arm64, tagged with the version, so there is no need to build it:
+
+```sh
+docker pull ghcr.io/pwin/semops:0.30.0
+```
+
+For Kubernetes or Azure, pin it by digest, and mirror it into your own registry if your
+cluster pulls only from there.
 
 ## Python {#python}
 
@@ -218,23 +224,25 @@ file is its reference.
 Each SemOps System release carries the `semops` binary, in an archive per platform:
 Linux (x86-64 and arm64), macOS (Apple Silicon and Intel) and Windows (x86-64). The Unix
 archives include `holos-server`, `holos`, `shacl` and `tarka` as links to it. On Windows,
-copy `semops.exe` to any of those names to get that command. No release has been made yet.
-
-Until the first one, each engine's repository publishes prebuilt commands, in an archive
-per platform with the licences and a README:
-
-| Engine | Commands | Platforms | Releases |
-|---|---|---|---|
-| HOLOS 0.27.0 | `holos`, `holos-server` | Linux x86-64 and arm64, macOS Intel and Apple Silicon, Windows x86-64 | [pwin/triplestore](https://github.com/pwin/triplestore/releases) |
-| SHACL engine 0.3.9 | `shacl` | Linux x86-64, macOS Apple Silicon, Windows x86-64 | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine/releases) |
-| tarka 0.3.1 | `tarka` | Linux x86-64, macOS Apple Silicon, Windows x86-64 | [pwin/tarka](https://github.com/pwin/tarka/releases) |
+copy `semops.exe` to any of those names to get that command. The releases are at
+[pwin/SemopsSystem](https://github.com/pwin/SemopsSystem/releases), 0.30.0 the first.
 
 Unpack the archive and put the command on your `PATH`. `SHA256SUMS`, beside the archives,
 lets you check what you downloaded before you run it:
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
+semops --version
 ```
+
+The engines' own repositories also publish their commands, released on their own before
+the workspace:
+
+| Engine | Commands | Platforms | Releases |
+|---|---|---|---|
+| HOLOS 0.27.0 | `holos`, `holos-server` | Linux x86-64 and arm64, macOS Intel and Apple Silicon, Windows x86-64 | [pwin/triplestore](https://github.com/pwin/triplestore/releases) |
+| SHACL engine 0.3.9 | `shacl` | Linux x86-64, macOS Apple Silicon, Windows x86-64 | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine/releases) |
+| tarka 0.3.1 | `tarka` | Linux x86-64, macOS Apple Silicon, Windows x86-64 | [pwin/tarka](https://github.com/pwin/tarka/releases) |
 
 These are the engines as they were released on their own. They do not include `semops`,
 placetime, or the security settings of [chapter 9](09-security.md).

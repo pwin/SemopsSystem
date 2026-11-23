@@ -129,9 +129,9 @@ azd up
 | `SEMOPS_SNAPSHOT_FILE` | `snapshotFile` | `snapshots/latest.nq.gz` |
 | `ENTRA_CLIENT_ID` | `entraClientId` | empty: no sign-in |
 
-Until a release publishes the image, set `SEMOPS_IMAGE` to one you have pushed to a registry
-the environment can pull from. `azd env get-values` shows the deployment's outputs,
-`ENDPOINT` among them.
+`SEMOPS_IMAGE` defaults to the 0.30.0 release's image on GitHub Container Registry. In
+production, pin a digest, or point it at a mirror in Azure Container Registry. `azd env
+get-values` shows the deployment's outputs, `ENDPOINT` among them.
 
 The template builds a virtual network, a premium FileStorage account with an NFS 4.1 share
 reachable only from the Container Apps subnet (no public access, account keys off), a
