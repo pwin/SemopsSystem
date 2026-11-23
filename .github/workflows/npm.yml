@@ -1,0 +1,57 @@
+# Publishes the WebAssembly packages to npm: `semops-wasm` (ESM, for bundlers) and
+# `semops-wasm-node` (CommonJS, for Node), built by crates/semops-wasm/build.mjs at the
+# workspace version.
+#
+#   Run workflow (manual), dry-run ticked     build, smoke-test, `npm publish --dry-run`
+#   Run workflow (manual), dry-run unticked   build, smoke-test, publish
+#
+# Needs the repository secret NPM_TOKEN: an npm automation (or granular) token that can
+# publish both packages. Each package is published with provenance, which links it to this
+# workflow run on npmjs.com; that needs `id-token: write`.
+name: npm packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Pack and check only; publish nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install wasm-pack
+        run: curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+      - name: Build both packages
+        run: node crates/semops-wasm/build.mjs
+      - name: Smoke-test the Node package
+        run: node crates/semops-wasm/tests/smoke.cjs
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          set -euo pipefail
+          flags="--access public --provenance"
+          if [ "$DRY_RUN" = "true" ]; then flags="$flags --dry-run"; fi
+          for dir in pkg-bundler pkg-node; do
+            (cd "crates/semops-wasm/$dir" && echo "== $(node -p 'require("./package.json").name')" && npm publish $flags)
+          done
