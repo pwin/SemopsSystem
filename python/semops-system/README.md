@@ -49,6 +49,21 @@ the same for text, and `so.list_checks()` lists the registry. A run is a dict: `
 `failed` (the checks whose query did not run) and `complete`, which is false when any did
 not.
 
+## The `semops` command
+
+The wheel installs the `semops` command, the same command as the binary, with every
+subcommand: `serve`, `query`, `load`, `validate`, `map`, `check`, `diff`, `repair` and the
+rest. A build that has Python needs nothing else to gate on the quality checks:
+
+```sh
+pip install semops-system
+semops check ontology/*.ttl --format sarif --out semops.sarif
+```
+
+`python -m semops_system` runs it too. Under `semops serve`, `--max-query-memory` is not
+enforced: an extension module cannot install the counting allocator the binary has. For a
+server, prefer the binary or the container image.
+
 tarka produces RDF 1.1. To get RDF 1.2 from its output, load it into a store and run SPARQL
 1.2. For example, this annotates every mapped triple with its source:
 

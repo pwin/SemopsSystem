@@ -151,7 +151,12 @@ print(len(run["findings"]), run["complete"])
 ```
 
 `so.holos`, `so.shacl` and `so.tarka` are the modules the `holosdb`, `shacl` and
-`tarka-rdf` wheels carry, and each one's own documentation applies. `so.check` returns
+`tarka-rdf` wheels carry, and each one's own documentation applies.
+
+The wheel also installs the `semops` command, with every subcommand, so a machine with
+Python needs no Rust toolchain to run it. The one difference from the binary: under
+`semops serve`, `--max-query-memory` is not enforced, because an extension module cannot
+install the counting allocator that needs. Run a server from the binary or the image. `so.check` returns
 `findings`, a list of dicts, and `complete`, which is false if a check could not run.
 
 There are wheels for Linux (x86_64 and aarch64), macOS (Apple Silicon and Intel) and

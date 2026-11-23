@@ -18,7 +18,9 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use pyo3::wrap_pymodule;
 use semops_checks::run::{self, Engine, Run};
+use std::ffi::OsString;
 use std::path::Path;
+use std::process::ExitCode;
 
 fn engine(name: &str) -> PyResult<Engine> {
     match name {
@@ -153,6 +155,24 @@ fn list_checks(py: Python<'_>) -> PyResult<Bound<'_, PyList>> {
     Ok(list)
 }
 
+/// Runs the `semops` command with `argv`, program name first, and returns its exit status:
+/// what the wheel's `semops` console script calls.
+///
+/// The command holds no Python objects, so the GIL is released while it runs.
+/// `--max-query-memory` is not enforced here: the extension cannot install the counting
+/// allocator the `semops` binary has.
+#[pyfunction]
+fn main(py: Python<'_>, argv: Vec<String>) -> i32 {
+    let code = py.detach(|| semops::main_with(argv.into_iter().map(OsString::from)));
+    // The command writes to the process's own stdout, which Python does not flush.
+    let _ = std::io::Write::flush(&mut std::io::stdout());
+    // ExitCode carries no number to read back, but compares: every status the command
+    // returns is one of 0 to 255.
+    (0..=255u8)
+        .find(|n| ExitCode::from(*n) == code)
+        .map_or(1, i32::from)
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -162,5 +182,6 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(check, m)?)?;
     m.add_function(wrap_pyfunction!(check_text, m)?)?;
     m.add_function(wrap_pyfunction!(list_checks, m)?)?;
+    m.add_function(wrap_pyfunction!(main, m)?)?;
     Ok(())
 }

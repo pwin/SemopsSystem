@@ -66,6 +66,8 @@ archive resolves under its lock file.
   their own wheels from their own repositories. Making each depend on and re-export
   `semops-system` is a change to three published packages, and waits for this one to be
   released.
-- **The `semops` command in the wheel.** `pip install semops-system` gives the modules,
-  not the command line.
+- **`--max-query-memory` under the wheel's `semops serve`.** The wheel now installs the
+  `semops` command too, as a console script over `_native.main`, which runs the `semops`
+  library's `main_with`. An extension module cannot install a global allocator, so the
+  memory ceiling the binary enforces is not enforced there.
 - **musllinux and Windows on Arm wheels.** pip builds those platforms from the sdist.
