@@ -279,6 +279,17 @@ jobs:
           done
       - name: Container Apps Bicep
         run: az bicep build --file deploy/azure/containerapps/main.bicep --stdout > /dev/null
+      # The azd template's parameter file may name only parameters the Bicep declares.
+      - name: azd parameters match the Bicep
+        run: |
+          python3 - <<'PY'
+          import json, re
+          declared = set(re.findall(r"^param (\w+)", open("deploy/azure/containerapps/main.bicep").read(), re.M))
+          given = set(json.load(open("deploy/azure/containerapps/main.parameters.json"))["parameters"])
+          extra = given - declared
+          assert not extra, f"main.parameters.json names parameters main.bicep does not declare: {extra}"
+          print(f"{len(given)} azd parameters, all declared")
+          PY
 
   # The manual (docs/manual): the web edition, the EPUB and the A4 PDF, built from the same
   # chapters and kept as an artifact for each run. pandoc from the runner's packages;
