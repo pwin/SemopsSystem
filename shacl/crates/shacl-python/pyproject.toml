@@ -25,7 +25,7 @@ dynamic = ["version"]
 [project.urls]
 Repository = "https://github.com/pwin/SemopsSystem"
 Issues = "https://github.com/pwin/SemopsSystem/issues"
-Changelog = "https://github.com/pwin/SHACL_Engine/releases"
+Changelog = "https://github.com/pwin/SemopsSystem/blob/HEAD/CHANGELOG.md"
 
 [tool.maturin]
 # The extension is built from the workspace member, and targets the stable ABI
