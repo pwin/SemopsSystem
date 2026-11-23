@@ -9,6 +9,10 @@ and no network.
 | `semops-wasm` | Bundlers (webpack, Vite, Rollup): ES modules with a separate `.wasm` |
 | `semops-wasm-node` | Node and `require()`, including the VS Code extension host |
 
+```sh
+npm install semops-wasm-node
+```
+
 ```js
 const semops = require('semops-wasm-node');
 

@@ -10,7 +10,10 @@ and `tarka/`, for their history before the workspace.
 - `semops repair FILE` applies the quality checks' repairs to a file, as the suite and the
   VS Code extension do (#15).
 - `pip install semops-system` installs the `semops` command, with every subcommand (#17).
-- The repository is an `azd` template for the Container Apps option (#16).
+- The repository is an `azd` template for the Container Apps option (#16), and a GitHub
+  Action and an Azure Pipelines template run `semops check` as a CI gate (#19).
+- The first published artifacts: the `semops` binaries and the image `ghcr.io/pwin/semops`
+  (#13), `semops-system` on PyPI, and `semops-wasm` and `semops-wasm-node` on npm (#20).
 
 ## 0.29.0, 23 November 2026
 

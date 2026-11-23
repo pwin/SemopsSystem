@@ -9,7 +9,7 @@ gap from a mistake, and says what to use meanwhile.
 | Not yet | Meanwhile |
 |---|---|
 | `holosdb`, `shacl` and `tarka-rdf` as meta-packages over `semops-system` | They still publish as their own wheels, from the engines' repositories |
-| `semops-wasm` and `semops-wasm-node` on npm, and the old package names as shims over them | Build them from `crates/semops-wasm` ([Installing](02-installing.md#javascript)), or use `holos-wasm` and `shacl-wasm` from npm |
+| `holos-wasm` and `shacl-wasm` as shims over `semops-wasm` | `semops-wasm` itself, which keeps their class and function names |
 | Installers: winget, Homebrew, `.deb`, `.rpm` | The release archives |
 
 ## Checks and validation
