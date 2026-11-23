@@ -30,7 +30,7 @@ gap from a mistake, and says what to use meanwhile.
 | Reading `abfss://` and Blob Storage URLs directly | Mount Blob Storage over NFS, or copy the files in |
 | Checkpoint upload to Blob Storage, with lifecycle rules | Checkpoints on an NFS share, which Blob NFS can hold |
 | OpenTelemetry export to Azure Monitor | Container logs to Log Analytics |
-| An Azure Pipelines task and a GitHub Action of their own | The Helm chart and the Bicep template; `semops check --format junit` or `sarif` in a script step |
+| Marketplace listings for the GitHub Action and an Azure DevOps extension | The Helm chart and the Bicep template; `semops check --format junit` or `sarif` in a script step |
 
 ## Security
 

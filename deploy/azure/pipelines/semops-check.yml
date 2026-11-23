@@ -1,0 +1,55 @@
+# An Azure Pipelines template that runs the ontology quality checks, `semops check`, and
+# publishes each check as a test in the run's Tests tab. It installs the command from PyPI
+# (`pip install semops-system`) and fails the job on findings at or above the gate.
+#
+#   steps:
+#   - template: deploy/azure/pipelines/semops-check.yml@semops
+#     parameters:
+#       files: ontology/*.ttl
+#
+# with the SemOps System repository declared as a resource named `semops`, or a copy of this
+# file in your own repository.
+parameters:
+- name: files
+  type: string
+- name: failOn
+  type: string
+  default: Violation
+  values: [Violation, Warning, Info, never]
+- name: engine
+  type: string
+  default: both
+  values: [both, sparql, shacl]
+- name: version
+  type: string
+  default: ">=0.30.0"
+- name: pythonVersion
+  type: string
+  default: "3.13"
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: ${{ parameters.pythonVersion }}
+  displayName: Use Python ${{ parameters.pythonVersion }}
+
+- script: python -m pip install "semops-system${{ parameters.version }}"
+  displayName: Install semops
+
+- bash: |
+    # Word splitting and globbing of FILES are intended: it is a list of paths.
+    # shellcheck disable=SC2086
+    semops check $FILES --engine "$ENGINE" --fail-on "$FAIL_ON" --format junit --out semops-junit.xml
+  displayName: Run the quality checks
+  env:
+    FILES: ${{ parameters.files }}
+    FAIL_ON: ${{ parameters.failOn }}
+    ENGINE: ${{ parameters.engine }}
+
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  displayName: Publish the checks as tests
+  inputs:
+    testResultsFormat: JUnit
+    testResultsFiles: semops-junit.xml
+    testRunTitle: semops check
