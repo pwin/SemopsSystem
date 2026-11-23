@@ -1519,6 +1519,7 @@ dependencies = [
  "holos-store",
  "oxrdf",
  "oxrdfio",
+ "oxsdatatypes",
  "pyo3",
  "sparesults",
  "spareval",
@@ -4205,8 +4206,10 @@ dependencies = [
 name = "shacl-python"
 version = "0.30.0"
 dependencies = [
+ "oxsdatatypes",
  "pyo3",
  "shacl",
+ "spareval",
 ]
 
 [[package]]
@@ -4663,8 +4666,10 @@ name = "tarka-python"
 version = "0.30.0"
 dependencies = [
  "holos-engine",
+ "oxsdatatypes",
  "pyo3",
  "pyo3-polars",
+ "spareval",
  "tarka",
  "tarka-bottr",
  "tarka-polars",

@@ -3,6 +3,16 @@
 SemOps System's own releases. The engines keep their own changelogs, in `holos/`, `shacl/`
 and `tarka/`, for their history before the workspace.
 
+## Unreleased
+
+- Each engine is published from the workspace on its own, at the workspace version:
+  `holosdb`, `shacl` and `tarka-rdf` on PyPI, and `holos-wasm`, `shacl-wasm` and their
+  `-node` builds on npm, by `engines.yml`. The engines' old repositories stop releasing
+  (#23).
+- Each release carries the engines' commands on their own, beside `semops` (#23).
+- `semops-system` no longer requires Polars. `pip install "semops-system[polars]"` adds it,
+  for mapping data frames (#23).
+
 ## 0.30.0, 23 November 2026
 
 - `semops diff OLD NEW` compares two versions of an ontology and suggests a semantic-version

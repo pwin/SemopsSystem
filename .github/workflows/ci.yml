@@ -174,8 +174,9 @@ jobs:
         package:
           - { dist: holosdb, manifest: holos/crates/holos-python/Cargo.toml, tests: holos/crates/holos-python/tests, extra: "" }
           - { dist: shacl, manifest: shacl/crates/shacl-python/Cargo.toml, tests: shacl/crates/shacl-python/tests, extra: "" }
-          # tarka-rdf's tests read their results back with holosdb and shacl from PyPI; the
-          # wheels built in the same workspace are the better check, and come with phase 3.
+          # tarka-rdf's tests read their results back with holosdb and shacl, here from PyPI.
+          # engines.yml runs them against the wheels built from this workspace, before it
+          # publishes any of the three.
           - { dist: tarka-rdf, manifest: tarka/crates/tarka-python/Cargo.toml, tests: tarka/crates/tarka-python/tests, extra: "polars holosdb shacl" }
     runs-on: ubuntu-latest
     steps:
@@ -213,6 +214,8 @@ jobs:
         run: node holos/crates/holos-wasm/tests/smoke.cjs
       - name: Build shacl-wasm
         run: node shacl/crates/shacl-wasm/build.mjs
+      - name: Smoke-test the shacl-wasm node package
+        run: node shacl/crates/shacl-wasm/tests/smoke.cjs
       # The consolidated package: both engines and the quality checks in one module.
       - name: Build semops-wasm (both targets)
         run: node crates/semops-wasm/build.mjs

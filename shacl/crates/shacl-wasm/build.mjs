@@ -23,7 +23,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const REPOSITORY = 'https://github.com/pwin/SHACL_Engine';
+// Published from the SemOps System workspace, whose repository npm provenance checks
+// against this field.
+const REPOSITORY = 'https://github.com/pwin/SemopsSystem';
 const LICENSES = ['LICENSE-APACHE', 'LICENSE-MIT'];
 
 // `nodejs` for require()-based consumers (the VS Code extension host, CLIs);

@@ -23,8 +23,8 @@ classifiers = [
 dynamic = ["version"]
 
 [project.urls]
-Repository = "https://github.com/pwin/SHACL_Engine"
-Issues = "https://github.com/pwin/SHACL_Engine/issues"
+Repository = "https://github.com/pwin/SemopsSystem"
+Issues = "https://github.com/pwin/SemopsSystem/issues"
 Changelog = "https://github.com/pwin/SHACL_Engine/releases"
 
 [tool.maturin]

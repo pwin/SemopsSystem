@@ -13,6 +13,7 @@ One native extension holds them all, built from one commit of the
 
 ```sh
 pip install semops-system
+pip install "semops-system[polars]"     # to map Polars data frames with tarka as well
 ```
 
 ```python

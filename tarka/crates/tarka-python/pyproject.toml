@@ -19,7 +19,7 @@ classifiers = ["Programming Language :: Rust", "Topic :: Database"]
 test = ["pytest>=8", "holosdb>=0.27", "shacl>=0.3.9"]
 
 [project.urls]
-Repository = "https://github.com/pwin/tarka"
+Repository = "https://github.com/pwin/SemopsSystem"
 
 [tool.maturin]
 module-name = "tarka_rdf"

@@ -77,9 +77,11 @@ build with maturin, one at a time, for example
 
 ## Names
 
-The product is **SemOps System**. It will ship as the `semops` command, the `semops-system`
+The product is **SemOps System**. It ships as the `semops` command, the `semops-system`
 wheel on PyPI (`import semops_system`), the `semops-wasm` npm packages and the
-`ghcr.io/pwin/semops` image. Until then the engines ship under their existing names.
+`ghcr.io/pwin/semops` image. Each engine is also published from here on its own, under its
+existing name, for anyone who wants one: `holosdb`, `shacl` and `tarka-rdf` on PyPI,
+`holos-wasm` and `shacl-wasm` on npm, and its commands in each release.
 [docs/decisions/0002](docs/decisions/0002-names-and-registries.md) explains the choices.
 
 ## Status

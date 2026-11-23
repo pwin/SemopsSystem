@@ -46,14 +46,19 @@ the package name, the licence files and the repository, as holos-wasm's script d
 CI `wasm` job builds both, runs `tests/smoke.cjs` against the Node build, and keeps the
 two packages as a workflow artifact.
 
+**The engines' packages stay.** `holos-wasm`, `shacl-wasm` and their `-node` builds are
+still built on their own, from this workspace and at its version, by
+`.github/workflows/engines.yml`, not as shims over `semops-wasm`
+([0002](0002-names-and-registries.md#the-engines-packages)). A page that needs one engine
+loads less: 4.8 MB unpacked for holos-wasm and 3.2 MB for shacl-wasm, against 6.4 MB for
+`semops-wasm`.
+
 ## Not done
 
 - **Publishing is by hand.** `.github/workflows/npm.yml` published 0.30.0 of both
   packages, with provenance, on 23 November 2026. It runs when started from the Actions tab,
   with the token in the repository secret `NPM_TOKEN`; npm's trusted publishing, which
   needs no token, could replace that now the packages exist.
-- **Old names as shims.** 0002 keeps `holos-wasm`, `shacl-wasm` and their `-node` builds as
-  shims over `semops-wasm` for two minor releases. That follows the first npm publish.
 - **Mapping in the browser.** tarka's TARQL and OTTR mapping is not in the module yet.
   Polars cannot build for wasm32, and the CSV path has not been separated from it.
 - **A `web` target**, loadable by a `<script type="module">` with no bundler. The
