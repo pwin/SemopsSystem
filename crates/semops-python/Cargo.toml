@@ -22,6 +22,8 @@ holosdb = { package = "holos-python", path = "../../holos/crates/holos-python" }
 shacl-py = { package = "shacl-python", path = "../../shacl/crates/shacl-python" }
 tarka-py = { package = "tarka-python", path = "../../tarka/crates/tarka-python" }
 semops-checks.workspace = true
+# The `semops` command, for the wheel's console script.
+semops = { path = "../semops" }
 oxrdf.workspace = true
 oxrdfio.workspace = true
 # Not used here directly. The workspace patches these two crates from vendor/ ([patch] in

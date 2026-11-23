@@ -10,7 +10,6 @@ gap from a mistake, and says what to use meanwhile.
 |---|---|
 | A first release, which publishes the `semops` binaries and the image `ghcr.io/pwin/semops` | Build from source, or build the image from `holos/deploy/Dockerfile` and push it to your own registry |
 | `holosdb`, `shacl` and `tarka-rdf` as meta-packages over `semops-system` | They still publish as their own wheels, from the engines' repositories |
-| The `semops` command in the Python wheel | Install the command from source or the container image |
 | `semops-wasm` and `semops-wasm-node` on npm, and the old package names as shims over them | Build them from `crates/semops-wasm` ([Installing](02-installing.md#javascript)), or use `holos-wasm` and `shacl-wasm` from npm |
 | Installers: winget, Homebrew, `.deb`, `.rpm` | The release archives, once there is a release; the engines' own release binaries until then |
 

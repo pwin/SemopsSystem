@@ -4018,6 +4018,7 @@ dependencies = [
  "oxrdfio",
  "oxsdatatypes",
  "pyo3",
+ "semops",
  "semops-checks",
  "shacl-python",
  "spareval",

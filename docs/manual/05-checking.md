@@ -103,9 +103,14 @@ picks which run:
 
 ## In a build
 
-A GitHub Actions step that fails the build on a violation:
+A GitHub Actions step that fails the build on a violation, with the command from the
+Python wheel:
 
 ```yaml
+- uses: actions/setup-python@v5
+  with:
+    python-version: "3.13"
+- run: pip install semops-system
 - name: Check the ontology
   run: semops check ontology/*.ttl
 ```
