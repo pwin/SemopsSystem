@@ -1,0 +1,91 @@
+# A GitHub Action that runs the ontology quality checks, `semops check`, and gates the job on
+# what they find. It installs the command from PyPI (`pip install semops-system`), writes the
+# findings as SARIF and, unless told not to, uploads them to GitHub code scanning, so they
+# appear on the pull request and in the Security tab.
+#
+#   - uses: pwin/SemopsSystem/actions/check@v0.30.0
+#     with:
+#       files: ontology/*.ttl
+#
+# Uploading needs `security-events: write` in the calling workflow's permissions.
+name: semops check
+description: Run the SemOps System ontology quality checks, report them to code scanning, and fail on violations
+author: Peter Winstanley
+branding:
+  icon: check-circle
+  color: blue
+
+inputs:
+  files:
+    description: The RDF files to check, read into one graph. Space-separated; shell globs are expanded.
+    required: true
+  fail-on:
+    description: The least severe finding that fails the job (Violation, Warning, Info or never).
+    default: Violation
+  engine:
+    description: Which formulation of the checks runs (both, sparql or shacl).
+    default: both
+  sarif:
+    description: Where to write the SARIF report.
+    default: semops.sarif
+  upload:
+    description: Upload the SARIF report to GitHub code scanning (true or false).
+    default: "true"
+  version:
+    description: The semops-system release to install, as a pip version specifier.
+    default: ">=0.30.0"
+  python-version:
+    description: The Python to install it with.
+    default: "3.13"
+
+outputs:
+  sarif:
+    description: The path of the SARIF report.
+    value: ${{ inputs.sarif }}
+  exit-code:
+    description: semops check's exit status (0 passed, 1 findings at the gate, 2 could not run).
+    value: ${{ steps.check.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install semops
+      shell: bash
+      run: python -m pip install "semops-system${{ inputs.version }}"
+    - name: Run the checks
+      id: check
+      shell: bash
+      env:
+        FILES: ${{ inputs.files }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        ENGINE: ${{ inputs.engine }}
+        SARIF: ${{ inputs.sarif }}
+      run: |
+        # Word splitting and globbing of FILES are intended: it is a list of paths.
+        # shellcheck disable=SC2086
+        set +e
+        semops check $FILES --engine "$ENGINE" --fail-on "$FAIL_ON" --format sarif --out "$SARIF"
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        if [ -f "$SARIF" ]; then
+          python -c "import collections, json, sys; r = json.load(open(sys.argv[1]))['runs'][0]['results']; c = collections.Counter(x['level'] for x in r); print(len(r), 'findings:', c['error'], 'violation,', c['warning'], 'warning,', c['note'], 'info')" "$SARIF"
+        fi
+    - name: Upload to code scanning
+      if: inputs.upload == 'true'
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ inputs.sarif }}
+        category: semops-check
+    - name: Gate on the findings
+      shell: bash
+      env:
+        CODE: ${{ steps.check.outputs.exit-code }}
+      run: |
+        case "$CODE" in
+          0) echo "semops check passed" ;;
+          1) echo "::error::semops check found findings at or above the gate"; exit 1 ;;
+          *) echo "::error::semops check could not run (exit $CODE)"; exit "$CODE" ;;
+        esac

@@ -107,13 +107,31 @@ A GitHub Actions step that fails the build on a violation, with the command from
 Python wheel:
 
 ```yaml
-- uses: actions/setup-python@v5
+- uses: actions/setup-python@v7
   with:
     python-version: "3.13"
 - run: pip install semops-system
 - name: Check the ontology
   run: semops check ontology/*.ttl
 ```
+
+The repository's own action does the same, and also uploads the findings to GitHub's code
+scanning, so they appear on the pull request:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+- uses: actions/checkout@v7
+- uses: pwin/SemopsSystem/actions/check@main
+  with:
+    files: ontology/*.ttl
+```
+
+Its inputs are `files`, `fail-on`, `engine`, `sarif` (the report's path), `upload` (`false`
+to keep the report out of code scanning), `version` (a pip version specifier) and
+`python-version`. Pin it to a release tag or a commit rather than `main`.
 
 To see the findings in GitHub's code scanning as well, write SARIF and upload it, even when
 the check fails:
@@ -127,7 +145,9 @@ the check fails:
     sarif_file: semops.sarif
 ```
 
-In Azure Pipelines, JUnit puts each check in the run's Tests tab:
+In Azure Pipelines, JUnit puts each check in the run's Tests tab. The template
+`deploy/azure/pipelines/semops-check.yml` installs the command, runs the checks and
+publishes them; include it from a repository resource, or copy it. By hand:
 
 ```yaml
 - script: semops check ontology/*.ttl --format junit --out semops-junit.xml

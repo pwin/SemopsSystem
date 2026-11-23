@@ -226,6 +226,34 @@ jobs:
             crates/semops-wasm/pkg-bundler/
             crates/semops-wasm/pkg-node/
 
+  # The repository's GitHub Action, run as a caller runs it: once passing (no gate) and once
+  # failing (the default gate, on a fixture with a violation). It installs semops-system
+  # from PyPI, so it tests the released command.
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: pass
+        uses: ./actions/check
+        with:
+          files: crates/semops-checks/tests/fixtures/ontology/domain.ttl
+          fail-on: never
+          upload: "false"
+      - id: gate
+        uses: ./actions/check
+        continue-on-error: true
+        with:
+          files: crates/semops-checks/tests/fixtures/ontology/domain.ttl
+          sarif: gate.sarif
+          upload: "false"
+      - name: The action passed once and failed once, as it should
+        run: |
+          set -euo pipefail
+          test "${{ steps.pass.outputs.exit-code }}" = 0
+          test "${{ steps.gate.outcome }}" = failure
+          test "${{ steps.gate.outputs.exit-code }}" = 1
+          python3 -c "import json; d = json.load(open('semops.sarif')); assert d['version'] == '2.1.0'; print(len(d['runs'][0]['results']), 'results')"
+
   # Phase 1's gate, reported rather than enforced until the consumers have caught up:
   # the editor, the VS Code extension and the suite must run the engine releases in
   # versions.toml.
