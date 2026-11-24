@@ -1001,6 +1001,15 @@ pub fn from_term(term: TermRef<'_>, store: &TermStore) -> Option<TermId> {
     // than `get_term` offers, and both have been silently dropped before.
     store.resolve_rendered(term)
 }
+
+/// A term a query produced, as an id. A term the store already holds is
+/// found; one the query computed (`BIND`, an aggregate, `STR()`, `IRI()` …)
+/// is interned in the SPARQL scope, since no source document holds it and a
+/// query is entitled to produce it: a node expression's output, or the
+/// `?value` a SPARQL constraint reports (SHACL 5.3.2).
+pub fn intern_term(term: TermRef<'_>, store: &mut TermStore) -> TermId {
+    from_term(term, store).unwrap_or_else(|| store.intern_oxrdf(term, crate::model::scope::SPARQL))
+}
 #[cfg(test)]
 mod tests {
     use super::*;

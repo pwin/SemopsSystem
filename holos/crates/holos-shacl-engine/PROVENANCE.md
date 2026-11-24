@@ -197,6 +197,16 @@ The bridge is not in this crate. [`holos-shacl`](../holos-shacl/src/bridge.rs)
 holds it, and builds this crate's `Graph` and `TermStore` from a
 `holos_store::Store` through its public API.
 
+## Fixes made in both copies at once
+
+Since the workspace holds both this crate and `shacl/crates/shacl`, a fix to
+code they still share goes into both in one change, with the same text, so it
+adds no divergence.
+
+| fix | change | tests |
+|---|---|---|
+| a SPARQL constraint reports a computed `?value` (and a computed IRI `?path`) instead of dropping it (SHACL 5.3.2) | pwin/SemopsSystem#24 | `shacl/crates/shacl/tests/sparql_computed_value.rs`, `holos-shacl/tests/sparql_computed_value.rs` |
+
 ## Keeping in step with upstream
 
 1. The divergence table above, re-measured. `diff -u` against a checkout of the

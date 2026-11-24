@@ -12,6 +12,10 @@ and `tarka/`, for their history before the workspace.
 - Each release carries the engines' commands on their own, beside `semops` (#23).
 - `semops-system` no longer requires Polars. `pip install "semops-system[polars]"` adds it,
   for mapping data frames (#23).
+- A SPARQL constraint's result carries `sh:value` when `?value` is a term the query computed
+  (`BIND`, an aggregate, `STR()`) and neither graph holds, as SHACL 5.3.2 requires; it used to
+  be left out while the message still showed it. `?path` counts only when it is an IRI. In
+  `shacl` and in HOLOS (#24, reported as SHACL_Engine#3).
 
 ## 0.30.0, 23 November 2026
 

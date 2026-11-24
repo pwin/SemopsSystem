@@ -682,3 +682,27 @@ def test_max_results_none_is_the_default_and_reports_everything():
     data = "@prefix ex: <http://ex/> .\n" + "\n".join(f"ex:n{i} a ex:T ." for i in range(30))
     assert len(shapes.validate_turtle(data).results) == 30
     assert len(shapes.validate_turtle(data, max_results=None).results) == 30
+
+
+def test_sparql_constraint_reports_a_computed_value():
+    """pwin/SemopsSystem#24: `?value` is reported as bound (SHACL 5.3.2), even when
+    the query computed it and neither graph holds that term. It used to be dropped,
+    leaving `value` None and no `sh:value` in the report while the message still
+    showed `{?value}`."""
+    shapes = shacl.Shapes.from_turtle("""
+        @prefix ex: <http://example.org/> . @prefix sh: <http://www.w3.org/ns/shacl#> .
+        ex:S a sh:NodeShape ; sh:targetNode ex:a ;
+          sh:sparql [ sh:message "value is {?value}" ;
+            sh:select "SELECT $this ?value WHERE { BIND(5 AS ?value) }" ] .
+    """)
+    integer_5 = '"5"^^<http://www.w3.org/2001/XMLSchema#integer>'
+    for data in [
+        "<http://example.org/a> <http://example.org/p> <http://example.org/b> .",
+        "<http://example.org/a> <http://example.org/p> 5 .",
+    ]:
+        report = shapes.validate_turtle(data)
+        [r] = report.results
+        assert r.value == integer_5, data
+        assert r.value_plain == "5", data
+        assert r.message == "value is 5", data
+        assert f"<http://www.w3.org/ns/shacl#value> {integer_5}" in report.serialize("nt"), data

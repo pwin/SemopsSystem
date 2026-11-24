@@ -1454,25 +1454,26 @@ impl Engine<'_> {
                         .collect();
                 }
 
-                // A solution may override the focus node, value and path. Terms
-                // the query invented rather than read are not in the store and
-                // simply do not appear in the report.
-                if let Some(t) = solution.get("this")
-                    && let Some(id) = crate::sparql::from_term(t.as_ref(), store)
-                {
-                    r.focus_node = id;
+                // A solution may override the focus node, value and path, and
+                // SHACL 5.3.2 reports each binding as it is. A term the query
+                // computed rather than read (`BIND(5 AS ?value)`, a `COUNT`,
+                // `STR($this)`) is in neither graph, so it is interned in the
+                // SPARQL scope; dropping it would leave `sh:value` out of the
+                // result while the message still shows `{?value}`.
+                if let Some(t) = solution.get("this") {
+                    r.focus_node = crate::sparql::intern_term(t.as_ref(), store);
                 }
                 // A solution that says nothing about the offending value faults
                 // the focus node itself, which is what the suite's expected
                 // reports contain for queries projecting only `$this`.
-                r.value = match solution.get("value") {
-                    Some(t) => crate::sparql::from_term(t.as_ref(), store),
-                    None => Some(r.focus_node),
-                };
-                if let Some(t) = solution.get("path")
-                    && let Some(id) = crate::sparql::from_term(t.as_ref(), store)
-                {
-                    r.path = Some(id);
+                r.value = Some(match solution.get("value") {
+                    Some(t) => crate::sparql::intern_term(t.as_ref(), store),
+                    None => r.focus_node,
+                });
+                // `?path` counts only "if that is a IRI" (5.3.2); anything else
+                // leaves the shape's own path in place.
+                if let Some(t @ oxrdf::Term::NamedNode(_)) = solution.get("path") {
+                    r.path = Some(crate::sparql::intern_term(t.as_ref(), store));
                 }
                 out.push(r);
             }
