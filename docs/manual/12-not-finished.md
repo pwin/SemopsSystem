@@ -8,8 +8,6 @@ gap from a mistake, and says what to use meanwhile.
 
 | Not yet | Meanwhile |
 |---|---|
-| `holosdb`, `shacl` and `tarka-rdf` as meta-packages over `semops-system` | They still publish as their own wheels, from the engines' repositories |
-| `holos-wasm` and `shacl-wasm` as shims over `semops-wasm` | `semops-wasm` itself, which keeps their class and function names |
 | Installers: winget, Homebrew, `.deb`, `.rpm` | The release archives |
 
 ## Checks and validation

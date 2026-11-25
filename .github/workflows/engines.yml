@@ -1,0 +1,267 @@
+# Builds, tests and publishes each engine on its own, from this workspace and at its version
+# (docs/decisions/0002-names-and-registries.md):
+#
+#   PyPI   holosdb, shacl, tarka-rdf
+#   npm    holos-wasm, holos-wasm-node, shacl-wasm, shacl-wasm-node
+#
+# For anyone who wants one engine and not `semops-system` or `semops-wasm`, which carry all
+# three. The code is the same; only the packaging differs.
+#
+#   Pull request touching this file     build and test, publish nothing
+#   Run workflow (manual)               build and test, then publish where chosen
+#
+# PyPI publishing is trusted publishing: each of the three projects lists pwin/SemopsSystem,
+# this file (`engines.yml`) and the environment `pypi` (or `testpypi`) as a publisher.
+# Renaming this file breaks that until the publishers are changed to match. npm publishing
+# uses the repository secret NPM_TOKEN, as npm.yml does.
+name: engine packages
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/engines.yml"
+  workflow_dispatch:
+    inputs:
+      pypi:
+        description: "Publish the Python wheels to"
+        type: choice
+        options: [none, testpypi, pypi]
+        default: none
+      npm:
+        description: "npm: pack and check (dry-run), or publish"
+        type: choice
+        options: [none, dry-run, publish]
+        default: dry-run
+
+permissions:
+  contents: read
+
+env:
+  CARGO_PROFILE_RELEASE_DEBUG: "false"
+  # As in workflow.yml: named so maturin-action does not run `cargo metadata` on the host of
+  # a containerised Linux build, where no Rust is installed.
+  CARGO_TARGET_DIR: target
+
+jobs:
+  # One abi3 wheel per package and platform, on the platforms semops-system is built for.
+  # holosdb compiles RocksDB, whose bindings need the libclang that manylinux_2_28 has and
+  # the 2014 image lacks; shacl and tarka-rdf do not, so they keep the older, wider baseline.
+  wheels:
+    name: wheel (${{ matrix.package.dist }}, ${{ matrix.platform.os }} / ${{ matrix.platform.target }})
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - { dist: holosdb, dir: holos/crates/holos-python, manylinux: "2_28" }
+          - { dist: shacl, dir: shacl/crates/shacl-python, manylinux: "auto" }
+          - { dist: tarka-rdf, dir: tarka/crates/tarka-python, manylinux: "auto" }
+        platform:
+          - { os: ubuntu-latest, target: x86_64 }
+          - { os: ubuntu-24.04-arm, target: aarch64 }
+          - { os: macos-latest, target: aarch64 }
+          - { os: macos-latest, target: x86_64 }
+          - { os: windows-latest, target: x64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # The same fixes as workflow.yml (and HOLOS's python.yml, which explains them). Only
+      # holosdb needs libclang; for the other two they cost nothing.
+      - name: macOS build environment
+        if: runner.os == 'macOS'
+        run: |
+          lib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          test -f "$lib/libclang.dylib" || { echo "no libclang.dylib under $lib"; exit 1; }
+          echo "LIBCLANG_PATH=$lib" >> "$GITHUB_ENV"
+          if [ "${{ matrix.platform.target }}" = "x86_64" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=10.13" >> "$GITHUB_ENV"
+          fi
+      - name: Point bindgen at libclang (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $lib = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path "$lib\libclang.dll")) { throw "no libclang.dll under $lib" }
+          "LIBCLANG_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build the wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: ${{ matrix.package.dir }}
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ runner.os == 'Linux' && matrix.package.manylinux || 'auto' }}
+          args: --release --out dist
+          sccache: "true"
+          # No `exit` here: maturin-action runs this and the build as one script in the
+          # container, so an early `exit 0` skips the build and leaves dist/ empty.
+          before-script-linux: |
+            set -eux
+            if [ "${{ matrix.package.dist }}" = "holosdb" ]; then
+              if command -v dnf >/dev/null; then
+                dnf install -y gcc-c++ clang-devel llvm-devel
+              elif command -v yum >/dev/null; then
+                yum install -y gcc-c++ clang-devel llvm-devel
+              elif command -v apt-get >/dev/null; then
+                apt-get update && apt-get install -y g++ clang libclang-dev
+              fi
+            fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.package.dist }}-${{ matrix.platform.os }}-${{ matrix.platform.target }}
+          path: ${{ matrix.package.dir }}/dist
+          if-no-files-found: error
+
+  sdist:
+    name: sdist (${{ matrix.package.dist }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - { dist: holosdb, dir: holos/crates/holos-python }
+          - { dist: shacl, dir: shacl/crates/shacl-python }
+          - { dist: tarka-rdf, dir: tarka/crates/tarka-python }
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: ${{ matrix.package.dir }}
+          command: sdist
+          args: --out dist
+      # As in workflow.yml: every path dependency and [patch] target is in the archive (the
+      # crates name vendor/ by path for this), and cargo resolves it without the workspace.
+      - name: The sdist resolves on its own
+        run: |
+          mkdir sdist-check
+          tar -xzf ${{ matrix.package.dir }}/dist/*.tar.gz -C sdist-check
+          manifest=$(find sdist-check -path "*/${{ matrix.package.dir }}/Cargo.toml" | head -1)
+          test -n "$manifest" || { echo "no ${{ matrix.package.dir }}/Cargo.toml in the sdist"; exit 1; }
+          cargo metadata --format-version 1 --manifest-path "$manifest" > /dev/null
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.package.dist }}-sdist
+          path: ${{ matrix.package.dir }}/dist
+
+  # The three wheels as a user installs them, together, at the oldest and newest CPython the
+  # three support in common. tarka-rdf's tests read their output back with holosdb and
+  # shacl, and here those are the wheels this run built, not the releases on PyPI.
+  test:
+    needs: wheels
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - name: Install and test
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          # These wheels and only these: with --find-links alone, pip may prefer a release of
+          # the same version already on PyPI (see workflow.yml).
+          python -m pip install --no-index --find-links dist --no-deps --only-binary :all: holosdb shacl tarka-rdf
+          python -m pip install "polars>=1.30" "pytest>=8"
+          python -m pip list | grep -Ei "^(holosdb|shacl|tarka-rdf) "
+          python -m pytest holos/crates/holos-python/tests -q
+          python -m pytest shacl/crates/shacl-python/tests -q
+          python -m pytest tarka/crates/tarka-python/tests -q
+
+  publish-pypi:
+    name: publish ${{ matrix.dist }} to ${{ inputs.pypi }}
+    needs: [test, sdist]
+    if: github.event_name == 'workflow_dispatch' && inputs.pypi != 'none'
+    runs-on: ubuntu-latest
+    # One job per project, so a project without this repository as a trusted publisher
+    # fails alone and the others still publish.
+    strategy:
+      fail-fast: false
+      matrix:
+        dist: [holosdb, shacl, tarka-rdf]
+    environment:
+      name: ${{ inputs.pypi }}
+      url: ${{ inputs.pypi == 'pypi' && 'https://pypi.org' || 'https://test.pypi.org' }}/p/${{ matrix.dist }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: wheels-${{ matrix.dist }}-*
+          merge-multiple: true
+          path: dist
+      - run: ls -l dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ inputs.pypi == 'pypi' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}
+
+  # The four npm packages: each engine for bundlers (ESM) and for Node (CommonJS), built by
+  # the engine's build.mjs, which names them and points their `repository` here, as npm's
+  # provenance requires of a package published from this repository.
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.npm != 'none' && 'npm' || '' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install wasm-pack
+        run: curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+      - name: Build holos-wasm (both targets)
+        run: node holos/crates/holos-wasm/build.mjs
+      - name: Build shacl-wasm (both targets)
+        run: node shacl/crates/shacl-wasm/build.mjs
+      - name: Smoke-test the Node packages
+        run: |
+          node holos/crates/holos-wasm/tests/smoke.cjs
+          node shacl/crates/shacl-wasm/tests/smoke.cjs
+      - name: Check the package metadata
+        run: |
+          set -euo pipefail
+          version=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "semops") | .version')
+          for dir in holos/crates/holos-wasm/pkg-bundler holos/crates/holos-wasm/pkg-node \
+                     shacl/crates/shacl-wasm/pkg-bundler shacl/crates/shacl-wasm/pkg-node; do
+            node -e '
+              const p = require(process.argv[1] + "/package.json");
+              const [want] = process.argv.slice(2);
+              if (p.version !== want) throw new Error(`${p.name} is ${p.version}, the workspace ${want}`);
+              if (!/github\.com\/pwin\/SemopsSystem/.test(p.repository.url)) throw new Error(`${p.name} repository ${p.repository.url}`);
+              console.log(`${p.name}@${p.version}`);
+            ' "$PWD/$dir" "$version"
+          done
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.npm || 'pack' }}
+        run: |
+          set -euo pipefail
+          for dir in holos/crates/holos-wasm/pkg-bundler holos/crates/holos-wasm/pkg-node \
+                     shacl/crates/shacl-wasm/pkg-bundler shacl/crates/shacl-wasm/pkg-node; do
+            echo "== $(node -p "require('./$dir/package.json').name")"
+            case "$MODE" in
+              publish) (cd "$dir" && npm publish --access public --provenance) ;;
+              dry-run) (cd "$dir" && npm publish --access public --provenance --dry-run) ;;
+              *)       (cd "$dir" && npm pack --dry-run) ;;
+            esac
+          done

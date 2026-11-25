@@ -34,8 +34,11 @@ each entry is now the package's own version.
 
 **maturin builds it.** `python/semops-system/pyproject.toml` takes maturin as its build
 backend. It points at `crates/semops-python` and reads the version from Cargo, so the wheel
-is the workspace's release (0.29.0). Its one runtime dependency is `polars`, which tarka
-converts data frames through, as the tarka-rdf wheel requires.
+is the workspace's release (0.29.0). Through 0.30.0 its one runtime dependency was
+`polars`, which tarka converts data frames through. After 0.30.0 it has none, and Polars
+is the `polars` extra (`pip install "semops-system[polars]"`): the module imports it only
+when a data frame is passed, and the store, the validator, the checks and the `semops`
+command do without its 55 MB.
 
 **The stable ABI.** Each engine asked for a different abi3 floor (3.9, 3.10 and 3.11). In
 one build pyo3 takes the lowest, so the extension is built for the 3.9 limited API, and the

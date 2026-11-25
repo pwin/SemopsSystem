@@ -22,7 +22,11 @@ holos-stats.workspace = true
 oxrdf.workspace = true
 oxrdfio.workspace = true
 sparesults.workspace = true
-spareval.workspace = true
+# The workspace patches these two crates from vendor/ ([patch] in the root Cargo.toml), and
+# maturin copies a crate's path dependencies into its sdist but not [patch] paths. Naming
+# them as path dependencies is what puts them in this package's sdist.
+spareval = { path = "../../../vendor/spareval", version = "0.2", features = ["sparql-12", "sep-0002"] }
+oxsdatatypes = { path = "../../../vendor/oxsdatatypes", version = "0.2" }
 spargeo.workspace = true
 
 # abi3-py311 builds ONE wheel per platform that works on every CPython 3.11+, instead of a

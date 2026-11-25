@@ -35,7 +35,7 @@ nothing:
 | Rust crates | `semops` (the command), `semops-core`, `semops-engine`, `semops-shacl`, `semops-map`, `semops-checks`, … | All free on crates.io. Nothing needs publishing there yet: HOLOS, SHACL_Engine and tarka are not on crates.io either |
 | npm (WebAssembly) | `semops-wasm` (browser and bundler) and `semops-wasm-node` (Node.js) | The same split as `holos-wasm` and `holos-wasm-node` today |
 | Container image | `ghcr.io/pwin/semops` | Mirrored into Azure Container Registry by the deployment pipeline (proposal, Azure section) |
-| Old names | `holosdb`, `shacl`, `tarka-rdf` on PyPI; `holos-wasm`, `shacl-wasm` and their `-node` builds on npm | Kept as shims that depend on and re-export `semops-system` / `semops-wasm` at the same version, for at least two minor releases |
+| Engine packages | `holosdb`, `shacl`, `tarka-rdf` on PyPI; `holos-wasm`, `shacl-wasm` and their `-node` builds on npm | Each built on its own from this workspace, at the workspace version, for anyone who wants one engine. Not shims over `semops-system` and `semops-wasm`: see [The engines' packages](#the-engines-packages) |
 
 ### Publishing to PyPI
 
@@ -48,6 +48,29 @@ nothing:
   names exactly; if they name none, any environment works.
 - Versions: the wheel carries the workspace version (0.29.0, see Cargo.toml). Pre-releases
   for checking the pipeline use PEP 440 forms such as `0.29.0.dev1`, published to TestPyPI.
+
+### The engines' packages
+
+Changed after 0.30.0. This decision first kept the old names as shims: packages that
+depended on `semops-system` or `semops-wasm` and re-exported one engine from it. A shim
+installs all three engines to get one. `pip install shacl` would bring a 20 MB wheel and
+Polars where a 2.4 MB wheel does the job, and a page that loads `shacl-wasm` would load
+the store and the checks as well.
+
+So each engine's package is built from its crate in this workspace, as before but at the
+workspace version: `holos/crates/holos-python`, `shacl/crates/shacl-python` and
+`tarka/crates/tarka-python` for PyPI, and `holos-wasm` and `shacl-wasm`, with their Node
+builds, for npm. The code is the code in `semops-system` and `semops-wasm`; only the
+packaging differs, and code moves between them unchanged.
+
+- `.github/workflows/engines.yml` builds and tests all of them and publishes when run by
+  hand. Each PyPI project lists pwin/SemopsSystem, `engines.yml` and the environment
+  `pypi` as a trusted publisher (and `testpypi` on TestPyPI). The npm packages use the
+  token in `NPM_TOKEN`, as `semops-wasm` does.
+- Each release carries the engines' commands beside `semops`, built on their own:
+  `holos` and `holos-server`, `shacl`, and `tarka`.
+- The engines' old repositories (pwin/triplestore, pwin/SHACL_Engine, pwin/tarka) stop
+  releasing and point here. The jump from 0.27.0, 0.3.9 and 0.3.1 to 0.30.0 marks the move.
 
 ### The first release: a bridge
 

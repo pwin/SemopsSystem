@@ -159,6 +159,15 @@ print(len(run["findings"]), run["complete"])
 `so.holos`, `so.shacl` and `so.tarka` are the modules the `holosdb`, `shacl` and
 `tarka-rdf` wheels carry, and each one's own documentation applies.
 
+tarka also maps Polars data frames, and for that it needs Polars, about 55 MB that nothing
+else in the package uses. Ask for it with the package:
+
+```sh
+pip install "semops-system[polars]"
+```
+
+Releases up to 0.30.0 installed Polars every time.
+
 The wheel also installs the `semops` command, with every subcommand, so a machine with
 Python needs no Rust toolchain to run it. The one difference from the binary: under
 `semops serve`, `--max-query-memory` is not enforced, because an extension module cannot
@@ -171,8 +180,20 @@ compiler and libclang. 0.29.0 was the first native release. The 0.29.0.dev1 rele
 it was a bridge to the separately released engines, and code written against it keeps
 working.
 
-The engines are also on PyPI separately: `pip install holosdb`, `pip install shacl`,
-`pip install tarka-rdf`.
+### One engine {#one-engine}
+
+Each engine is also a package of its own, for when you want one and not all three. From
+0.30.0 they are built from this workspace, at its version:
+
+| Install | Import | Wheel |
+|---|---|---|
+| `pip install holosdb` | `holosdb`, the store | about 6 MB |
+| `pip install shacl` | `shacl`, the SHACL engine | about 2.5 MB |
+| `pip install tarka-rdf` | `tarka_rdf`, tarka | about 12 MB, and it installs Polars |
+
+`semops-system` is about 20 MB. Code written against one of them runs unchanged under
+`semops_system`, as `so.holos`, `so.shacl` or `so.tarka`, so you can start with one and
+move. Their releases before 0.30.0 came from the engines' own repositories.
 
 ## JavaScript and WebAssembly {#javascript}
 
@@ -205,7 +226,9 @@ Info QUA-007 https://example.org/shop
 
 On the same file, `semops check` finds the same ten. `Store` and the validator's
 `Validator`, `Report` and `validateTurtle` keep the names they have in the engines' own
-packages, which are on npm now:
+packages. Those are built from this workspace too, at its version, for a page that needs
+only one engine and should not load the other (4.8 MB and 3.2 MB unpacked, against 6.4 MB
+for `semops-wasm`):
 
 ```sh
 npm install holos-wasm        # the store, for the browser and bundlers
@@ -234,17 +257,23 @@ sha256sum -c SHA256SUMS --ignore-missing
 semops --version
 ```
 
-The engines' own repositories also publish their commands, released on their own before
-the workspace:
+Beside each `semops` archive are the engines' commands, each built on its own, for a
+machine that needs one engine:
 
-| Engine | Commands | Platforms | Releases |
-|---|---|---|---|
-| HOLOS 0.27.0 | `holos`, `holos-server` | Linux x86-64 and arm64, macOS Intel and Apple Silicon, Windows x86-64 | [pwin/triplestore](https://github.com/pwin/triplestore/releases) |
-| SHACL engine 0.3.9 | `shacl` | Linux x86-64, macOS Apple Silicon, Windows x86-64 | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine/releases) |
-| tarka 0.3.1 | `tarka` | Linux x86-64, macOS Apple Silicon, Windows x86-64 | [pwin/tarka](https://github.com/pwin/tarka/releases) |
+| Archive | Commands |
+|---|---|
+| `holos-<version>-<platform>` | `holos`, `holos-server` |
+| `shacl-<version>-<platform>` | `shacl` |
+| `tarka-<version>-<platform>` | `tarka` |
 
-These are the engines as they were released on their own. They do not include `semops`,
-placetime, or the security settings of [chapter 9](09-security.md).
+Each does what `semops` does under that name, from a smaller file.
+
+Releases of the engines before 0.30.0 are in their old repositories:
+[pwin/triplestore](https://github.com/pwin/triplestore/releases) (HOLOS 0.27.0),
+[pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine/releases) (0.3.9) and
+[pwin/tarka](https://github.com/pwin/tarka/releases) (0.3.1). They do not include
+placetime or the security settings of [chapter 9](09-security.md), and those repositories
+no longer release.
 
 ## As a service {#service}
 

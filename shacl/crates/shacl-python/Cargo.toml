@@ -13,6 +13,11 @@ name = "shacl"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+# The workspace patches these two crates from vendor/ ([patch] in the root Cargo.toml), and
+# maturin copies a crate's path dependencies into its sdist but not [patch] paths. Naming
+# them as path dependencies is what puts them in this package's sdist.
+oxsdatatypes = { path = "../../../vendor/oxsdatatypes", version = "0.2" }
+spareval = { path = "../../../vendor/spareval", version = "0.2" }
 # Aliased: the extension module itself must be called `shacl`, which would
 # otherwise shadow this dependency.
 engine = { package = "shacl", path = "../shacl" }

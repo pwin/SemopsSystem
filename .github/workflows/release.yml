@@ -1,16 +1,19 @@
-# A SemOps System release: the `semops` binary for five platforms, the multi-arch container
-# image on GitHub Container Registry, and the GitHub Release that carries the binaries.
+# A SemOps System release: the `semops` binary and each engine's own commands for five
+# platforms, the multi-arch container image on GitHub Container Registry, and the GitHub
+# Release that carries the binaries.
 #
 #   Tag  v*                 build everything, publish the image, create the release
-#   Run workflow (manual)   the same for a tag that exists, to retry without moving it
+#   Run workflow (manual)   the same for a tag that exists: to retry without moving it, or
+#                           to add archives to a release made before they existed
 #
-# Separate from workflow.yml, which publishes the Python wheel to PyPI as a trusted
-# publisher: this one writes to the repository (the release) and to the registry (the
-# image), and neither job needs the other's permissions. The two run side by side on their
-# own tags (`v*` here, `py-v*` there).
+# Separate from workflow.yml and engines.yml, which publish to PyPI as a trusted publisher:
+# this one writes to the repository (the release) and to the registry (the image), and
+# neither needs the other's permissions.
 #
 # The binary is the one `semops`, which is also holos-server, holos, shacl and tarka when run
-# under those names (docs/decisions/0008). The Unix archives carry those names as links.
+# under those names (docs/decisions/0008). The Unix archives carry those names as links. For
+# anyone who wants a single engine, each engine's commands are built on their own as well,
+# in an archive named after the engine: holos (holos and holos-server), shacl and tarka.
 name: release
 
 on:
@@ -21,6 +24,10 @@ on:
       tag:
         description: "Tag to build and release, e.g. v0.30.0"
         required: true
+      image:
+        description: "Build and push the container image too"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -32,9 +39,10 @@ env:
 
 jobs:
   binaries:
-    name: binary (${{ matrix.target }})
+    name: binaries (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    # Five binaries, sharing their crates; each link is a thin-LTO pass of its own.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -70,36 +78,58 @@ jobs:
           if (-not (Test-Path "$lib\libclang.dll")) { throw "no libclang.dll under $lib" }
           "LIBCLANG_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Build
-        run: cargo build --locked --profile release-abort --target ${{ matrix.target }} -p semops
-      - name: Check the binary runs, as itself and under the engines' names
+        run: >
+          cargo build --locked --profile release-abort --target ${{ matrix.target }}
+          -p semops -p holos-cli -p holos-server -p shacl-cli -p tarka-cli
+      - name: Check the binaries run
         if: matrix.target != 'x86_64-apple-darwin'
         shell: bash
         run: |
+          set -euo pipefail
           dir="target/${{ matrix.target }}/release-abort"
           exe=""
           if [ "${{ runner.os }}" = "Windows" ]; then exe=".exe"; fi
           "$dir/semops$exe" --version
           "$dir/semops$exe" check --list | tail -1
+          # The one binary under the engines' names, then the engines' own binaries.
+          mkdir -p alias
           for name in holos-server holos shacl tarka; do
-            cp "$dir/semops$exe" "$dir/$name$exe"
+            cp "$dir/semops$exe" "alias/$name$exe"
+            "alias/$name$exe" --version
             "$dir/$name$exe" --version
           done
       - name: Package
         shell: bash
         run: |
+          set -euo pipefail
           tag="${{ inputs.tag || github.ref_name }}"
-          name="semops-${tag#v}-${{ matrix.target }}"
-          dir="target/${{ matrix.target }}/release-abort"
-          mkdir -p "dist/$name"
-          cp README.md LICENSE-APACHE LICENSE-MIT "dist/$name/"
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            cp "$dir/semops.exe" "dist/$name/"
-            (cd dist && 7z a -tzip "$name.zip" "$name" > /dev/null)
-          else
-            cp "$dir/semops" "dist/$name/"
-            for alias in holos-server holos shacl tarka; do ln -s semops "dist/$name/$alias"; done
-            tar -C dist -czf "dist/$name.tar.gz" "$name"
-          fi
+          version="${tag#v}"
+          target="${{ matrix.target }}"
+          dir="target/$target/release-abort"
+          exe=""
+          if [ "${{ runner.os }}" = "Windows" ]; then exe=".exe"; fi
+          mkdir -p dist
+          # pack NAME DOCS-DIR BINARY... : an archive of the binaries, with the README and
+          # licences from DOCS-DIR.
+          pack() {
+            local name="$1" docs="$2"; shift 2
+            mkdir -p "dist/$name"
+            cp "$docs/README.md" "$docs/LICENSE-APACHE" "$docs/LICENSE-MIT" "dist/$name/"
+            for bin in "$@"; do cp "$dir/$bin$exe" "dist/$name/"; done
+            if [ -z "$exe" ] && [ "$name" = "semops-$version-$target" ]; then
+              for alias in holos-server holos shacl tarka; do ln -s semops "dist/$name/$alias"; done
+            fi
+            if [ -n "$exe" ]; then
+              (cd dist && 7z a -tzip "$name.zip" "$name" > /dev/null)
+            else
+              tar -C dist -czf "dist/$name.tar.gz" "$name"
+            fi
+            rm -rf "dist/$name"
+          }
+          pack "semops-$version-$target" . semops
+          pack "holos-$version-$target" holos holos holos-server
+          pack "shacl-$version-$target" shacl shacl
+          pack "tarka-$version-$target" tarka tarka
           ls -l dist
       - uses: actions/upload-artifact@v7
         with:
@@ -113,6 +143,7 @@ jobs:
   # joins them into one multi-arch tag.
   image-arch:
     name: image (${{ matrix.arch }})
+    if: github.event_name == 'push' || inputs.image
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     permissions:
@@ -176,6 +207,10 @@ jobs:
             "${IMAGE}:${version}-amd64" "${IMAGE}:${version}-arm64"
           docker buildx imagetools inspect "${IMAGE}:${version}"
 
+  # Creates the release, or adds to one that exists. An archive the release already has is
+  # left alone, not replaced: a rebuild is not byte-for-byte the same, and a published
+  # checksum must keep matching its download. SHA256SUMS keeps its lines and gains the new
+  # archives'.
   publish:
     name: publish the release
     needs: binaries
@@ -183,20 +218,40 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/download-artifact@v7
         with:
           pattern: binaries-*
           merge-multiple: true
           path: dist
-      - name: Checksums
-        run: cd dist && sha256sum semops-* > SHA256SUMS && cat SHA256SUMS
-      - name: Create the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag || github.ref_name }}
+      - name: Create the release, or add to it
         run: |
-          gh release create "$TAG" dist/* \
-            --repo "${{ github.repository }}" \
-            --title "SemOps System ${TAG#v}" \
-            --notes "The \`semops\` binary for Linux (x86_64, aarch64), macOS (Apple Silicon, Intel) and Windows (x64). It is also holos-server, holos, shacl and tarka when run under those names; the Unix archives include those names as links. Verify a download against SHA256SUMS. The container image is ${IMAGE}:${TAG#v}."
+          set -euo pipefail
+          version="${TAG#v}"
+          notes="The \`semops\` binary for Linux (x86_64, aarch64), macOS (Apple Silicon, Intel) and Windows (x64). It is also holos-server, holos, shacl and tarka when run under those names; the Unix archives include those names as links. Each engine's commands are also built on their own, in the holos-, shacl- and tarka- archives, for anyone who wants one engine. Verify a download against SHA256SUMS. The container image is ${IMAGE}:${version}."
+          cd dist
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            sha256sum * > SHA256SUMS
+            cat SHA256SUMS
+            gh release create "$TAG" * --title "SemOps System $version" --notes "$notes"
+            exit 0
+          fi
+          published=$(gh release view "$TAG" --json assets -q '.assets[].name')
+          new=()
+          for f in *; do
+            if grep -qxF "$f" <<< "$published"; then echo "kept as published: $f"; else new+=("$f"); fi
+          done
+          if [ ${#new[@]} -eq 0 ]; then echo "nothing to add"; exit 0; fi
+          if grep -qxF SHA256SUMS <<< "$published"; then
+            gh release download "$TAG" -p SHA256SUMS -O SHA256SUMS
+          else
+            : > SHA256SUMS
+          fi
+          sha256sum "${new[@]}" >> SHA256SUMS
+          cat SHA256SUMS
+          gh release upload "$TAG" "${new[@]}" SHA256SUMS --clobber
+          gh release edit "$TAG" --notes "$notes"

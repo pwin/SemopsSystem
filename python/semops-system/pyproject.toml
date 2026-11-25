@@ -25,12 +25,14 @@ classifiers = [
     "Topic :: Database :: Database Engines/Servers",
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
-# tarka maps Polars data frames, and its module converts them through the polars package,
-# as the tarka-rdf wheel requires it.
-dependencies = ["polars>=1.30"]
+# Nothing else is required. tarka converts Polars data frames through the polars package,
+# which loads only when a data frame is passed, so it is an extra: about 55 MB that
+# everything else in the package does without.
+dependencies = []
 
 [project.optional-dependencies]
-test = ["pytest>=8"]
+polars = ["polars>=1.30"]
+test = ["pytest>=8", "polars>=1.30"]
 
 # The semops command, the same as the binary (see semops_system/__main__.py).
 [project.scripts]

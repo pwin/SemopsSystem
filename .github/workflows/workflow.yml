@@ -159,6 +159,7 @@ jobs:
           # a wheel of the same version from PyPI instead, and test the release before this one.
           python -m pip install --no-index --find-links dist --no-deps semops-system
           python -m pip install "polars>=1.30" "pytest>=8"
+          python -c "import semops_system, sys; assert 'polars' not in sys.modules, 'polars loaded at import'"
           python -m pip show semops-system
           python -c "import semops_system as so; print(so.__version__, len(so.list_checks()), 'checks')"
           python -m pytest python/semops-system/tests -v

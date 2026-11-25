@@ -20,9 +20,9 @@ def test_every_part_is_from_this_build():
     assert semops_system.holos.__version__ == semops_system.__version__
 
 
-def test_the_engines_are_not_separate_installs():
+def test_nothing_else_is_required():
     # The bridge release depended on holosdb, shacl and tarka-rdf; the native wheel carries
-    # them. Only polars, which tarka converts data frames through, is required.
-    declared = [r for r in requires("semops-system") or [] if "extra ==" not in r]
-    names = {r.split(">")[0].split("=")[0].split("<")[0].strip().lower() for r in declared}
-    assert names == {"polars"}
+    # them. polars, which tarka converts data frames through, is the `polars` extra.
+    requirements = requires("semops-system") or []
+    assert [r for r in requirements if "extra ==" not in r] == []
+    assert any(r.startswith("polars") and 'extra == "polars"' in r.replace("'", '"') for r in requirements)
