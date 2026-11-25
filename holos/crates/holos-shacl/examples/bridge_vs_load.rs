@@ -10,7 +10,7 @@
 //! ```
 
 use holos_shacl::bridge;
-use holos_shacl_engine::model::{loader, TermStore};
+use shacl::model::{loader, TermStore};
 use holos_store::{GraphFilter, Store};
 use oxrdfio::{RdfFormat, RdfParser};
 use std::io::BufReader;

@@ -1564,7 +1564,6 @@ name = "holos-shacl"
 version = "0.30.0"
 dependencies = [
  "holos-core",
- "holos-shacl-engine",
  "holos-store",
  "oxrdf",
  "oxrdfio",
@@ -1572,26 +1571,8 @@ dependencies = [
  "regex",
  "rustc-hash",
  "semops-functions",
+ "shacl",
  "thiserror 2.0.20",
-]
-
-[[package]]
-name = "holos-shacl-engine"
-version = "0.30.0"
-dependencies = [
- "anyhow",
- "flate2",
- "foldhash 0.2.0",
- "hashbrown 0.16.1",
- "oxrdf",
- "oxrdfio",
- "oxsdatatypes",
- "oxttl",
- "rayon",
- "regex",
- "semops-functions",
- "spareval",
- "spargebra",
 ]
 
 [[package]]

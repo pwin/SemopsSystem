@@ -114,6 +114,38 @@ impl Starts {
         Self { base, starts }
     }
 
+    /// Records one row led by `a` inserted into the permutation, or removed
+    /// from it: the runs after `a`'s move by one.
+    ///
+    /// A leading id outside the span grows the array at that end with empty
+    /// runs; one inside it costs the tail after `a`, as the row's memmove did.
+    /// Removal never shrinks it, because an empty run at either end answers a
+    /// lookup exactly as no entry does.
+    fn shift(&mut self, a: TermId, inserted: bool) {
+        let a = a.0;
+        if self.starts.is_empty() {
+            self.base = a;
+            self.starts = vec![0, 0];
+        } else if a < self.base {
+            // Every existing run starts at or after offset 0, so the new runs
+            // in front of them are empty.
+            let grow = (self.base - a) as usize;
+            self.starts.splice(0..0, std::iter::repeat_n(0, grow));
+            self.base = a;
+        } else if (a - self.base) as usize + 1 >= self.starts.len() {
+            let end = self.starts[self.starts.len() - 1];
+            self.starts.resize((a - self.base) as usize + 2, end);
+        }
+        let i = (a - self.base) as usize;
+        for start in &mut self.starts[i + 1..] {
+            if inserted {
+                *start += 1;
+            } else {
+                *start -= 1;
+            }
+        }
+    }
+
     /// The rows led by `a`, or none.
     #[inline]
     fn run<'r>(&self, rows: &'r [Row], a: TermId) -> &'r [Row] {
@@ -149,6 +181,55 @@ pub struct Graph {
 }
 
 impl Graph {
+    /// Applies a batch of additions and removals, for a caller that keeps one
+    /// graph current as its source changes: HOLOS's incremental revalidation.
+    ///
+    /// Removals are applied first, so a delta that removes and re-adds the same
+    /// triple ends with it present — which is what a store reporting a value's
+    /// replacement produces, and the other order would silently drop it.
+    ///
+    /// A small delta edits each sorted permutation in place and recounts its
+    /// first-level index in one pass; a large one rebuilds the graph. The
+    /// crossover is where `d` memmoves of `n` rows stop being cheaper than one
+    /// sort of `n + d`, and it is not delicate: a holon tick carries a handful
+    /// of triples and a bulk load all of them.
+    pub fn apply(&mut self, added: &[Row], removed: &[Row]) {
+        const REBUILD_ABOVE: usize = 64;
+
+        if added.len() + removed.len() > REBUILD_ABOVE.max(self.len() / 16) {
+            let dropped: std::collections::HashSet<Row> = removed.iter().copied().collect();
+            let mut rows: Vec<Row> = Vec::with_capacity(self.spo.len() + added.len());
+            rows.extend(self.spo.iter().copied().filter(|r| !dropped.contains(r)));
+            rows.extend_from_slice(added);
+            *self = GraphBuilder { rows }.build();
+            return;
+        }
+
+        // One binary search and one memmove per row per permutation, and its
+        // first-level index shifted from the row's leading id on: both touch
+        // only the tail after the row, which for new terms (the highest ids)
+        // is nearly nothing.
+        let edit = |rows: &mut Vec<Row>, starts: &mut Starts, key: fn(Row) -> Row| {
+            for &r in removed {
+                let k = key(r);
+                if let Ok(i) = rows.binary_search(&k) {
+                    rows.remove(i);
+                    starts.shift(k[0], false);
+                }
+            }
+            for &r in added {
+                let k = key(r);
+                if let Err(i) = rows.binary_search(&k) {
+                    rows.insert(i, k);
+                    starts.shift(k[0], true);
+                }
+            }
+        };
+        edit(&mut self.spo, &mut self.spo_starts, |r| r);
+        edit(&mut self.pos, &mut self.pos_starts, |[s, p, o]| [p, o, s]);
+        edit(&mut self.osp, &mut self.osp_starts, |[s, p, o]| [o, s, p]);
+    }
+
     pub fn len(&self) -> usize {
         self.spo.len()
     }
@@ -330,5 +411,149 @@ mod tests {
         assert!(g.is_empty());
         assert_eq!(g.objects(t(0), t(1)).count(), 0);
         assert!(!g.contains(t(0), t(1), t(2)));
+    }
+
+    // ----------------------------------------------------------------- deltas
+
+    /// Every triple in the graph, read back through each of the three indexes separately.
+    ///
+    /// A mutation that updates `spo` and forgets `pos` leaves a graph that answers one
+    /// question correctly and another wrongly, and every caller-level test would still pass
+    /// as long as it happened to ask the first. So the check is per index, not per graph.
+    fn dump(g: &Graph) -> (Vec<Row>, Vec<Row>, Vec<Row>) {
+        let mut by_spo: Vec<Row> = g.iter().collect();
+        let mut by_pos: Vec<Row> = Vec::new();
+        let mut by_osp: Vec<Row> = Vec::new();
+        // `subjects_of` walks `pos`; `subject_predicates` walks `osp`.
+        let predicates: std::collections::BTreeSet<TermId> = by_spo.iter().map(|r| r[1]).collect();
+        for p in predicates {
+            for sub in g.subjects_of(p) {
+                for o in g.objects(sub, p) {
+                    by_pos.push([sub, p, o]);
+                }
+            }
+        }
+        let objects: std::collections::BTreeSet<TermId> = by_spo.iter().map(|r| r[2]).collect();
+        for o in objects {
+            for (sub, p) in g.subject_predicates(o) {
+                by_osp.push([sub, p, o]);
+            }
+        }
+        by_spo.sort_unstable();
+        by_pos.sort_unstable();
+        by_pos.dedup();
+        by_osp.sort_unstable();
+        by_osp.dedup();
+        (by_spo, by_pos, by_osp)
+    }
+
+    fn rebuilt(rows: &[Row]) -> Graph {
+        let mut b = GraphBuilder::new();
+        for &[s, p, o] in rows {
+            b.push(s, p, o);
+        }
+        b.build()
+    }
+
+    /// A deterministic pseudo-random sequence, so a failure is reproducible.
+    fn lcg(seed: &mut u64) -> u32 {
+        *seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+        (*seed >> 33) as u32
+    }
+
+    #[test]
+    fn a_delta_that_removes_and_re_adds_ends_with_the_triple_present() {
+        // A store reporting a value's replacement produces exactly this, and applying the
+        // additions first would drop it.
+        let mut g = sample();
+        g.apply(&[[t(0), t(1), t(2)]], &[[t(0), t(1), t(2)]]);
+        assert!(g.contains(t(0), t(1), t(2)));
+    }
+
+    /// The differential property: however a graph is reached, it answers like one built from
+    /// the same triples in one go.
+    ///
+    /// Run either side of the rebuild threshold, because the two strategies are separate
+    /// code and a test that only exercised one would leave the other unwitnessed. The
+    /// threshold itself is a performance choice and no correctness test can pin it: moving it
+    /// changes which branch runs and nothing else, which is exactly the property these assert.
+    fn agrees_with_a_rebuild(batch: usize, rounds: usize, seed: u64) {
+        let mut seed = seed;
+        let mut g = Graph::default();
+        let mut model: std::collections::BTreeSet<Row> = std::collections::BTreeSet::new();
+
+        for _ in 0..rounds {
+            let mut added = Vec::new();
+            let mut removed = Vec::new();
+            for _ in 0..batch {
+                let row = [
+                    t(lcg(&mut seed) % 12),
+                    t(lcg(&mut seed) % 4),
+                    t(lcg(&mut seed) % 12),
+                ];
+                if lcg(&mut seed).is_multiple_of(3) {
+                    removed.push(row);
+                } else {
+                    added.push(row);
+                }
+            }
+            // The model applies them in the same order the graph promises to.
+            for r in &removed {
+                model.remove(r);
+            }
+            for r in &added {
+                model.insert(*r);
+            }
+            g.apply(&added, &removed);
+
+            let expected: Vec<Row> = model.iter().copied().collect();
+            assert_eq!(
+                dump(&g),
+                dump(&rebuilt(&expected)),
+                "batch={batch} after applying {} additions and {} removals",
+                added.len(),
+                removed.len()
+            );
+            assert_eq!(g.len(), expected.len());
+        }
+    }
+
+    /// A delta bringing ids below and above every id the graph held grows the
+    /// first-level index at both ends, and removing them leaves empty runs that
+    /// answer like no entry.
+    #[test]
+    fn a_delta_beyond_either_end_of_the_id_span_is_indexed() {
+        let mut g = rebuilt(&[[t(5), t(6), t(7)], [t(6), t(6), t(5)]]);
+        let low = [t(1), t(2), t(3)];
+        let high = [t(40), t(41), t(42)];
+        g.apply(&[low, high], &[]);
+        assert_eq!(
+            dump(&g),
+            dump(&rebuilt(&[
+                [t(5), t(6), t(7)],
+                [t(6), t(6), t(5)],
+                low,
+                high
+            ]))
+        );
+        g.apply(&[], &[low, high, [t(5), t(6), t(7)]]);
+        assert_eq!(dump(&g), dump(&rebuilt(&[[t(6), t(6), t(5)]])));
+        assert_eq!(g.objects(t(1), t(2)).count(), 0);
+        assert_eq!(g.objects(t(40), t(41)).count(), 0);
+        g.apply(&[], &[[t(6), t(6), t(5)]]);
+        assert!(g.is_empty());
+        g.apply(&[high], &[]);
+        assert_eq!(dump(&g), dump(&rebuilt(&[high])));
+    }
+
+    #[test]
+    fn small_deltas_agree_with_a_rebuild() {
+        agrees_with_a_rebuild(4, 60, 0x5eed);
+    }
+
+    #[test]
+    fn large_deltas_agree_with_a_rebuild() {
+        // Past `REBUILD_ABOVE`, so this exercises the other branch.
+        agrees_with_a_rebuild(200, 12, 0xc0ffee);
     }
 }

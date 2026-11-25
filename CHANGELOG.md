@@ -16,6 +16,11 @@ and `tarka/`, for their history before the workspace.
   (`BIND`, an aggregate, `STR()`) and neither graph holds, as SHACL 5.3.2 requires; it used to
   be left out while the message still showed it. `?path` counts only when it is an IRI. In
   `shacl` and in HOLOS (#24, reported as SHACL_Engine#3).
+- One SHACL engine. HOLOS validates SHACL-SPARQL, node expressions and rules with `shacl`,
+  the crate published on its own, and its adapted copy, `holos-shacl-engine`, is gone.
+  `shacl` gains the incremental-revalidation API HOLOS needs: `Graph::apply` and the shapes'
+  dependency index. W3C results are unchanged
+  ([ADR 0011](docs/decisions/0011-one-shacl-engine.md)).
 
 ## 0.30.0, 23 November 2026
 

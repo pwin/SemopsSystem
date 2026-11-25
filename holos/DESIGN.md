@@ -480,8 +480,11 @@ be a write in the middle of a read.
 
 > **Built, and it ended up as two validators rather than one.**
 >
-> `crates/holos-shacl-engine` is [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine)
-> adapted — the plan this section always described. `crates/holos-shacl`
+> The engine is the workspace's [`shacl`](../shacl/crates/shacl) crate (formerly
+> [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine)), the plan this section always
+> described. Until [ADR 0011](../docs/decisions/0011-one-shacl-engine.md) HOLOS carried an
+> adapted copy, `crates/holos-shacl-engine`; it is gone, and the column headed
+> 'Adapted engine' below now describes `shacl` reached through the bridge. `crates/holos-shacl`
 > supplies the store bridge, the incremental planner, and a `Validate` trait that hides
 > which validator is in use.
 >

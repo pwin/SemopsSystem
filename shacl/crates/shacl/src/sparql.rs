@@ -952,6 +952,107 @@ pub fn to_term(t: TermId, store: &TermStore) -> Term {
     store.to_oxrdf(t)
 }
 
+/// Every IRI a query uses as a predicate, or `None` if it uses a variable as one.
+///
+/// This is what lets a SPARQL constraint take part in incremental revalidation: a shape whose
+/// constraint reads `ex:email` has to be re-checked when `ex:email` is written, and nothing
+/// outside the query text knows that. Parsing it already happened at compile time, so the
+/// answer is a walk rather than a re-parse.
+///
+/// `None` is not a failure. A query matching `?s ?p ?o` genuinely depends on every predicate,
+/// and the caller must treat the shape as unconditionally stale rather than guess — this is
+/// the direction where being wrong loses a violation instead of costing time.
+#[must_use]
+pub fn predicates(query: &Query) -> Option<Vec<oxrdf::NamedNode>> {
+    let pattern = match query {
+        Query::Select { pattern, .. }
+        | Query::Ask { pattern, .. }
+        | Query::Construct { pattern, .. }
+        | Query::Describe { pattern, .. } => pattern,
+    };
+    let mut out = Vec::new();
+    predicates_in(pattern, &mut out).then_some(out)
+}
+/// Walks one pattern. Returns false as soon as a variable predicate appears.
+fn predicates_in(p: &spargebra::algebra::GraphPattern, out: &mut Vec<oxrdf::NamedNode>) -> bool {
+    use spargebra::algebra::GraphPattern as G;
+    match p {
+        G::Bgp { patterns } => {
+            for t in patterns {
+                match &t.predicate {
+                    spargebra::term::NamedNodePattern::NamedNode(n) => out.push(n.clone()),
+                    spargebra::term::NamedNodePattern::Variable(_) => return false,
+                }
+            }
+            true
+        }
+        // A property path can traverse any of the predicates it names, and `!(…)` or a
+        // variable-free negated set can traverse ones it does not. Treated as unbounded,
+        // which is the safe direction and is also rare in a SHACL constraint.
+        G::Path { .. } => false,
+        G::Join { left, right } | G::Union { left, right } | G::LeftJoin { left, right, .. } => {
+            predicates_in(left, out) && predicates_in(right, out)
+        }
+        G::Minus { left, right } => predicates_in(left, out) && predicates_in(right, out),
+        // `FILTER NOT EXISTS { ... }` hides a whole pattern inside the *expression*, which
+        // is where a SHACL constraint most often puts the thing it reads. Recursing only into
+        // `inner` walked straight past it and reported no dependencies at all.
+        G::Filter { inner, expr } => {
+            predicates_in(inner, out) && predicates_in_expression(expr, out)
+        }
+        G::Graph { inner, .. }
+        | G::Extend { inner, .. }
+        | G::OrderBy { inner, .. }
+        | G::Project { inner, .. }
+        | G::Distinct { inner }
+        | G::Reduced { inner }
+        | G::Slice { inner, .. }
+        | G::Group { inner, .. } => predicates_in(inner, out),
+        G::Values { .. } => true,
+        // `SERVICE` reads a graph this engine cannot see, so nothing here can bound it.
+        G::Service { .. } => false,
+    }
+}
+
+/// Walks an expression for the patterns `EXISTS` and `NOT EXISTS` embed in it.
+///
+/// Exhaustive on purpose. `Exists` is the only variant carrying a pattern today, and a
+/// catch-all would silently start losing dependencies the moment another one did — which is
+/// the failure this function exists to prevent, so a new variant should stop the build.
+fn predicates_in_expression(
+    e: &spargebra::algebra::Expression,
+    out: &mut Vec<oxrdf::NamedNode>,
+) -> bool {
+    use spargebra::algebra::Expression as E;
+    fn all(xs: &[E], out: &mut Vec<oxrdf::NamedNode>) -> bool {
+        xs.iter().all(|x| predicates_in_expression(x, out))
+    }
+    match e {
+        E::Exists(pattern) => predicates_in(pattern, out),
+        E::NamedNode(_) | E::Literal(_) | E::Variable(_) | E::Bound(_) => true,
+        E::Not(x) | E::UnaryPlus(x) | E::UnaryMinus(x) => predicates_in_expression(x, out),
+        E::Or(a, b)
+        | E::And(a, b)
+        | E::Equal(a, b)
+        | E::SameTerm(a, b)
+        | E::Greater(a, b)
+        | E::GreaterOrEqual(a, b)
+        | E::Less(a, b)
+        | E::LessOrEqual(a, b)
+        | E::Add(a, b)
+        | E::Subtract(a, b)
+        | E::Multiply(a, b)
+        | E::Divide(a, b) => predicates_in_expression(a, out) && predicates_in_expression(b, out),
+        E::In(x, xs) => predicates_in_expression(x, out) && all(xs, out),
+        E::If(a, b, c) => {
+            predicates_in_expression(a, out)
+                && predicates_in_expression(b, out)
+                && predicates_in_expression(c, out)
+        }
+        E::Coalesce(xs) | E::FunctionCall(_, xs) => all(xs, out),
+    }
+}
+
 /// Resolves a term produced by SPARQL back into the store, if it is present.
 ///
 /// The stand-in IRI is decoded here as well as on the way in, because a

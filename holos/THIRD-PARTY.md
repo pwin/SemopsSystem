@@ -12,19 +12,15 @@ python scripts/third-party.py > THIRD-PARTY.md
 
 ## Code copied into this tree
 
-Three components. Everything else is a dependency, not a copy.
+Two components. Everything else is a dependency, not a copy.
 
 | Component | Origin | Licence | Copyright |
 |---|---|---|---|
-| [`holos-shacl-engine`](crates/holos-shacl-engine) | [pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine) @ `874e6e57` | MIT OR Apache-2.0 | Peter Winstanley — **the same holder as this project** |
 | [`oxsdatatypes`](vendor/oxsdatatypes) | [oxsdatatypes 0.2.4](https://crates.io/crates/oxsdatatypes/0.2.4) from [Oxigraph](https://github.com/oxigraph/oxigraph) | MIT OR Apache-2.0 | Oxigraph developers |
 | [`spareval`](vendor/spareval) | [spareval 0.2.9](https://crates.io/crates/spareval/0.2.9) from [Oxigraph](https://github.com/oxigraph/oxigraph) | MIT OR Apache-2.0 | Oxigraph developers |
 
 Each keeps its `LICENSE-MIT` and `LICENSE-APACHE` beside a `PROVENANCE.md` that
 records every change made to it.
-
-`holos-shacl-engine`: because the upstream copyright holder and this project's are
-the same person, no third-party copyright attaches to that code.
 
 `oxsdatatypes`: copyright in it remains with the Oxigraph developers. It is in the
 tree for one change: decimal multiplication and division round to 18 fractional

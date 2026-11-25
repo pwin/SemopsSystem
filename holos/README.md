@@ -376,8 +376,7 @@ formally; `policy_survives_every_operator_that_defeats_query_rewriting` in
 | [crates/holos-engine](crates/holos-engine) | The dataset view (and policy chokepoint), SPARQL evaluation |
 | [crates/holos-python](crates/holos-python) | Python bindings (PyO3 + maturin) — see its [PACKAGING.md](crates/holos-python/PACKAGING.md) |
 | [crates/holos-stats](crates/holos-stats) | Characteristic sets, cardinality estimation, and the measurement against the reused optimiser |
-| [crates/holos-shacl](crates/holos-shacl) | Store bridge, incremental planner, native evaluator, `Validate` trait |
-| [crates/holos-shacl-engine](crates/holos-shacl-engine) | [SHACL_Engine](https://github.com/pwin/SHACL_Engine), adapted — see its [PROVENANCE.md](crates/holos-shacl-engine/PROVENANCE.md) |
+| [crates/holos-shacl](crates/holos-shacl) | Store bridge, incremental planner, native evaluator, `Validate` trait; SHACL-SPARQL, node expressions and rules through the workspace's [`shacl`](../shacl/crates/shacl) engine |
 | [crates/holos-holon](crates/holos-holon) | Holons: scene, boundary, event log, the tick |
 | [crates/holos-server](crates/holos-server) | SPARQL 1.2 Protocol over HTTP, the console |
 | [crates/holos-cli](crates/holos-cli) | The `holos` binary |
@@ -388,10 +387,10 @@ formally; `policy_survives_every_operator_that_defeats_query_rewriting` in
 MIT OR Apache-2.0.
 
 Reuses Oxigraph crates (`oxrdf`, `oxttl`, `oxrdfio`, `spargebra`, `spareval`, `sparesults`,
-`spargeo`) under the same terms, and adapts
-[pwin/SHACL_Engine](https://github.com/pwin/SHACL_Engine), also MIT OR Apache-2.0 — see
-[crates/holos-shacl-engine/PROVENANCE.md](crates/holos-shacl-engine/PROVENANCE.md) for the
-commit it was taken from and every change made to it.
+`spargeo`) under the same terms. SHACL beyond Core runs on the workspace's own engine,
+[`shacl`](../shacl/crates/shacl) (formerly pwin/SHACL_Engine), also MIT OR Apache-2.0; HOLOS
+carried an adapted copy of it until
+[ADR 0011](../docs/decisions/0011-one-shacl-engine.md).
 
 The console (MatGUI, a fork of YASGUI) is loaded from a CDN by the console page and is not committed
 to this tree; it carries its own licence, and [THIRD-PARTY.md](THIRD-PARTY.md) lists what it bundles.
