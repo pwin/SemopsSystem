@@ -3,7 +3,7 @@
 SemOps System's own releases. The engines keep their own changelogs, in `holos/`, `shacl/`
 and `tarka/`, for their history before the workspace.
 
-## Unreleased
+## 0.31.0, 25 November 2026
 
 - Each engine is published from the workspace on its own, at the workspace version:
   `holosdb`, `shacl` and `tarka-rdf` on PyPI, and `holos-wasm`, `shacl-wasm` and their
@@ -20,22 +20,22 @@ and `tarka/`, for their history before the workspace.
   the crate published on its own, and its adapted copy, `holos-shacl-engine`, is gone.
   `shacl` gains the incremental-revalidation API HOLOS needs: `Graph::apply` and the shapes'
   dependency index. W3C results are unchanged
-  ([ADR 0011](docs/decisions/0011-one-shacl-engine.md)).
+  ([ADR 0011](docs/decisions/0011-one-shacl-engine.md), #27).
 - Every `semops` subcommand takes an Azure Blob Storage URL wherever it takes an input
   file (`abfss://`, `az://`, `https://<account>.blob.core.windows.net/…`), with credentials
   from the environment, a managed identity included
-  ([ADR 0012](docs/decisions/0012-blob-urls-as-inputs.md)).
+  ([ADR 0012](docs/decisions/0012-blob-urls-as-inputs.md), #28).
 - Checkpoints to Blob Storage. `semops upload` and `semops download` copy a file or a
   directory to and from a blob prefix, and `semops backup --to <URL>` checkpoints a store
   and uploads it. The AKS chart's backup job uploads each checkpoint when `backup.blob.url`
   is set, signing in with workload identity, and `deploy/azure/backup/` has a lifecycle
   rule for retention. An output flag given a blob URL is now refused instead of fetched
-  ([ADR 0013](docs/decisions/0013-checkpoints-to-blob-storage.md)).
+  ([ADR 0013](docs/decisions/0013-checkpoints-to-blob-storage.md), #29).
 - OpenTelemetry from the server: a span and a duration for each request, by the HTTP
   semantic conventions, over OTLP/HTTP, when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. No query
   text is sent. The AKS chart's `telemetry.otlpEndpoint` points the writer and replicas at
   a collector, and `deploy/azure/telemetry/collector.yaml` forwards to Application Insights
-  ([ADR 0014](docs/decisions/0014-telemetry.md)).
+  ([ADR 0014](docs/decisions/0014-telemetry.md), #30).
 
 ## 0.30.0, 23 November 2026
 

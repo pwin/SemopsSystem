@@ -74,6 +74,8 @@ INSERT { ?s ?p ?o {| ex:source ex:spreadsheet |} } WHERE { ?s ?p ?o }
 
 ## Releases
 
+- 0.31.0 needs Polars only with `[polars]`, adds `upload` and `download` and reads Azure Blob
+  Storage URLs as inputs, and carries the SHACL fix for a computed `?value`.
 - 0.30.0 installs the `semops` command, which now has `diff` and `repair`.
 - 0.29.0 was the first native release.
 - 0.29.0.dev1 was a bridge that installed three separately released engines (holosdb

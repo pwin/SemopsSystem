@@ -3,7 +3,7 @@
 # findings as SARIF and, unless told not to, uploads them to GitHub code scanning, so they
 # appear on the pull request and in the Security tab.
 #
-#   - uses: pwin/SemopsSystem/actions/check@v0.30.0
+#   - uses: pwin/SemopsSystem/actions/check@v0.31.0
 #     with:
 #       files: ontology/*.ttl
 #
@@ -33,7 +33,7 @@ inputs:
     default: "true"
   version:
     description: The semops-system release to install, as a pip version specifier.
-    default: ">=0.30.0"
+    default: ">=0.31.0"
   python-version:
     description: The Python to install it with.
     default: "3.13"
