@@ -78,7 +78,7 @@ One more is read by the store itself, wherever it runs:
 
 ## holos-server {#holos-server}
 
-As `holos-server --help` prints it, for version 0.30.0:
+As `holos-server --help` prints it, for version 0.31.0:
 
 ```text
 holos-server — SPARQL 1.2 over HTTP, with a YASGUI console

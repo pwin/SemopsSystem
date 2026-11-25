@@ -162,7 +162,7 @@ publishes them; include it from a repository resource, or copy it. By hand:
 The container image carries the command too, for a pipeline that does not install Rust:
 
 ```sh
-docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.30.0 \
+docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.31.0 \
   check ontology/*.ttl --format csv --out findings.csv
 ```
 

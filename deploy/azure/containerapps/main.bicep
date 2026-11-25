@@ -26,7 +26,7 @@ param namePrefix string
 param location string = resourceGroup().location
 
 @description('The SemOps System image. Pin a digest in production.')
-param image string = 'ghcr.io/pwin/semops:0.30.0'
+param image string = 'ghcr.io/pwin/semops:0.31.0'
 
 @allowed(['snapshot', 'replica', 'writer'])
 param mode string = 'replica'
