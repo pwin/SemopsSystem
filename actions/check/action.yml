@@ -33,7 +33,7 @@ inputs:
     default: "true"
   version:
     description: The semops-system release to install, as a pip version specifier.
-    default: ">=0.31.0"
+    default: ">=0.30.0"
   python-version:
     description: The Python to install it with.
     default: "3.13"
