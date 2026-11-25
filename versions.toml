@@ -1,9 +1,9 @@
 # The one version-pin file (roadmap phase 1).
 #
-# Until the workspace ships its own packages, the toolchain is still consumed as the
-# separate engine releases below, and every consumer (the browser editor, the VS Code
-# extension, the Python suite and its evidence repository, the manual) has to take the same
-# ones, or a graph can pass in the editor and fail in CI. This file says which releases belong
+# The consumers (the browser editor, the VS Code extension, the Python suite and its evidence
+# repository, the manual) still take the engines as separate packages, and every one has to
+# take the same release, or a graph can pass in the editor and fail in CI. From 0.31.0 the
+# engine packages are built from this workspace, at its version. This file says which releases belong
 # together; `scripts/check_pins.py` reads each consumer's lockfile and reports any that
 # disagree. Phase 1's gate is that it reports none.
 #
@@ -16,19 +16,19 @@ version = "0.31.0"
 pypi = "semops-system"
 
 [engines.holos]
-version = "0.27.0"
+version = "0.31.0"
 source = "holos/"
 pypi = ["holosdb"]
 npm = ["holos-wasm", "holos-wasm-node"]
 
 [engines.shacl]
-version = "0.3.9"
+version = "0.31.0"
 source = "shacl/"
 pypi = ["shacl"]
 npm = ["shacl-wasm", "shacl-wasm-node"]
 
 [engines.tarka]
-version = "0.3.1"
+version = "0.31.0"
 source = "tarka/"
 pypi = ["tarka-rdf"]
 
