@@ -74,6 +74,41 @@ sudo mkdir -p /mnt/holos/store /mnt/holos/checkpoints /mnt/holos/snapshots
 sudo chown -R 10001:10001 /mnt/holos
 ```
 
+## Reading from Blob Storage
+
+Every `semops` subcommand takes a blob wherever it takes an input file:
+
+```sh
+semops load --store db --data abfss://data@acct.dfs.core.windows.net/dumps/2026-11.nt.gz
+semops check https://acct.blob.core.windows.net/ontologies/domain.ttl --format sarif
+semops map run --query sales.tarql --input az://lake/sales/2026.parquet
+```
+
+Before the subcommand runs, each argument that names a blob is downloaded to a temporary
+file, and the argument becomes that file's path. The file keeps the blob's name, so the
+format is still taken from its extension. It is removed when the command finishes.
+
+Only arguments that can only be storage are fetched: the `abfss`, `abfs`, `az`, `azure` and
+`adl` schemes, and `https` on `*.blob.core.windows.net` or `*.dfs.core.windows.net`. A
+plain `http(s)` IRI is left as typed, because named graphs and base IRIs look just like
+one.
+
+Credentials come from the environment:
+
+| Set | To use |
+|---|---|
+| `AZURE_STORAGE_ACCOUNT_KEY` (and `AZURE_STORAGE_ACCOUNT_NAME` for `az://`) | The account key |
+| `AZURE_STORAGE_SAS_KEY`, or a SAS in the URL (`…?sv=…&sig=…`) | A SAS token |
+| `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` | A service principal |
+| `AZURE_FEDERATED_TOKEN_FILE`, as AKS workload identity sets it | Workload identity |
+| `AZURE_USE_AZURE_CLI=true` | Your `az login` |
+| Nothing | The managed identity of the VM, container app or pod |
+| `AZURE_SKIP_SIGNATURE=true` | A public container, with no credentials |
+
+The download goes to the system temporary directory (`TMPDIR`, or `TMP` on Windows). For a
+large dump, point that at a disk with room. Writing to Blob Storage, such as uploading a
+checkpoint, is not done yet ([chapter 12](12-not-finished.md)).
+
 ## Entra ID
 
 The server does not check tokens. Two Azure services do it for it:

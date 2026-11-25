@@ -2295,6 +2295,7 @@ dependencies = [
  "futures-util",
  "http",
  "http-body-util",
+ "httparse",
  "humantime",
  "hyper",
  "itertools 0.14.0",
@@ -3941,15 +3942,20 @@ dependencies = [
  "anyhow",
  "clap",
  "csv",
+ "futures",
  "holos-cli",
  "holos-engine",
  "holos-server",
  "mimalloc",
+ "object_store",
  "oxrdfio",
  "semops-checks",
  "serde_json",
  "shacl-cli",
  "tarka-cli",
+ "tempfile",
+ "tokio",
+ "url",
 ]
 
 [[package]]

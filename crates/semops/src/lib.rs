@@ -21,10 +21,21 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod remote;
 mod reports;
 
 #[derive(Parser)]
-#[command(name = "semops", version, about = "The SemOps System command")]
+#[command(
+    name = "semops",
+    version,
+    about = "The SemOps System command",
+    after_help = concat!(
+        "Any argument naming an Azure Storage blob (abfss://, az://, ",
+        "https://<account>.blob.core.windows.net/...) is downloaded before the subcommand ",
+        "runs, and the subcommand reads the local copy. Credentials come from the AZURE_* ",
+        "environment variables or a managed identity."
+    )
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -316,7 +327,20 @@ fn forward(name: &str, Forward { args }: Forward) -> ExitCode {
 }
 
 fn run_cli(args: Vec<OsString>) -> Result<ExitCode> {
-    let command = Cli::parse_from(args).command;
+    // Blob URLs are fetched before anything parses the arguments, and the files live until
+    // the command returns (`remote`).
+    let local = remote::localise(args)?;
+    let command = Cli::parse_from(local.args.iter().cloned()).command;
+    if let Command::Repair {
+        file, write: true, ..
+    } = &command
+        && let Some(url) = local.source_of(file)
+    {
+        bail!(
+            "`repair --write` cannot write back to {}; use --out FILE",
+            remote::redact(url)
+        );
+    }
     let forwarded = match command {
         Command::Serve(f) => ("serve", f),
         Command::Load(f) => ("load", f),

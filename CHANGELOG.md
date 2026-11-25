@@ -21,6 +21,10 @@ and `tarka/`, for their history before the workspace.
   `shacl` gains the incremental-revalidation API HOLOS needs: `Graph::apply` and the shapes'
   dependency index. W3C results are unchanged
   ([ADR 0011](docs/decisions/0011-one-shacl-engine.md)).
+- Every `semops` subcommand takes an Azure Blob Storage URL wherever it takes an input
+  file (`abfss://`, `az://`, `https://<account>.blob.core.windows.net/…`), with credentials
+  from the environment, a managed identity included
+  ([ADR 0012](docs/decisions/0012-blob-urls-as-inputs.md)).
 
 ## 0.30.0, 23 November 2026
 
