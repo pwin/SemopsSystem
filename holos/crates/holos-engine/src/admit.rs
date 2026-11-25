@@ -173,6 +173,10 @@ impl Context<'_> {
         clippy::wildcard_enum_match_arm,
         reason = "a new spargebra pattern must compile here, and estimating it as zero                   admits the query rather than refusing one nothing understands"
     )]
+    #[allow(
+        clippy::match_wildcard_for_single_variants,
+        reason = "the wildcard is for property paths and whatever spargebra adds next"
+    )]
     fn rows(&self, pattern: &GraphPattern, pins: &Pins) -> u64 {
         #[allow(
             clippy::cast_possible_truncation,

@@ -1029,11 +1029,13 @@ mod tests {
         let session = Session::unrestricted(e.store()).unwrap();
         let view = e.view(&session);
         let p = "PREFIX ex: <http://example.com/> ";
-        assert!(rows(
-            &view,
-            &format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 10 LIMIT 3")
-        )
-        .is_empty());
+        assert_eq!(
+            rows(
+                &view,
+                &format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 10 LIMIT 3")
+            ),
+            [] as [Vec<Option<String>>; 0]
+        );
         assert_eq!(
             rows(
                 &view,

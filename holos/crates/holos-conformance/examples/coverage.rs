@@ -153,7 +153,7 @@ fn suite(label: &str, manifest_path: &Path) {
     if !skip_reasons.is_empty() {
         println!("\n  not run, by reason:");
         let mut reasons: Vec<_> = skip_reasons.into_iter().collect();
-        reasons.sort_by(|a, b| b.1.cmp(&a.1));
+        reasons.sort_by_key(|r| std::cmp::Reverse(r.1));
         for (reason, n) in reasons {
             println!("    {n:>4}  {reason}");
         }

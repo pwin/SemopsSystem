@@ -97,7 +97,7 @@ fn branch_body(
     let version = registry::version(engine, source)?;
     let mut child = Holon::new(new_id);
     child.admission = source.admission;
-    child.projections = source.projections.clone();
+    child.projections.clone_from(&source.projections);
 
     // Scene and boundary are copied; the event log deliberately is not.
     copy_graph(engine, &source.scene, &child.scene)?;

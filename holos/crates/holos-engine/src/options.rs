@@ -335,6 +335,10 @@ impl std::fmt::Debug for Deadline {
 
 impl Deadline {
     /// Starts a watchdog that cancels after `timeout`.
+    ///
+    /// # Panics
+    ///
+    /// Never: a deadline with a timeout always has something to watch.
     #[must_use]
     pub fn start(timeout: Duration) -> Self {
         // Safe to unwrap: `guard` returns `None` only when asked to watch nothing.
@@ -396,6 +400,7 @@ impl Deadline {
         // see, but it is also one that does not keep growing on this thread, and a
         // runaway's does. Three ticks is 30 ms, which against a hash table doubling toward
         // gigabytes is nothing.
+        #[allow(clippy::items_after_statements, reason = "beside the reasoning for it")]
         const SUSTAINED_SAMPLES: u32 = 3;
         let mut over = 0_u32;
 

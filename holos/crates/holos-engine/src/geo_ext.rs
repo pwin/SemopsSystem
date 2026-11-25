@@ -95,8 +95,11 @@ const SPATIALF_TRANSFORM_DATATYPE: NamedNodeRef<'_> =
 const SPATIALF_TRANSFORM: NamedNodeRef<'_> =
     NamedNodeRef::new_unchecked("http://jena.apache.org/function/spatial#transform");
 
+/// A SPARQL extension function as `spargeo` declares one.
+pub type GeoFunction = fn(&[Term]) -> Option<Term>;
+
 /// The functions this module adds to, or replaces in, `spargeo`'s 43.
-pub const EXTRA_GEOSPARQL_FUNCTIONS: [(NamedNodeRef<'static>, fn(&[Term]) -> Option<Term>); 12] = [
+pub const EXTRA_GEOSPARQL_FUNCTIONS: [(NamedNodeRef<'static>, GeoFunction); 12] = [
     (BUFFER, geof_buffer),
     (BOUNDARY, geof_boundary),
     // Not a geometry operation at all: the one thing GeoSPARQL leaves out.
@@ -146,7 +149,7 @@ const SNAP_EPSILON: f64 = 1e-9;
 /// The functions are a public const array of name/pointer pairs, which is what makes it
 /// possible to reuse an implementation rather than write a second one that would then have
 /// to be kept in agreement with it.
-fn spargeo_function(local: &str) -> Option<fn(&[Term]) -> Option<Term>> {
+fn spargeo_function(local: &str) -> Option<GeoFunction> {
     let iri = format!("{GEOF}{local}");
     spargeo::GEOSPARQL_EXTENSION_FUNCTIONS
         .iter()
@@ -297,6 +300,7 @@ fn pick_output_kind(args: &[Term]) -> Kind {
 ///
 /// Public so the spatial index can decide what to index without a second copy of the
 /// datatype and CRS rules — those live here, and a second copy would drift.
+#[must_use]
 pub fn geometry_of(term: &Term) -> Option<Geometry> {
     extract_geometry(term)
 }
@@ -345,9 +349,10 @@ fn reproject(geom: &Geometry, from: Crs, to: Crs) -> Option<Geometry> {
     // No shortcut for `from == to`: `transform` still refuses a coordinate that is not a
     // place, and a bare CRS84 literal is exactly where one turns up.
     let failed = std::cell::Cell::new(false);
-    let moved = map_coords(geom, &|c| match crate::crs::transform(from, to, c) {
-        Some(c) => c,
-        None => {
+    let moved = map_coords(geom, &|c| {
+        if let Some(c) = crate::crs::transform(from, to, c) {
+            c
+        } else {
             failed.set(true);
             c
         }
@@ -548,7 +553,9 @@ fn boundary_of(geom: &Geometry) -> Geometry {
             Geometry::MultiPoint(MultiPoint(vec![Point::from(l.start), Point::from(l.end)]))
         }
 
-        Geometry::LineString(ls) => Geometry::MultiPoint(MultiPoint(line_endpoints(&[ls.clone()]))),
+        Geometry::LineString(ls) => {
+            Geometry::MultiPoint(MultiPoint(line_endpoints(std::slice::from_ref(ls))))
+        }
 
         Geometry::MultiLineString(mls) => Geometry::MultiPoint(MultiPoint(line_endpoints(&mls.0))),
 
@@ -868,9 +875,8 @@ fn declared_system(term: &Term) -> Option<Crs> {
 /// A literal that is already CRS84, or is not a geometry at all — a unit IRI, a radius —
 /// is passed through untouched, so the wrapper costs a datatype comparison per argument on
 /// the common path.
-#[must_use]
 pub fn crs_aware(
-    function: fn(&[Term]) -> Option<Term>,
+    function: GeoFunction,
 ) -> impl Fn(&[Term]) -> Option<Term> + Send + Sync + 'static {
     move |args: &[Term]| match to_crs84(args) {
         Some(rewritten) => function(&rewritten),
@@ -934,6 +940,7 @@ mod tests {
 
     #[test]
     fn buffering_a_point_in_degrees_gives_a_polygon_of_that_radius() {
+        use geo::algorithm::BoundingRect;
         let out =
             geof_buffer(&[wkt("POINT(0 0)"), number(1.0), units("degree")]).expect("buffered");
         let geom = geometry_of(&out);
@@ -941,7 +948,6 @@ mod tests {
             panic!("expected a multipolygon");
         };
         assert_eq!(mp.0.len(), 1);
-        use geo::algorithm::BoundingRect;
         let rect = geom.bounding_rect().expect("has extent");
         // A unit-radius disc around the origin spans -1..1 in both axes.
         assert!((rect.min().x + 1.0).abs() < 0.05, "min x {}", rect.min().x);
@@ -1049,7 +1055,7 @@ mod tests {
         let Geometry::GeometryCollection(gc) = geometry_of(&out) else {
             panic!("expected an empty collection");
         };
-        assert!(gc.0.is_empty());
+        assert_eq!(gc.0, [] as [geo::Geometry; 0]);
     }
 
     // -----------------------------------------------------------------------------
@@ -1079,7 +1085,7 @@ mod tests {
             "http://www.opengis.net/def/crs/EPSG/0/2154",
             "POINT(650000 6860000)",
         );
-        assert!(geof_boundary(&[french.clone()]).is_none());
+        assert!(geof_boundary(std::slice::from_ref(&french)).is_none());
         assert!(extract_geometry(&french).is_none());
         assert!(geof_get_srid(&[french]).is_none());
     }
@@ -1274,7 +1280,7 @@ mod tests {
             wkt("POINT(200 52)"),
         ] {
             assert!(extract_geometry(&literal).is_none(), "{literal} was read");
-            assert!(geof_boundary(&[literal.clone()]).is_none());
+            assert!(geof_boundary(std::slice::from_ref(&literal)).is_none());
             assert!(holos_transform(&[literal, crs_iri(crate::crs::EPSG_3857_URI)]).is_none());
         }
         // Whereas the same numbers in an order that is a place are read.

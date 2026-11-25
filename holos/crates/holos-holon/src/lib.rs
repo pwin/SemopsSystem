@@ -109,6 +109,10 @@ impl Delta {
 
     /// Adds a triple.
     #[must_use]
+    #[allow(
+        clippy::should_implement_trait,
+        reason = "a builder step, not addition"
+    )]
     pub fn add(mut self, triple: Triple) -> Self {
         self.added.push(triple);
         self
@@ -588,6 +592,6 @@ pub fn graph_size(store: &Store, graph: &NamedNode) -> usize {
     };
     store
         .quads_for_pattern(None, None, None, GraphFilter::Named(id))
-        .filter(std::result::Result::is_ok)
+        .flatten()
         .count()
 }

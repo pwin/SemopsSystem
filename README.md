@@ -19,11 +19,12 @@ engine and the tarka mapper, built, versioned and released together. It implemen
 | [`docs/manual/`](docs/manual/) | The manual: installing, a first run, the server, checking, validating, mapping, storage, security, Azure, and a reference. `python docs/manual/build.py` builds it as a website, an EPUB and an A4 PDF | — |
 | [`docs/decisions/`](docs/decisions/) | Why the workspace is laid out as it is, what it is called, and what it must be able to do | — |
 | [`CHANGELOG.md`](CHANGELOG.md) | What each SemOps System release changed | — |
-| [`versions.toml`](versions.toml) | Which engine releases the editor, extension and suite must use until the workspace ships its own packages | — |
+| [`versions.toml`](versions.toml) | Which engine release the editor, extension and suite must use: the workspace's own, from 0.31.0 | — |
 | [`python/semops-system/`](python/semops-system/) | The `semops-system` package on PyPI: one native wheel, the three engines and the quality checks in one extension module built from `crates/semops-python`, with tests of everything the product must do | — |
 
 Each engine directory was imported with `git subtree`, with its history, and keeps its own
-README, changelog and documentation.
+README, changelog and documentation. The engines' original repositories, pwin/triplestore,
+pwin/SHACL_Engine and pwin/tarka, are archived: work on them happens here.
 
 ## What it does
 

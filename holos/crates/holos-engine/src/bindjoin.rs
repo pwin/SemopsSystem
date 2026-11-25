@@ -529,6 +529,13 @@ pub fn plan(query: &Query) -> Option<Plan> {
 ///
 /// Returns the variables the subtree binds, or `None` if anything in it is outside the
 /// fragment. The return value is what makes filter hoisting safe — see below.
+/// A pattern's subject, predicate and object: each a term id when bound, `None` when free.
+type Slots = (Option<TermId>, Option<TermId>, Option<TermId>);
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "one walk over the pattern, one case per form"
+)]
 fn collect(
     pattern: &GraphPattern,
     scope: &Scope,
@@ -1681,12 +1688,7 @@ impl Plan {
                 Slot::Fixed(id) => Some(Some(id)),
                 Slot::Any => None,
             },
-            Scope::Variable(v) => match bindings.get(v) {
-                Some(id) => Some(Some(*id)),
-                // `None` is `spareval`'s "any named graph", which is what an unbound `GRAPH
-                // ?g` ranges over — never the default graph.
-                None => None,
-            },
+            Scope::Variable(v) => bindings.get(v).map(|id| Some(*id)),
         };
 
         // A filter that bounds this pattern's object turns the scan into a range read.
@@ -2069,7 +2071,7 @@ impl Plan {
         triple: &TriplePattern,
         view: &DatasetView<'_>,
         bindings: &FxHashMap<&Variable, TermId>,
-    ) -> Result<Option<(Option<TermId>, Option<TermId>, Option<TermId>)>, ViewError> {
+    ) -> Result<Option<Slots>, ViewError> {
         let subject = match slot(&triple.subject, view, bindings)? {
             Slot::Missing => return Ok(None),
             Slot::Any => None,
@@ -2268,13 +2270,12 @@ fn bind<'p>(
     let TermPattern::Variable(v) = term else {
         return true;
     };
-    match bindings.get(v) {
-        Some(existing) => *existing == actual,
-        None => {
-            bindings.insert(v, actual);
-            added.push(v);
-            true
-        }
+    if let Some(existing) = bindings.get(v) {
+        *existing == actual
+    } else {
+        bindings.insert(v, actual);
+        added.push(v);
+        true
     }
 }
 
@@ -2288,13 +2289,12 @@ fn bind_variable<'p>(
     bindings: &mut FxHashMap<&'p Variable, TermId>,
     added: &mut Added<'p>,
 ) -> bool {
-    match bindings.get(variable) {
-        Some(existing) => *existing == id,
-        None => {
-            bindings.insert(variable, id);
-            added.push(variable);
-            true
-        }
+    if let Some(existing) = bindings.get(variable) {
+        *existing == id
+    } else {
+        bindings.insert(variable, id);
+        added.push(variable);
+        true
     }
 }
 
@@ -2307,13 +2307,12 @@ fn bind_predicate<'p>(
     let spargebra::term::NamedNodePattern::Variable(v) = predicate else {
         return true;
     };
-    match bindings.get(v) {
-        Some(existing) => *existing == actual,
-        None => {
-            bindings.insert(v, actual);
-            added.push(v);
-            true
-        }
+    if let Some(existing) = bindings.get(v) {
+        *existing == actual
+    } else {
+        bindings.insert(v, actual);
+        added.push(v);
+        true
     }
 }
 
@@ -2413,6 +2412,7 @@ fn estimate_todo(
                     .fold(f64::INFINITY, f64::min)
             })
             .sum(),
+        #[allow(clippy::cast_precision_loss, reason = "an estimate")]
         Todo::Values(values) => values.rows.len() as f64,
         // A closure is cheap from a bound end and proportional to the store from an unbound
         // one, so the estimate is the boundness rather than a row count: ordered after every
@@ -2478,15 +2478,14 @@ fn estimate(
         object,
         subject_var: None,
     };
-    match stats {
-        Some(stats) => stats.estimate_pattern(&pattern),
+    if let Some(stats) = stats {
+        stats.estimate_pattern(&pattern)
+    } else {
         // Without statistics, fewer free positions means fewer rows. Crude, and enough to
         // put a pattern with two constants ahead of one with none.
-        None => {
-            let free = usize::from(pattern.subject.is_none())
-                + usize::from(pattern.predicate.is_none())
-                + usize::from(pattern.object.is_none());
-            10f64.powi(free as i32 * 2)
-        }
+        let free = i32::from(pattern.subject.is_none())
+            + i32::from(pattern.predicate.is_none())
+            + i32::from(pattern.object.is_none());
+        10f64.powi(free * 2)
     }
 }

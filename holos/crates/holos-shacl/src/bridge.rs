@@ -47,7 +47,7 @@ impl std::fmt::Debug for Bridged {
         f.debug_struct("Bridged")
             .field("triples", &self.graph.len())
             .field("terms", &self.terms.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

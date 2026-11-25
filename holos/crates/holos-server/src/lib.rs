@@ -951,29 +951,6 @@ fn is_graph_store_path(state: &State, path: &str) -> bool {
         && path.starts_with(&format!("{}/", state.config.gsp_path.trim_end_matches('/')))
 }
 
-/// Takes a consistent snapshot of the store, for an administrator.
-///
-/// # Why the client cannot name the destination
-///
-/// It would be the obvious API — `POST /backup?to=/srv/backups/tonight` — and it would be an
-/// arbitrary-write primitive: whatever the server process can write, a caller could ask it
-/// to fill with a copy of the database. The server owns the parent directory (`--backup-dir`)
-/// and mints a timestamped child; the caller chooses nothing but the moment.
-///
-/// # The guard
-///
-/// Three conditions, each of which fails closed:
-///
-/// 1. **The endpoint does not exist** unless both `--backup-dir` and `--backup-role` are set.
-///    An unconfigured server answers 404, so the surface is absent rather than merely
-///    defended.
-/// 2. **The principal must hold the named role.** A backup copies the whole store, ignoring
-///    the policy that governs every query — so this is the one operation where the ordinary
-///    access controls do not apply, and it needs its own.
-/// 3. **Identity has to be trustworthy.** Without `--trust-forwarded-identity` every request
-///    is anonymous and holds no roles, so the endpoint answers 403 to everyone. That is the
-///    correct default: an unauthenticated server should not be able to be told to copy
-///    itself.
 /// `POST /maintenance/purge` — reclaim spatial index entries for departed geometries.
 ///
 /// # Why this is a maintenance step and not automatic
@@ -1049,6 +1026,29 @@ fn purge(state: &State, request: Request) -> Result<()> {
     }
 }
 
+/// Takes a consistent snapshot of the store, for an administrator.
+///
+/// # Why the client cannot name the destination
+///
+/// It would be the obvious API — `POST /backup?to=/srv/backups/tonight` — and it would be an
+/// arbitrary-write primitive: whatever the server process can write, a caller could ask it
+/// to fill with a copy of the database. The server owns the parent directory (`--backup-dir`)
+/// and mints a timestamped child; the caller chooses nothing but the moment.
+///
+/// # The guard
+///
+/// Three conditions, each of which fails closed:
+///
+/// 1. **The endpoint does not exist** unless both `--backup-dir` and `--backup-role` are set.
+///    An unconfigured server answers 404, so the surface is absent rather than merely
+///    defended.
+/// 2. **The principal must hold the named role.** A backup copies the whole store, ignoring
+///    the policy that governs every query — so this is the one operation where the ordinary
+///    access controls do not apply, and it needs its own.
+/// 3. **Identity has to be trustworthy.** Without `--trust-forwarded-identity` every request
+///    is anonymous and holds no roles, so the endpoint answers 403 to everyone. That is the
+///    correct default: an unauthenticated server should not be able to be told to copy
+///    itself.
 fn backup(state: &State, request: Request) -> Result<()> {
     let (Some(dir), Some(role)) = (&state.config.backup_dir, &state.config.backup_role) else {
         // Not 403: an endpoint that is switched off should be indistinguishable from one

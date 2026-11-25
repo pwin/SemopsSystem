@@ -371,7 +371,7 @@ impl Merged {
     pub fn next_row(&mut self) -> std::io::Result<Option<Vec<Option<Term>>>> {
         let width = match self {
             Self::InMemory { rows, .. } => return Ok(rows.next()),
-            Self::Spilled { _owner, .. } => _owner.width,
+            Self::Spilled { _owner: owner, .. } => owner.width,
         };
         loop {
             let Self::Spilled {

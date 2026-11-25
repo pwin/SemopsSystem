@@ -185,7 +185,7 @@ impl DefaultServiceHandler for CachingServiceHandler {
             })?;
             rows.push(Ok(solution));
         }
-        Ok(QuerySolutionIter::new(endpoint_vars, rows.into_iter()))
+        Ok(QuerySolutionIter::new(endpoint_vars, rows))
     }
 }
 

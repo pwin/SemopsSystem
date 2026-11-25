@@ -137,7 +137,7 @@ impl std::fmt::Debug for EngineRun {
         f.debug_struct("EngineRun")
             .field("triples", &self.bridged.len())
             .field("shapes", &self.shapes.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -686,7 +686,7 @@ mod tests {
     use holos_store::GraphFilter;
     use oxrdfio::{RdfFormat, RdfParser};
 
-    const DOC: &str = r#"
+    const DOC: &str = r"
 @prefix ex:   <http://example.com/> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -699,7 +699,7 @@ ex:PersonShape a sh:NodeShape ;
 
 ex:alice a ex:Person ; ex:age 30 .
 ex:bob   a ex:Person ; ex:age 900 .
-"#;
+";
 
     fn store_from(turtle: &str) -> Store {
         let mut store = Store::new();
@@ -738,7 +738,7 @@ ex:bob   a ex:Person ; ex:age 900 .
     #[test]
     fn a_clean_store_conforms() {
         let store = store_from(
-            r#"
+            r"
 @prefix ex:   <http://example.com/> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -748,7 +748,7 @@ ex:PersonShape a sh:NodeShape ;
     sh:targetClass ex:Person ;
     sh:property [ sh:path ex:age ; sh:datatype xsd:integer ; sh:maxInclusive 150 ] .
 ex:alice a ex:Person ; ex:age 30 .
-"#,
+",
         );
         let mut run = EngineRun::prepare(
             &store,

@@ -105,9 +105,9 @@ fn scatter(i: usize, salt: u64, range: usize) -> usize {
 /// spread is what makes a `knows+` path query behave differently depending on where it
 /// starts, which is exactly the behaviour worth timing.
 fn degree(i: usize) -> usize {
-    if i % 1000 == 0 {
+    if i.is_multiple_of(1000) {
         200
-    } else if i % 50 == 0 {
+    } else if i.is_multiple_of(50) {
         20
     } else {
         3

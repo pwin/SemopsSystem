@@ -22,7 +22,8 @@ Because a file named `main.rs` still exists, git records `lib.rs` as new and `ma
 rewritten, not as a rename. A `git subtree pull` that brings an upstream change to an
 engine's `main.rs` will therefore conflict in that file, and the change has to be carried
 into `lib.rs` by hand. That cost falls only on the engines' remaining upstream commits, as
-the work moves into this repository.
+the work moves into this repository. (There are none now: the engines' repositories were
+archived on 25 November 2026.)
 
 **`semops` links all four and forwards to them**, argument for argument:
 

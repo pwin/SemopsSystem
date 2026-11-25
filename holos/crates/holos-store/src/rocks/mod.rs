@@ -205,19 +205,11 @@ struct ScopeState {
     generation: u64,
 }
 
-/// What a bulk load has to remember that the database cannot yet answer.
-///
-/// Writes are buffered, so a `get` during the load does not see them. Two consequences
-/// have to be handled rather than tolerated:
-///
-/// - **Term ids.** Interning the same new term twice within one buffer would allocate two
-///   ids for one term and silently alias them. The map below is therefore mandatory, not
-///   an optimisation, and it bounds a load's memory by its number of *distinct* terms.
-///   Loads bigger than memory need the external merge sort that `DESIGN.md` §6.1 pairs
-///   with `SstFileWriter`, which is not built yet.
-/// - **Counters.** Duplicate quads cannot be detected against the buffer cheaply, so
-///   `quad_count` and the predicate statistics are recomputed by one pass over the index
-///   when the load finishes, rather than maintained during it.
+/// Turns a key read in one index order back into a quad.
+type Unpermute3 = fn([TermId; 3]) -> EncodedQuad;
+/// As [`Unpermute3`], for the four-component orders.
+type Unpermute4 = fn([TermId; 4]) -> EncodedQuad;
+
 /// One buffered write, held as owned bytes.
 ///
 /// A `rocksdb::WriteBatch` would be the natural buffer and cannot be used: it wraps a raw
@@ -290,6 +282,19 @@ impl DictBuffers {
     }
 }
 
+/// What a bulk load has to remember that the database cannot yet answer.
+///
+/// Writes are buffered, so a `get` during the load does not see them. Two consequences
+/// have to be handled rather than tolerated:
+///
+/// - **Term ids.** Interning the same new term twice within one buffer would allocate two
+///   ids for one term and silently alias them. The map below is therefore mandatory, not
+///   an optimisation, and it bounds a load's memory by its number of *distinct* terms.
+///   Loads bigger than memory need the external merge sort that `DESIGN.md` §6.1 pairs
+///   with `SstFileWriter`, which is not built yet.
+/// - **Counters.** Duplicate quads cannot be detected against the buffer cheaply, so
+///   `quad_count` and the predicate statistics are recomputed by one pass over the index
+///   when the load finishes, rather than maintained during it.
 #[derive(Default)]
 struct BulkState {
     pending: Vec<Pending>,
@@ -570,7 +575,7 @@ impl std::fmt::Debug for BulkState {
             .field("named_graphs", &self.graphs.len())
             .field("sorted_ingestion", &self.sst)
             .field("spilled", &self.spilled.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -1179,7 +1184,9 @@ impl RocksStorage {
                 if reads == 0 {
                     0.0
                 } else {
-                    nanos as f64 / 1e3 / reads as f64
+                    #[allow(clippy::cast_precision_loss, reason = "a diagnostic average")]
+                    let average = nanos as f64 / 1e3 / reads as f64;
+                    average
                 },
                 b[0],
                 b[1],
@@ -1309,7 +1316,7 @@ impl RocksStorage {
                                 state.pending.push(Pending::Put(family, key, value));
                             }
                         }
-                        other => state.pending.push(other),
+                        delete @ Pending::Delete(..) => state.pending.push(delete),
                     }
                 }
             } else {
@@ -1390,6 +1397,7 @@ impl RocksStorage {
     }
 
     /// Interns a term, writing any new rows into `batch`.
+    #[allow(clippy::too_many_lines, reason = "one case per kind of term")]
     fn encode_into(&mut self, term: TermRef<'_>, ops: &mut Vec<Pending>) -> Result<TermId> {
         // Well-known and inline terms never touch the dictionary at all (§5).
         if let TermRef::NamedNode(n) = term {
@@ -2399,51 +2407,48 @@ impl RocksStorage {
     ) -> Result<QuadScan<'_>> {
         Ok(match graph {
             GraphFilter::Default => {
-                let (order, prefix, un): (_, Vec<TermId>, fn([TermId; 3]) -> EncodedQuad) =
-                    match (s, p, o) {
-                        (Some(s), Some(p), Some(o)) => (DSPO, vec![s, p, o], un_dspo),
-                        (Some(s), Some(p), None) => (DSPO, vec![s, p], un_dspo),
-                        (Some(s), None, Some(o)) => (DOSP, vec![o, s], un_dosp),
-                        (Some(s), None, None) => (DSPO, vec![s], un_dspo),
-                        (None, Some(p), Some(o)) => (DPOS, vec![p, o], un_dpos),
-                        (None, Some(p), None) => (DPOS, vec![p], un_dpos),
-                        (None, None, Some(o)) => (DOSP, vec![o], un_dosp),
-                        (None, None, None) => (DSPO, vec![], un_dspo),
-                    };
+                let (order, prefix, un): (_, Vec<TermId>, Unpermute3) = match (s, p, o) {
+                    (Some(s), Some(p), Some(o)) => (DSPO, vec![s, p, o], un_dspo),
+                    (Some(s), Some(p), None) => (DSPO, vec![s, p], un_dspo),
+                    (Some(s), None, Some(o)) => (DOSP, vec![o, s], un_dosp),
+                    (Some(s), None, None) => (DSPO, vec![s], un_dspo),
+                    (None, Some(p), Some(o)) => (DPOS, vec![p, o], un_dpos),
+                    (None, Some(p), None) => (DPOS, vec![p], un_dpos),
+                    (None, None, Some(o)) => (DOSP, vec![o], un_dosp),
+                    (None, None, None) => (DSPO, vec![], un_dspo),
+                };
                 Box::new(
                     self.scan_order(order, &prefix)?
                         .map(move |k| Ok(un(split_key::<3>(&k?)?))),
                 )
             }
             GraphFilter::Named(g) => {
-                let (order, prefix, un): (_, Vec<TermId>, fn([TermId; 4]) -> EncodedQuad) =
-                    match (s, p, o) {
-                        (Some(s), Some(p), Some(o)) => (GSPO, vec![g, s, p, o], un_gspo),
-                        (Some(s), Some(p), None) => (GSPO, vec![g, s, p], un_gspo),
-                        (Some(s), None, Some(o)) => (GOSP, vec![g, o, s], un_gosp),
-                        (Some(s), None, None) => (GSPO, vec![g, s], un_gspo),
-                        (None, Some(p), Some(o)) => (GPOS, vec![g, p, o], un_gpos),
-                        (None, Some(p), None) => (GPOS, vec![g, p], un_gpos),
-                        (None, None, Some(o)) => (GOSP, vec![g, o], un_gosp),
-                        (None, None, None) => (GSPO, vec![g], un_gspo),
-                    };
+                let (order, prefix, un): (_, Vec<TermId>, Unpermute4) = match (s, p, o) {
+                    (Some(s), Some(p), Some(o)) => (GSPO, vec![g, s, p, o], un_gspo),
+                    (Some(s), Some(p), None) => (GSPO, vec![g, s, p], un_gspo),
+                    (Some(s), None, Some(o)) => (GOSP, vec![g, o, s], un_gosp),
+                    (Some(s), None, None) => (GSPO, vec![g, s], un_gspo),
+                    (None, Some(p), Some(o)) => (GPOS, vec![g, p, o], un_gpos),
+                    (None, Some(p), None) => (GPOS, vec![g, p], un_gpos),
+                    (None, None, Some(o)) => (GOSP, vec![g, o], un_gosp),
+                    (None, None, None) => (GSPO, vec![g], un_gspo),
+                };
                 Box::new(
                     self.scan_order(order, &prefix)?
                         .map(move |k| Ok(un(split_key::<4>(&k?)?))),
                 )
             }
             GraphFilter::AnyNamed => {
-                let (order, prefix, un): (_, Vec<TermId>, fn([TermId; 4]) -> EncodedQuad) =
-                    match (s, p, o) {
-                        (Some(s), Some(p), Some(o)) => (SPOG, vec![s, p, o], un_spog),
-                        (Some(s), Some(p), None) => (SPOG, vec![s, p], un_spog),
-                        (Some(s), None, Some(o)) => (OSPG, vec![o, s], un_ospg),
-                        (Some(s), None, None) => (SPOG, vec![s], un_spog),
-                        (None, Some(p), Some(o)) => (POSG, vec![p, o], un_posg),
-                        (None, Some(p), None) => (POSG, vec![p], un_posg),
-                        (None, None, Some(o)) => (OSPG, vec![o], un_ospg),
-                        (None, None, None) => (SPOG, vec![], un_spog),
-                    };
+                let (order, prefix, un): (_, Vec<TermId>, Unpermute4) = match (s, p, o) {
+                    (Some(s), Some(p), Some(o)) => (SPOG, vec![s, p, o], un_spog),
+                    (Some(s), Some(p), None) => (SPOG, vec![s, p], un_spog),
+                    (Some(s), None, Some(o)) => (OSPG, vec![o, s], un_ospg),
+                    (Some(s), None, None) => (SPOG, vec![s], un_spog),
+                    (None, Some(p), Some(o)) => (POSG, vec![p, o], un_posg),
+                    (None, Some(p), None) => (POSG, vec![p], un_posg),
+                    (None, None, Some(o)) => (OSPG, vec![o], un_ospg),
+                    (None, None, None) => (SPOG, vec![], un_spog),
+                };
                 Box::new(
                     self.scan_order(order, &prefix)?
                         .map(move |k| Ok(un(split_key::<4>(&k?)?))),
@@ -2734,6 +2739,10 @@ fn directory_bytes(dir: &std::path::Path) -> u64 {
     total
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "used as `map_err(rocks_err)`"
+)]
 fn rocks_err(e: rocksdb::Error) -> StorageError {
     StorageError::Io(std::io::Error::other(e.to_string()))
 }
@@ -2895,10 +2904,6 @@ fn index_opts(prefix_len: usize) -> Options {
 }
 
 fn num_cpus() -> i32 {
-    i32::try_from(
-        std::thread::available_parallelism()
-            .map(std::num::NonZeroUsize::get)
-            .unwrap_or(2),
-    )
-    .unwrap_or(2)
+    i32::try_from(std::thread::available_parallelism().map_or(2, std::num::NonZeroUsize::get))
+        .unwrap_or(2)
 }

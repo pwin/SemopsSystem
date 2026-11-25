@@ -154,6 +154,10 @@ impl Rdfs {
 ///
 /// Storage failures, a write the session's policy refuses, and [`EngineError::BadRequest`]
 /// when the closure exceeds `budget`.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the rule set, applied in one fixpoint loop"
+)]
 pub fn materialise(
     engine: &mut Engine,
     session: &mut Session,

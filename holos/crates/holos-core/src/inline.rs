@@ -329,6 +329,10 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
 mod tests {
     use super::*;
 
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "the tests build each literal inline"
+    )]
     fn round_trip(literal: Literal) -> TermId {
         let id = encode_literal(literal.as_ref())
             .unwrap_or_else(|| panic!("expected {literal} to inline"));
@@ -340,6 +344,10 @@ mod tests {
         id
     }
 
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "the tests build each literal inline"
+    )]
     fn refuses(literal: Literal) {
         assert_eq!(
             encode_literal(literal.as_ref()),
@@ -350,7 +358,7 @@ mod tests {
 
     #[test]
     fn integers_round_trip() {
-        for v in [0_i64, 1, -1, 42, -42, i32::MAX as i64, INT_MIN, INT_MAX] {
+        for v in [0_i64, 1, -1, 42, -42, i64::from(i32::MAX), INT_MIN, INT_MAX] {
             round_trip(Literal::new_typed_literal(v.to_string(), xsd::INTEGER));
         }
     }
@@ -376,7 +384,7 @@ mod tests {
         }
         // Out of 60-bit range.
         refuses(Literal::new_typed_literal(
-            (INT_MAX as i128 + 1).to_string(),
+            (i128::from(INT_MAX) + 1).to_string(),
             xsd::INTEGER,
         ));
     }

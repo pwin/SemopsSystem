@@ -231,11 +231,8 @@ fn visit(pattern: &GraphPattern, f: &mut impl FnMut(&GraphPattern)) {
     match pattern {
         GraphPattern::Join { left, right }
         | GraphPattern::Union { left, right }
-        | GraphPattern::Minus { left, right } => {
-            visit(left, f);
-            visit(right, f);
-        }
-        GraphPattern::LeftJoin { left, right, .. } => {
+        | GraphPattern::Minus { left, right }
+        | GraphPattern::LeftJoin { left, right, .. } => {
             visit(left, f);
             visit(right, f);
         }
@@ -247,8 +244,8 @@ fn visit(pattern: &GraphPattern, f: &mut impl FnMut(&GraphPattern)) {
         | GraphPattern::Distinct { inner }
         | GraphPattern::Reduced { inner }
         | GraphPattern::Slice { inner, .. }
-        | GraphPattern::Group { inner, .. } => visit(inner, f),
-        GraphPattern::Service { inner, .. } => visit(inner, f),
+        | GraphPattern::Group { inner, .. }
+        | GraphPattern::Service { inner, .. } => visit(inner, f),
         GraphPattern::Bgp { .. } | GraphPattern::Path { .. } | GraphPattern::Values { .. } => {}
     }
 }
@@ -422,7 +419,7 @@ fn rewrite_bgp(patterns: &[TriplePattern], context: &mut Context<'_, '_>) -> Gra
     }
     if relations.is_empty() {
         return GraphPattern::Bgp {
-            patterns: plain.to_vec(),
+            patterns: plain.clone(),
         };
     }
 
