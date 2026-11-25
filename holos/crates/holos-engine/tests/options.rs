@@ -267,9 +267,8 @@ fn a_long_running_query_is_stopped() {
         });
     let elapsed = started.elapsed();
 
-    let error = outcome.expect_err(
-        "a 400-million-row cross product should have been cancelled, not completed",
-    );
+    let error = outcome
+        .expect_err("a 400-million-row cross product should have been cancelled, not completed");
     assert!(
         elapsed < Duration::from_secs(30),
         "cancellation took too long: {elapsed:?}"

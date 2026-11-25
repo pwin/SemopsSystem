@@ -355,13 +355,17 @@ fn datetime_functions() -> Vec<Probe> {
         p(
             "xsd:date - xsd:date",
             "SEP-0002",
-            holds(r#"("2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date) = "P730D"^^xsd:dayTimeDuration"#),
+            holds(
+                r#"("2026-11-04"^^xsd:date - "2024-11-04"^^xsd:date) = "P730D"^^xsd:dayTimeDuration"#,
+            ),
             "a duration",
         ),
         p(
             "xsd:dateTime - xsd:dateTime",
             "SEP-0002",
-            holds(r#"("2026-11-20T14:00:00Z"^^xsd:dateTime - "2026-11-20T13:28:00Z"^^xsd:dateTime) = "PT32M"^^xsd:dayTimeDuration"#),
+            holds(
+                r#"("2026-11-20T14:00:00Z"^^xsd:dateTime - "2026-11-20T13:28:00Z"^^xsd:dateTime) = "PT32M"^^xsd:dayTimeDuration"#,
+            ),
             "a duration",
         ),
         // Several values and both orders, not one: sparopt orders the operands of `+` by hash,
@@ -384,7 +388,9 @@ fn datetime_functions() -> Vec<Probe> {
         p(
             "ADJUST",
             "SEP-0002",
-            holds(r#"ADJUST("2026-01-01T12:00:00Z"^^xsd:dateTime, "PT1H"^^xsd:dayTimeDuration) = "2026-01-01T13:00:00+01:00"^^xsd:dateTime"#),
+            holds(
+                r#"ADJUST("2026-01-01T12:00:00Z"^^xsd:dateTime, "PT1H"^^xsd:dayTimeDuration) = "2026-01-01T13:00:00+01:00"^^xsd:dateTime"#,
+            ),
             "",
         ),
     ]
@@ -440,8 +446,18 @@ fn casts() -> Vec<Probe> {
         ),
         // A cast that fails leaves the variable unbound in a row that is still there, so these
         // compare the cast's result in a FILTER, and fail as no row.
-        p("xsd:date", "SEP-0002", holds(r#"xsd:date("2026-01-01") = "2026-01-01"^^xsd:date"#), ""),
-        p("xsd:time", "SEP-0002", holds(r#"xsd:time("12:00:00") = "12:00:00"^^xsd:time"#), ""),
+        p(
+            "xsd:date",
+            "SEP-0002",
+            holds(r#"xsd:date("2026-01-01") = "2026-01-01"^^xsd:date"#),
+            "",
+        ),
+        p(
+            "xsd:time",
+            "SEP-0002",
+            holds(r#"xsd:time("12:00:00") = "12:00:00"^^xsd:time"#),
+            "",
+        ),
         p(
             "xsd:dayTimeDuration",
             "SEP-0002",

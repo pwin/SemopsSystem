@@ -95,7 +95,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut n = 0;
         let mut last: Option<String> = None;
         for solution in iter {
-            let value = solution?.get(0).map(ToString::to_string).unwrap_or_default();
+            let value = solution?
+                .get(0)
+                .map(ToString::to_string)
+                .unwrap_or_default();
             if let Some(previous) = &last {
                 assert!(*previous <= value, "out of order at row {n}");
             }

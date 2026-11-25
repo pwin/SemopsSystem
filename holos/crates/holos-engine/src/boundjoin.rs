@@ -69,9 +69,9 @@
 
 use crate::service::pattern_variables;
 use oxrdf::Variable;
-use spargebra::Query;
 use spargebra::algebra::GraphPattern;
 use spargebra::term::GroundTerm;
+use spargebra::Query;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// How many distinct key tuples may be pushed into one `SERVICE` clause.
@@ -464,7 +464,10 @@ pub fn keys_from_rows(candidates: &[Variable], rows: &[Vec<Option<GroundTerm>>])
     // A variable is pushed only if every row bound it: one unbound row means that solution
     // joins against the whole remote pattern, and a `VALUES` restricting it would lose rows.
     let keep: Vec<usize> = (0..candidates.len())
-        .filter(|i| rows.iter().all(|row| row.get(*i).is_some_and(Option::is_some)))
+        .filter(|i| {
+            rows.iter()
+                .all(|row| row.get(*i).is_some_and(Option::is_some))
+        })
         .collect();
     if keep.is_empty() {
         return None;

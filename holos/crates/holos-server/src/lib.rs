@@ -27,7 +27,6 @@ mod problem;
 mod telemetry;
 mod ui;
 
-
 use anyhow::{Context, Result};
 use holos_engine::{update as sparql_update, Engine, QueryOptions};
 use holos_security::{Label, Modes, Policy, Principal, PrincipalMatch, Rule, Scope, Session};
@@ -486,8 +485,10 @@ surprise, check that this is the directory the load wrote to."
             }
             // A network filesystem is a supported place for a store, and a slower one: every
             // synchronous write is a round trip, and only the lock keeps a second writer out.
-            if let holos_store::fscheck::Locking::Shared { fstype, mount_point } =
-                holos_store::fscheck::inspect(std::path::Path::new(path))
+            if let holos_store::fscheck::Locking::Shared {
+                fstype,
+                mount_point,
+            } = holos_store::fscheck::inspect(std::path::Path::new(path))
             {
                 if is_network_fs(&fstype) {
                     eprintln!(
@@ -924,7 +925,13 @@ fn serve_placetime(
         .iter()
         .map(|(name, value)| (*name, value.as_str()))
         .collect();
-    respond_with(request, answer.status, &answer.content_type, answer.body, &extra)
+    respond_with(
+        request,
+        answer.status,
+        &answer.content_type,
+        answer.body,
+        &extra,
+    )
 }
 
 /// Whether a path addresses the Graph Store Protocol.
@@ -1824,7 +1831,10 @@ fn read_body(
         request.as_reader().read_to_end(&mut body)?;
         return Ok(Ok(body));
     };
-    if request.body_length().is_some_and(|declared| declared > limit) {
+    if request
+        .body_length()
+        .is_some_and(|declared| declared > limit)
+    {
         return Ok(Err(BodyRefusal::TooLarge(limit)));
     }
     Ok(capped(request.as_reader(), limit)?)
@@ -2087,8 +2097,8 @@ fn parse_args(args: &[String]) -> Result<Config> {
             }
             "--placetime-vocabulary" => {
                 let name = value(&mut i)?;
-                c.placetime_vocabulary = semops_placetime::Vocabulary::parse(&name)
-                    .with_context(|| {
+                c.placetime_vocabulary =
+                    semops_placetime::Vocabulary::parse(&name).with_context(|| {
                         format!("--placetime-vocabulary is data.gov.uk or gist, not `{name}`")
                     })?;
                 placetime_vocabulary_named = true;
@@ -2162,7 +2172,10 @@ mod tests {
             parse_args(&args(&["--max-body", "1"])).unwrap().max_body,
             Some(1024 * 1024)
         );
-        assert_eq!(parse_args(&args(&["--max-body", "0"])).unwrap().max_body, None);
+        assert_eq!(
+            parse_args(&args(&["--max-body", "0"])).unwrap().max_body,
+            None
+        );
     }
 
     #[test]

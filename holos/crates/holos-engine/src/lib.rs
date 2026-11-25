@@ -761,7 +761,13 @@ impl Engine {
             let mut step_options = options.clone();
             step_options.explain = false;
             let mut evaluate = |pattern: &spargebra::algebra::GraphPattern| {
-                Self::solutions_of(view, pattern, dataset.clone(), base_iri.clone(), &step_options)
+                Self::solutions_of(
+                    view,
+                    pattern,
+                    dataset.clone(),
+                    base_iri.clone(),
+                    &step_options,
+                )
             };
             crate::pfunc::stage_query(parsed, &mut evaluate)?
         } else {
@@ -804,8 +810,7 @@ impl Engine {
                 view.store(),
                 budget,
                 options.spill_bytes.is_some(),
-            )
-            {
+            ) {
                 // Before the topology rewrite and the bind join, because this re-enters the
                 // evaluator with the `DISTINCT` removed and both would then run on that
                 // inner query anyway.
@@ -1002,8 +1007,7 @@ impl Engine {
         // Checked by both callers before they route here.
         let held = plan.held().unwrap_or_default();
         let token = deadline.as_ref().map(Deadline::token);
-        let variables: std::sync::Arc<[spargebra::term::Variable]> =
-            plan.projected.clone().into();
+        let variables: std::sync::Arc<[spargebra::term::Variable]> = plan.projected.clone().into();
 
         // The same conditions as the bind join itself: nothing in the options may change
         // what the body means. See `query_with`.
@@ -1253,12 +1257,10 @@ impl Engine {
             (results?, Some(explanation))
         } else {
             (
-                prepared
-                    .execute(view)
-                    .map_err(|e| match &deadline {
-                        Some(guard) => guard.explain(e),
-                        None => e,
-                    })?,
+                prepared.execute(view).map_err(|e| match &deadline {
+                    Some(guard) => guard.explain(e),
+                    None => e,
+                })?,
                 None,
             )
         };

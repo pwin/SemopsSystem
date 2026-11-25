@@ -5,7 +5,10 @@ use spareval::QuerySolution;
 use std::sync::Arc;
 
 fn variables() -> Arc<[Variable]> {
-    Arc::from(vec![Variable::new_unchecked("a"), Variable::new_unchecked("b")])
+    Arc::from(vec![
+        Variable::new_unchecked("a"),
+        Variable::new_unchecked("b"),
+    ])
 }
 
 #[test]

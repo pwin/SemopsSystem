@@ -16,8 +16,8 @@ use oxiri::Iri;
 use oxrdf::{Dataset, GraphName, NamedNode, Quad};
 use oxrdfio::RdfFormat;
 use spareval::{DefaultServiceHandler, QueryEvaluationError, QueryResults, QuerySolutionIter};
-use spargebra::SparqlParser;
 use spargebra::algebra::GraphPattern;
+use spargebra::SparqlParser;
 use std::sync::{Arc, Mutex};
 
 const EX: &str = "http://example.com/";
@@ -316,8 +316,10 @@ fn pushing_keys_does_not_change_the_answer() {
                ?town ex:sameAs ?remote .
                SERVICE <{REMOTE}> {{ ?remote ex:population ?population }} }} ORDER BY ?population"
         ),
-        format!("{PREFIX} ASK {{ ?town ex:sameAs ?remote .
-               SERVICE <{REMOTE}> {{ ?remote ex:population ?population }} }}"),
+        format!(
+            "{PREFIX} ASK {{ ?town ex:sameAs ?remote .
+               SERVICE <{REMOTE}> {{ ?remote ex:population ?population }} }}"
+        ),
         format!(
             "{PREFIX} CONSTRUCT {{ ?town ex:knownPopulation ?population }} WHERE {{
                ?town ex:sameAs ?remote .
@@ -326,7 +328,10 @@ fn pushing_keys_does_not_change_the_answer() {
     ] {
         let (bound, _) = run(&sparql);
         let unbound = without_the_bound_join(&sparql);
-        assert_eq!(bound, unbound, "the bound join changed the answer to {sparql}");
+        assert_eq!(
+            bound, unbound,
+            "the bound join changed the answer to {sparql}"
+        );
     }
 }
 
@@ -379,9 +384,11 @@ fn a_blank_node_key_is_not_sent() {
     // the far end. Pushing it would send a key that cannot match, and `VALUES` cannot carry one
     // anyway.
     let (_rows, sent) = run_on(
-        &format!("@prefix ex: <{EX}> .
+        &format!(
+            "@prefix ex: <{EX}> .
 ex:town ex:sameAs [ ex:kind \"anonymous\" ] .
-"),
+"
+        ),
         &format!(
             "{PREFIX} SELECT ?population WHERE {{
                ?town ex:sameAs ?remote .

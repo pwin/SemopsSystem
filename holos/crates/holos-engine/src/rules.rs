@@ -164,9 +164,9 @@ impl RuleSet {
         let mut pending_name: Option<String> = None;
 
         for line in text.lines() {
-            let starts_rule = line
-                .strip_prefix("CONSTRUCT")
-                .is_some_and(|rest| rest.is_empty() || rest.starts_with(|c: char| !c.is_alphanumeric()));
+            let starts_rule = line.strip_prefix("CONSTRUCT").is_some_and(|rest| {
+                rest.is_empty() || rest.starts_with(|c: char| !c.is_alphanumeric())
+            });
             if starts_rule {
                 let name = pending_name
                     .take()
@@ -215,9 +215,10 @@ impl RuleSet {
         let mut rules = Vec::with_capacity(blocks.len());
         for (name, body) in blocks {
             let text = format!("{prologue}{body}");
-            let parsed = parser.clone().parse_query(&text).map_err(|e| {
-                EngineError::BadRequest(format!("{name} does not parse: {e}"))
-            })?;
+            let parsed = parser
+                .clone()
+                .parse_query(&text)
+                .map_err(|e| EngineError::BadRequest(format!("{name} does not parse: {e}")))?;
             if let Err(why) = check(&parsed) {
                 return Err(EngineError::BadRequest(format!("{name}: {why}")));
             }
@@ -282,7 +283,9 @@ fn walk(pattern: &GraphPattern) -> Result<(), String> {
             return walk(inner);
         }
         GraphPattern::Extend {
-            inner, expression: e, ..
+            inner,
+            expression: e,
+            ..
         } => {
             expression(e)?;
             return walk(inner);
@@ -439,7 +442,8 @@ mod tests {
 
     fn engine() -> Engine {
         let mut e = Engine::new();
-        e.bulk_load(DATA.as_bytes(), RdfFormat::Turtle, None).unwrap();
+        e.bulk_load(DATA.as_bytes(), RdfFormat::Turtle, None)
+            .unwrap();
         e
     }
 
@@ -506,7 +510,10 @@ mod tests {
         let (outcome, _) =
             run("CONSTRUCT { ?x ex:ancestorOf ?z } WHERE { ?x ex:parentOf+ ?z }\n").expect("runs");
         assert_eq!(outcome.added, 6);
-        assert_eq!(outcome.rounds, 2, "one round to derive, one to find nothing new");
+        assert_eq!(
+            outcome.rounds, 2,
+            "one round to derive, one to find nothing new"
+        );
     }
 
     /// A rule that derives only what is already there stops after one round.
@@ -572,8 +579,15 @@ mod tests {
         let mut e = engine();
         let mut session = Session::unrestricted(e.store()).unwrap();
         // One round is not enough for a chain, so the cap bites.
-        let error = materialise(&mut e, &mut session, &set, &derived_graph(), DEFAULT_BUDGET, 1)
-            .expect_err("the cap must refuse");
+        let error = materialise(
+            &mut e,
+            &mut session,
+            &set,
+            &derived_graph(),
+            DEFAULT_BUDGET,
+            1,
+        )
+        .expect_err("the cap must refuse");
         assert!(error.to_string().contains("after 1 rounds"), "{error}");
     }
 
@@ -581,14 +595,23 @@ mod tests {
     #[test]
     fn the_budget_refuses() {
         let set = RuleSet::parse(
-            &format!("{PREFIX}CONSTRUCT {{ ?x ex:ancestorOf ?z }} WHERE {{ ?x ex:parentOf+ ?z }}\n"),
+            &format!(
+                "{PREFIX}CONSTRUCT {{ ?x ex:ancestorOf ?z }} WHERE {{ ?x ex:parentOf+ ?z }}\n"
+            ),
             None,
         )
         .expect("parses");
         let mut e = engine();
         let mut session = Session::unrestricted(e.store()).unwrap();
-        let error = materialise(&mut e, &mut session, &set, &derived_graph(), 2, DEFAULT_ROUNDS)
-            .expect_err("the budget must refuse");
+        let error = materialise(
+            &mut e,
+            &mut session,
+            &set,
+            &derived_graph(),
+            2,
+            DEFAULT_ROUNDS,
+        )
+        .expect_err("the budget must refuse");
         assert!(error.to_string().contains("more than 2 facts"), "{error}");
     }
 

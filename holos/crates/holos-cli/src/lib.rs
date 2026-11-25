@@ -709,14 +709,8 @@ fn rules(engine: &mut Engine, opts: &Options) -> Result<()> {
 
     let mut session = opts.session(engine)?;
     let before = engine.store().len();
-    let report = holos_engine::rules::materialise(
-        engine,
-        &mut session,
-        &set,
-        &graph,
-        budget,
-        max_rounds,
-    )?;
+    let report =
+        holos_engine::rules::materialise(engine, &mut session, &set, &graph, budget, max_rounds)?;
     engine.store_mut().flush()?;
 
     println!("\nderived {} fact(s) into <{iri}>", report.added);

@@ -168,11 +168,8 @@ fn term_to_js(term: &Term) -> JsValue {
                 &JsValue::from_str("termType"),
                 &JsValue::from_str("DefaultGraph"),
             );
-            let _ = js_sys::Reflect::set(
-                &graph,
-                &JsValue::from_str("value"),
-                &JsValue::from_str(""),
-            );
+            let _ =
+                js_sys::Reflect::set(&graph, &JsValue::from_str("value"), &JsValue::from_str(""));
             set("graph", &graph);
         }
     }
@@ -300,8 +297,8 @@ impl Store {
         if let Some(base) = base {
             options = options.with_base_iri(base);
         }
-        let (results, explanation) = Engine::query_with(&view, query, &options)
-            .map_err(|e| failed("querying", &e))?;
+        let (results, explanation) =
+            Engine::query_with(&view, query, &options).map_err(|e| failed("querying", &e))?;
 
         // Drained before the explanation is written, not after: see above.
         match results {
@@ -443,7 +440,11 @@ impl Store {
                         // null. "This row has no value here" and "this row has the value
                         // null" are different facts, and RDF has no null to mean the first.
                         if let Some(term) = solution.get(name.as_str()) {
-                            js_sys::Reflect::set(&row, &JsValue::from_str(name), &term_to_js(term))?;
+                            js_sys::Reflect::set(
+                                &row,
+                                &JsValue::from_str(name),
+                                &term_to_js(term),
+                            )?;
                         }
                     }
                     out.push(&row);
@@ -522,9 +523,8 @@ impl Store {
         let parsed = parser
             .parse_query(query)
             .map_err(|e| failed("parsing the query", &e))?;
-        let results =
-            Engine::query_prepared_with_handler(&view, &parsed, self.services.clone())
-                .map_err(|e| failed("querying", &e))?;
+        let results = Engine::query_prepared_with_handler(&view, &parsed, self.services.clone())
+            .map_err(|e| failed("querying", &e))?;
         let value = Self::results_to_js(results)?;
 
         let pending = js_sys::Array::new();

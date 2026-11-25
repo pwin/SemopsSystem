@@ -199,7 +199,8 @@ mod tests {
 
     fn engine() -> Engine {
         let mut e = Engine::new();
-        e.bulk_load(DATA.as_bytes(), RdfFormat::Turtle, None).unwrap();
+        e.bulk_load(DATA.as_bytes(), RdfFormat::Turtle, None)
+            .unwrap();
         e
     }
 
@@ -209,7 +210,10 @@ mod tests {
         let view = e.view(&session);
         let id = |local: &str| {
             let node = NamedNode::new_unchecked(format!("{EX}{local}"));
-            e.store().lookup_term(TermRef::from(&node)).unwrap().unwrap()
+            e.store()
+                .lookup_term(TermRef::from(&node))
+                .unwrap()
+                .unwrap()
         };
         let mut out = Vec::new();
         reachable(
@@ -273,10 +277,16 @@ mod tests {
     /// A cycle must terminate, and must not emit a node twice.
     #[test]
     fn a_cycle_terminates_and_repeats_nothing() {
-        assert_eq!(walk("f", Direction::Forward, Hops::ZeroOrMore), ["ex:f", "ex:g"]);
+        assert_eq!(
+            walk("f", Direction::Forward, Hops::ZeroOrMore),
+            ["ex:f", "ex:g"]
+        );
         // `+` around a cycle does reach the seed again, and that is one solution, not none
         // and not two.
-        assert_eq!(walk("f", Direction::Forward, Hops::OneOrMore), ["ex:f", "ex:g"]);
+        assert_eq!(
+            walk("f", Direction::Forward, Hops::OneOrMore),
+            ["ex:f", "ex:g"]
+        );
     }
 
     /// A consumer that stops is not walked past. The chain from `a` has five answers; asking
@@ -288,7 +298,10 @@ mod tests {
         let view = e.view(&session);
         let id = |local: &str| {
             let node = NamedNode::new_unchecked(format!("{EX}{local}"));
-            e.store().lookup_term(TermRef::from(&node)).unwrap().unwrap()
+            e.store()
+                .lookup_term(TermRef::from(&node))
+                .unwrap()
+                .unwrap()
         };
         let mut seen = 0;
         let outcome = reachable(
@@ -316,7 +329,10 @@ mod tests {
         let view = e.view(&session);
         let id = |local: &str| {
             let node = NamedNode::new_unchecked(format!("{EX}{local}"));
-            e.store().lookup_term(TermRef::from(&node)).unwrap().unwrap()
+            e.store()
+                .lookup_term(TermRef::from(&node))
+                .unwrap()
+                .unwrap()
         };
         let mut out = Vec::new();
         reachable(

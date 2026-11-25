@@ -23,10 +23,10 @@
 //! rather than a promise.
 
 use holos_core::TermId as HolosId;
-use shacl::model::{Graph, GraphBuilder, TermStore, Vocab};
-use shacl::TermId as EngineId;
 use holos_store::{GraphFilter, Store};
 use rustc_hash::FxHashMap;
+use shacl::model::{Graph, GraphBuilder, TermStore, Vocab};
+use shacl::TermId as EngineId;
 
 use crate::ShaclError;
 
@@ -76,7 +76,10 @@ impl Bridged {
     /// blank node's scope into its label, so a label lookup would miss the store's node.)
     #[must_use]
     pub fn reverse(&self) -> FxHashMap<EngineId, HolosId> {
-        self.forward.iter().map(|(holos, engine)| (*engine, *holos)).collect()
+        self.forward
+            .iter()
+            .map(|(holos, engine)| (*engine, *holos))
+            .collect()
     }
 
     /// How many triples were bridged.

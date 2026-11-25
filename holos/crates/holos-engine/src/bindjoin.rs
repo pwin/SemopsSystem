@@ -1810,19 +1810,18 @@ impl Plan {
             return Ok(());
         }
 
-        let predicate =
-            match lookup(view, oxrdf::Term::from(closure.predicate.clone()).as_ref())? {
-                Slot::Fixed(id) => id,
-                // A predicate the store has never seen crosses no edges, so only the
-                // zero-length case can answer — and that is `Hops::includes_seed`, handled by
-                // the walk below with an empty edge set. But with no id there is nothing to
-                // scan, so the answer is the seed alone.
-                Slot::Missing | Slot::Any => {
-                    return self.closure_zero_only(
-                        view, stats, closure, &subject, &object, rest, pending, bindings, run,
-                    );
-                }
-            };
+        let predicate = match lookup(view, oxrdf::Term::from(closure.predicate.clone()).as_ref())? {
+            Slot::Fixed(id) => id,
+            // A predicate the store has never seen crosses no edges, so only the
+            // zero-length case can answer — and that is `Hops::includes_seed`, handled by
+            // the walk below with an empty edge set. But with no id there is nothing to
+            // scan, so the answer is the seed alone.
+            Slot::Missing | Slot::Any => {
+                return self.closure_zero_only(
+                    view, stats, closure, &subject, &object, rest, pending, bindings, run,
+                );
+            }
+        };
 
         let graph = match &closure.scope {
             Scope::Default => Some(None),
@@ -1928,8 +1927,10 @@ impl Plan {
         bindings: &mut FxHashMap<&'p Variable, TermId>,
         run: &mut Run<'_>,
     ) -> Result<(), ViewError> {
-        if !matches!(closure.hops, crate::reach::Hops::ZeroOrMore | crate::reach::Hops::ZeroOrOne)
-        {
+        if !matches!(
+            closure.hops,
+            crate::reach::Hops::ZeroOrMore | crate::reach::Hops::ZeroOrOne
+        ) {
             return Ok(());
         }
         let (seed, far_end, far_slot) = match (subject, object) {
@@ -2143,11 +2144,7 @@ impl Plan {
     }
 
     /// [`Plan::project`] into a buffer that is reused for the next row.
-    fn project_into(
-        &self,
-        bindings: &FxHashMap<&Variable, TermId>,
-        out: &mut Vec<Option<TermId>>,
-    ) {
+    fn project_into(&self, bindings: &FxHashMap<&Variable, TermId>, out: &mut Vec<Option<TermId>>) {
         out.clear();
         out.extend(self.variables.iter().map(|v| bindings.get(v).copied()));
     }
@@ -2361,9 +2358,8 @@ fn zero_length_admissible(
     ) {
         return Ok(true);
     }
-    let free = |term: &TermPattern| {
-        matches!(term, TermPattern::Variable(_) | TermPattern::BlankNode(_))
-    };
+    let free =
+        |term: &TermPattern| matches!(term, TermPattern::Variable(_) | TermPattern::BlankNode(_));
     if !(free(&closure.subject) && free(&closure.object)) {
         return Ok(true);
     }
@@ -2389,10 +2385,7 @@ fn zero_length_admissible(
     Ok(false)
 }
 
-fn closure_seeds_bound(
-    closure: &ClosureItem,
-    bindings: &FxHashMap<&Variable, TermId>,
-) -> bool {
+fn closure_seeds_bound(closure: &ClosureItem, bindings: &FxHashMap<&Variable, TermId>) -> bool {
     let anchored = |term: &TermPattern| match term {
         TermPattern::Variable(v) => bindings.contains_key(v),
         TermPattern::NamedNode(_) | TermPattern::Literal(_) => true,
