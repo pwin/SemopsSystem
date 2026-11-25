@@ -16,7 +16,7 @@ Python wheel, the WebAssembly package and the container image, does everything H
 | --- | --- |
 | RDF 1.2: triple terms, annotations, base direction, in every syntax | Oxigraph crates with `rdf-12`, on in the workspace dependencies |
 | SPARQL 1.2 query and update, with SEP-0002 date, time and duration operators | `spargebra`/`spareval`/`sparopt` with `sparql-12` and `sep-0002` |
-| SHACL 1.0 and 1.2 Core, SHACL-SPARQL, node expressions and SHACL-AF rules | `shacl` and `holos-shacl-engine` (the adapted validator). `holos-shacl`, the native and incremental validator, checks Core itself and hands SHACL-SPARQL constraints and custom constraint components to the adapted engine, merging what it reports (below) |
+| SHACL 1.0 and 1.2 Core, SHACL-SPARQL, node expressions and SHACL-AF rules | `shacl`. `holos-shacl`, the native and incremental validator, checks Core itself and hands SHACL-SPARQL constraints and custom constraint components to `shacl` through its bridge, merging what it reports (below). Until [0011](0011-one-shacl-engine.md) HOLOS used its own copy of the engine, `holos-shacl-engine` |
 | GeoSPARQL: the 43 `spargeo` functions, plus `geof:buffer` and `geof:boundary` | `holos-engine`, where `spargeo` and `geo` are unconditional dependencies |
 | Persistent store (RocksDB) | `holos-store/rocksdb`, a default feature of the command, server and wheel. Not in WebAssembly, which has no file system |
 | Extension functions: XPath 3.1 `fn:` and `math:`, Jena ARQ `afn:`, Jena property functions `apf:` and `list:`, SPIN/TopBraid `spif:` | `semops-functions`, registered by every evaluator |
@@ -43,7 +43,7 @@ place failed in another:
 | Evaluator | `fn:` | `math:` | `afn:` | `apf:` | `spif:` |
 | --- | --- | --- | --- | --- | --- |
 | HOLOS queries (`holos-engine/src/functions.rs`) | 26 | none | 11 | none | 12 |
-| SHACL-SPARQL in `holos-shacl-engine` and `shacl` | none | none | none | none | none |
+| SHACL-SPARQL in `shacl` | none | none | none | none | none |
 | HOLOS's native validator | refused `sh:sparql` | | | | |
 | tarka mappings (`tarka-tarql/src/afn.rs`, `pfunc.rs`) | none | none | 13, its own copy, Jena's rules | `strSplit`, `concat`, `splitIRI`, `str`, `assign` | none |
 
@@ -105,7 +105,7 @@ tests, which the native path skips.
 
 **One table of cases, run through every evaluator** (`semops_functions::cases`): an
 expression and the value it must give, checked by this crate against `spareval`, by
-`holos-engine` through store queries, by `shacl`, `holos-shacl-engine` and `holos-shacl` as
+`holos-engine` through store queries, by `shacl` and `holos-shacl` as
 one `sh:sparql` constraint per case (each with a control case that must fail), and by tarka
 as a TARQL mapping. A function that works in a query and not in a shape is a test failure.
 

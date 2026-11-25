@@ -26,10 +26,10 @@
 use crate::bridge::{self, Bridged};
 use crate::incremental::Change;
 use crate::{Options, ShaclError};
-use holos_shacl_engine::model::Graph as EngineGraph;
-use holos_shacl_engine::report::ValidationReport;
-use holos_shacl_engine::shapes::{ShapeId, Shapes as EngineShapes};
-use holos_shacl_engine::{validate as engine_validate, TermId as EngineId};
+use shacl::model::Graph as EngineGraph;
+use shacl::report::ValidationReport;
+use shacl::shapes::{ShapeId, Shapes as EngineShapes};
+use shacl::{validate as engine_validate, TermId as EngineId};
 use holos_store::Store;
 use oxrdf::Graph as OxGraph;
 use rustc_hash::FxHashMap;
@@ -377,7 +377,7 @@ impl EngineRun {
         &mut self,
         work: &[(holos_core::TermId, holos_core::TermId)],
     ) -> Result<ValidationReport, ShaclError> {
-        let mut translated: Vec<(holos_shacl_engine::shapes::ShapeId, EngineId)> = Vec::new();
+        let mut translated: Vec<(shacl::shapes::ShapeId, EngineId)> = Vec::new();
         for (shape_node, focus) in work {
             let (Some(shape_id), Some(focus_id)) = (
                 self.bridged
@@ -586,7 +586,7 @@ impl EngineRun {
     /// caller asked what the rules entail, and half an answer to that is not an answer.
     pub fn infer(&mut self, max_rounds: usize) -> Result<Vec<oxrdf::Triple>, ShaclError> {
         let before = self.bridged.graph.clone();
-        let after = holos_shacl_engine::rules::apply_iterated(
+        let after = shacl::rules::apply_iterated(
             &before,
             &self.shapes,
             &self.shapes_graph,
@@ -630,7 +630,7 @@ impl EngineRun {
         self.shapes.unconditional().is_empty()
     }
 
-    /// Renders a report as RDF.
+    /// Renders a report as RDF, judged by the default severities and so not declaring them.
     #[must_use]
     pub fn report_to_oxrdf(&self, report: &ValidationReport) -> OxGraph {
         report.to_oxrdf(
@@ -638,7 +638,7 @@ impl EngineRun {
             &self.bridged.vocab,
             &self.shapes_graph,
             &self.shapes,
-            &self.all_severities(),
+            &[],
         )
     }
 
@@ -652,13 +652,13 @@ impl EngineRun {
         report: &ValidationReport,
         disallowed: &[EngineId],
     ) -> OxGraph {
-        report.to_oxrdf_declaring(
+        // The engine declares a non-empty set and reads an empty one as the default.
+        report.to_oxrdf(
             &self.bridged.terms,
             &self.bridged.vocab,
             &self.shapes_graph,
             &self.shapes,
             disallowed,
-            true,
         )
     }
 
@@ -674,7 +674,7 @@ impl EngineRun {
     /// Whether a report conforms.
     #[must_use]
     pub fn conforms(&self, report: &ValidationReport) -> bool {
-        report.conforms(&self.all_severities())
+        report.conforms(&self.all_severities(), &self.bridged.vocab)
     }
 }
 

@@ -81,7 +81,7 @@ fn apply_to_store(store: &mut Store, turtle: &str, added: bool) -> Vec<Change> {
 }
 
 /// A report as a canonical, sorted graph so two of them are comparable.
-fn canonical(run: &EngineRun, report: &holos_shacl_engine::report::ValidationReport) -> String {
+fn canonical(run: &EngineRun, report: &shacl::report::ValidationReport) -> String {
     let graph = run.report_to_oxrdf(report);
     let mut dataset = Dataset::new();
     for triple in graph.iter() {

@@ -14,7 +14,6 @@ members = [
     "holos/crates/holos-store",
     "holos/crates/holos-security",
     "holos/crates/holos-shacl",
-    "holos/crates/holos-shacl-engine",
     "holos/crates/holos-holon",
     "holos/crates/holos-stats",
     "holos/crates/holos-engine",
@@ -68,7 +67,6 @@ default-members = [
     "holos/crates/holos-store",
     "holos/crates/holos-security",
     "holos/crates/holos-shacl",
-    "holos/crates/holos-shacl-engine",
     "holos/crates/holos-holon",
     "holos/crates/holos-stats",
     "holos/crates/holos-engine",
@@ -157,7 +155,6 @@ holos-engine = { path = "holos/crates/holos-engine", version = "0.30.0" }
 holos-security = { path = "holos/crates/holos-security", version = "0.30.0" }
 holos-conformance = { path = "holos/crates/holos-conformance", version = "0.30.0" }
 holos-shacl = { path = "holos/crates/holos-shacl", version = "0.30.0" }
-holos-shacl-engine = { path = "holos/crates/holos-shacl-engine", version = "0.30.0" }
 holos-holon = { path = "holos/crates/holos-holon", version = "0.30.0" }
 holos-stats = { path = "holos/crates/holos-stats", version = "0.30.0" }
 holos-cli = { path = "holos/crates/holos-cli", version = "0.30.0" }

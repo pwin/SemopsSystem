@@ -23,8 +23,8 @@
 //! rather than a promise.
 
 use holos_core::TermId as HolosId;
-use holos_shacl_engine::model::{Graph, GraphBuilder, TermStore, Vocab};
-use holos_shacl_engine::TermId as EngineId;
+use shacl::model::{Graph, GraphBuilder, TermStore, Vocab};
+use shacl::TermId as EngineId;
 use holos_store::{GraphFilter, Store};
 use rustc_hash::FxHashMap;
 

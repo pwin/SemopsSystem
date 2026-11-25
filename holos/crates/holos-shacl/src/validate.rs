@@ -1351,7 +1351,7 @@ fn lexical_is_valid(value: &str, datatype: &str) -> bool {
 /// the day before it. The rest of the form, the timezone included, is still
 /// checked by the library; only February's upper bound comes from the
 /// specification. The adapted engine carries the same compensation, in
-/// `holos-shacl-engine`'s `datatypes::is_well_formed_g_month_day`.
+/// `shacl`'s `datatypes::is_well_formed_g_month_day`.
 fn g_month_day_is_valid(value: &str) -> bool {
     if value.parse::<oxsdatatypes::GMonthDay>().is_ok() {
         return true;
