@@ -24,7 +24,7 @@ gap from a mistake, and says what to use meanwhile.
 | Not yet | Meanwhile |
 |---|---|
 | A deployment of the templates to a subscription | The templates are linted and schema-checked in CI; the first deployment confirms resource versions |
-| OpenTelemetry export to Azure Monitor | Container logs to Log Analytics |
+| OTLP over gRPC or TLS from the server, so it can send to the Container Apps managed agent or a remote collector directly | An OpenTelemetry Collector beside it, receiving plain HTTP ([chapter 10](10-azure.md#telemetry)) |
 | Marketplace listings for the GitHub Action and an Azure DevOps extension | The Helm chart and the Bicep template; `semops check --format junit` or `sarif` in a script step |
 
 ## Security

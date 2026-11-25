@@ -73,6 +73,7 @@ spec:
           env:
             - name: TMPDIR
               value: /tmp
+            {{- include "holos.telemetryEnv" (dict "Values" .Values "role" "replica") | nindent 12 }}
           volumeMounts:
             - name: shared
               mountPath: {{ .Values.shared.mountPath }}

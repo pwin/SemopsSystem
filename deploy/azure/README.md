@@ -193,6 +193,23 @@ sudo chown -R 10001:10001 /mnt/holos
 For `snapshot` mode, put an N-Quads dump there (`snapshots/latest.nq.gz`, or set
 `snapshotFile`). `holos dump`, or `POST /backup` on an in-memory server, makes one.
 
+## Telemetry
+
+HOLOS sends OpenTelemetry traces and metrics over OTLP/HTTP when `OTEL_EXPORTER_OTLP_ENDPOINT`
+is set. An OpenTelemetry Collector forwards them to Application Insights:
+[`telemetry/collector.yaml`](telemetry/collector.yaml) is an example, using the contrib
+distribution's `azuremonitor` exporter.
+
+- **AKS:** run the collector as a service, then
+  `--set telemetry.otlpEndpoint=http://<collector service>.<namespace>:4318`. The writer and
+  the replicas both send, tagged `holos.role=writer` or `replica`.
+- **Container Apps:** run the collector as a sidecar in the same app, and set
+  `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` on the HOLOS container, which
+  overrides the value the managed agent injects. The managed agent accepts only gRPC, and
+  its Application Insights destination takes no metrics.
+
+The manual's Azure chapter lists the variables and what is, and is not, recorded.
+
 ## Identity
 
 HOLOS authenticates nobody itself. It applies policy to claims the edge has verified

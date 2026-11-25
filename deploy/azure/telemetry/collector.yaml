@@ -1,0 +1,39 @@
+# An OpenTelemetry Collector (the contrib distribution, which has the azuremonitor exporter)
+# between HOLOS and Application Insights.
+#
+# HOLOS sends OTLP as protobuf over plain HTTP; this receives it on port 4318 and forwards
+# traces and metrics to Application Insights over TLS. Set APPLICATIONINSIGHTS_CONNECTION_STRING
+# in the collector's environment, from a secret.
+#
+#   AKS:            run the collector as a Deployment and Service (the OpenTelemetry Operator or
+#                   the opentelemetry-collector Helm chart), and set the HOLOS chart's
+#                   telemetry.otlpEndpoint to http://<service>.<namespace>:4318.
+#   Container Apps: run it as a sidecar container in the same app, and set
+#                   OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 on the HOLOS container.
+#                   (The managed OpenTelemetry agent accepts only gRPC, and its Application
+#                   Insights destination takes no metrics.)
+#
+# This file is an example, not tested against a live workspace.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  azuremonitor:
+    connection_string: ${env:APPLICATIONINSIGHTS_CONNECTION_STRING}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [azuremonitor]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [azuremonitor]

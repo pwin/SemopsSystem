@@ -23,6 +23,14 @@ by cargo. One line is added, `exclude = ["Cargo.toml.orig"]`, which leaves that 
 packaging: the `semops-system` sdist packages this crate, and `cargo package` refuses a
 package that contains a file named `Cargo.toml.orig`.
 
+The ranges for `md-5`, `sha1` and `sha2` are narrowed from `>=0.10,<0.12` to `0.10`.
+`src/expression.rs` hashes with all three through `md5::Digest`, so they must share one major
+version of `digest`. Upstream's three independent ranges let cargo resolve them apart:
+adding OpenTelemetry to `holos-server` re-resolved the lock with `sha1` and `sha2` at 0.11
+(`digest` 0.11) and `md-5` at 0.10, and `MD5`, `SHA1` and the `SHA*` functions stopped
+compiling. One range for all three keeps them together. `md-5` 0.11 is out, so moving all
+three to 0.11 together is the later step.
+
 ## The change
 
 `src/expression.rs`: the evaluator for `Expression::Add`, and one function,

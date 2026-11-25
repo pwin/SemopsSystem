@@ -65,6 +65,7 @@ spec:
             # read-only root filesystem.
             - name: TMPDIR
               value: /tmp
+            {{- include "holos.telemetryEnv" (dict "Values" .Values "role" "writer") | nindent 12 }}
           volumeMounts:
             - name: store
               mountPath: /var/lib/holos
