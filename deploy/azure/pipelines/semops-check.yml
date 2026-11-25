@@ -22,7 +22,7 @@ parameters:
   values: [both, sparql, shacl]
 - name: version
   type: string
-  default: ">=0.30.0"
+  default: ">=0.31.0"
 - name: pythonVersion
   type: string
   default: "3.13"
