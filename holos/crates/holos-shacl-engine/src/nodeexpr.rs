@@ -632,7 +632,7 @@ fn eval_select(
     let mut out = Vec::new();
     for row in rows {
         if let Some(term) = row.get(&variable) {
-            out.push(intern_result(term, store));
+            out.push(crate::sparql::intern_term(term.as_ref(), store));
         }
     }
     Ok(out)
@@ -663,16 +663,8 @@ fn eval_sparql_expr(
     Ok(rows
         .iter()
         .filter_map(|row| row.get("value"))
-        .map(|t| intern_result(t, store))
+        .map(|t| crate::sparql::intern_term(t.as_ref(), store))
         .collect())
-}
-
-/// A term a query produced, as an id. A value that already exists is found;
-/// one the query computed is interned in the SPARQL scope, since a node
-/// expression is entitled to produce values the data never held.
-fn intern_result(term: &oxrdf::Term, store: &mut TermStore) -> TermId {
-    crate::sparql::from_term(term.as_ref(), store)
-        .unwrap_or_else(|| store.intern_oxrdf(term.as_ref(), crate::model::scope::SPARQL))
 }
 
 /// The `sparql:` namespace, whose predicates name SPARQL functions.
