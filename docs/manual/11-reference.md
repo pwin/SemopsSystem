@@ -66,6 +66,10 @@ Azure Key Vault reference supplies one.
 rest) when an argument is a Blob Storage URL. [Chapter 10](10-azure.md#reading-from-blob-storage)
 lists them.
 
+`holos-server` and `semops serve` read OpenTelemetry's own variables
+(`OTEL_EXPORTER_OTLP_ENDPOINT` and the rest) to send traces and metrics.
+[Chapter 10](10-azure.md#telemetry) lists them.
+
 One more is read by the store itself, wherever it runs:
 
 | Variable | Effect |

@@ -24,6 +24,7 @@ mod http;
 mod inputs;
 mod placetime;
 mod problem;
+mod telemetry;
 mod ui;
 
 
@@ -584,10 +585,16 @@ surprise, check that this is the directory the load wrote to."
         );
     }
 
+    let telemetry = Arc::new(telemetry::Telemetry::from_env());
+    if let Some(line) = telemetry.describe() {
+        eprintln!("  telemetry {line}");
+    }
+
     let mut workers = Vec::with_capacity(threads);
     for _ in 0..threads {
         let server = Arc::clone(&server);
         let state = Arc::clone(&state);
+        let telemetry = Arc::clone(&telemetry);
         workers.push(std::thread::spawn(move || {
             // A worker that dies takes its thread with it, not the server; a panic while
             // answering one request must not close the port for everyone else.
@@ -597,9 +604,14 @@ surprise, check that this is the directory the load wrote to."
             // accepts connections that nothing answers. (The container image builds with
             // `panic = "abort"`, where a panic restarts the process instead.)
             while let Ok(request) = server.recv() {
+                let in_flight = telemetry.start(
+                    request.method().as_str(),
+                    route_of(&state, request.method().as_str(), request.url()),
+                );
                 let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     dispatch(&state, request)
                 }));
+                telemetry.finish(in_flight);
                 match outcome {
                     Ok(Ok(())) => {}
                     Ok(Err(e)) => eprintln!("request failed: {e:#}"),
@@ -612,6 +624,47 @@ surprise, check that this is the directory the load wrote to."
         let _ = worker.join();
     }
     Ok(())
+}
+
+/// The route a request matches, for telemetry: one of a fixed set, so a client cannot make
+/// the metrics' cardinality grow, and `None` for a path no route serves.
+fn route_of(state: &State, method: &str, url: &str) -> Option<std::borrow::Cow<'static, str>> {
+    use std::borrow::Cow;
+    let path = url.split(['?', '#']).next().unwrap_or(url);
+    let fixed = [
+        "/",
+        "/health",
+        "/query",
+        "/update",
+        "/stats",
+        "/backup",
+        "/maintenance/purge",
+        "/ui/console.css",
+        ui::SCRIPT_PATH,
+    ];
+    if let Some(route) = fixed.into_iter().find(|r| *r == path) {
+        return Some(Cow::Borrowed(route));
+    }
+    if method == "OPTIONS" {
+        return Some(Cow::Borrowed("*"));
+    }
+    if is_graph_store_path(state, path) {
+        let base = &state.config.gsp_path;
+        return Some(if path == base {
+            Cow::Owned(base.clone())
+        } else {
+            Cow::Owned(format!("{}/{{graph}}", base.trim_end_matches('/')))
+        });
+    }
+    if state
+        .config
+        .placetime
+        .as_ref()
+        .is_some_and(|m| m.relative(path).is_some())
+    {
+        return Some(Cow::Borrowed("{placetime}"));
+    }
+    None
 }
 
 fn dispatch(state: &State, mut request: Request) -> Result<()> {
@@ -1844,6 +1897,7 @@ fn respond_with(
             response.add_header(header);
         }
     }
+    telemetry::record_status(status);
     request.respond(response)?;
     Ok(())
 }

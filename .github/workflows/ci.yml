@@ -293,7 +293,8 @@ jobs:
               "--set shared.enabled=true --set replicas.enabled=true --set backup.enabled=true --set identity.mode=forwarded --set server.placetime=true" \
               "--set shared.enabled=true --set backup.enabled=true --set identity.mode=forwarded --set backup.blob.url=https://acct.blob.core.windows.net/holos-backups/ --set backup.blob.clientId=00000000-0000-0000-0000-000000000000" \
               "--set store.storageClassName=azure-netapp-files --set networkPolicy.enabled=false" \
-              "--set server.placetimeBase=https://data.example/ref/ --set server.placetimeVocabulary=gist"; do
+              "--set server.placetimeBase=https://data.example/ref/ --set server.placetimeVocabulary=gist" \
+              "--set shared.enabled=true --set replicas.enabled=true --set telemetry.otlpEndpoint=http://otel-collector.observability:4318"; do
             # Word splitting of $values is intended: it is a list of flags.
             # shellcheck disable=SC2086
             helm template t "$chart" $values > rendered.yaml
@@ -305,7 +306,8 @@ jobs:
           for refused in "backup.enabled=true" "replicas.enabled=true" "identity.mode=anything" \
               "server.placetime=true,server.placetimeVocabulary=owl-time" \
               "shared.enabled=true,backup.enabled=true,identity.mode=forwarded,backup.blob.url=https://acct.blob.core.windows.net/c,backup.blob.clientId=x" \
-              "shared.enabled=true,backup.enabled=true,identity.mode=forwarded,backup.blob.url=https://acct.blob.core.windows.net/c/"; do
+              "shared.enabled=true,backup.enabled=true,identity.mode=forwarded,backup.blob.url=https://acct.blob.core.windows.net/c/" \
+              "telemetry.otlpEndpoint=https://collector.example:4318"; do
             if helm template t "$chart" --set "$refused" > /dev/null 2>&1; then
               echo "::error::the chart accepted --set $refused, which it must refuse"
               exit 1

@@ -59,7 +59,7 @@ version = "0.4"
 version = "0.2.3"
 
 [dependencies.md-5]
-version = ">=0.10,<0.12"
+version = "0.10"
 
 [dependencies.oxiri]
 version = "0.2.11"
@@ -81,10 +81,10 @@ version = "1.7"
 version = "2.1"
 
 [dependencies.sha1]
-version = ">=0.10,<0.12"
+version = "0.10"
 
 [dependencies.sha2]
-version = ">=0.10,<0.12"
+version = "0.10"
 
 [dependencies.sparesults]
 version = "=0.3.5"

@@ -31,6 +31,11 @@ and `tarka/`, for their history before the workspace.
   is set, signing in with workload identity, and `deploy/azure/backup/` has a lifecycle
   rule for retention. An output flag given a blob URL is now refused instead of fetched
   ([ADR 0013](docs/decisions/0013-checkpoints-to-blob-storage.md)).
+- OpenTelemetry from the server: a span and a duration for each request, by the HTTP
+  semantic conventions, over OTLP/HTTP, when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. No query
+  text is sent. The AKS chart's `telemetry.otlpEndpoint` points the writer and replicas at
+  a collector, and `deploy/azure/telemetry/collector.yaml` forwards to Application Insights
+  ([ADR 0014](docs/decisions/0014-telemetry.md)).
 
 ## 0.30.0, 23 November 2026
 

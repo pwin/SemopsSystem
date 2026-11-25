@@ -144,6 +144,33 @@ semops download https://acct.blob.core.windows.net/holos-backups/holos-20261125T
 semops serve --store ./store
 ```
 
+## Telemetry
+
+The server sends OpenTelemetry when it is given an endpoint: a span and a duration for each
+request, named by the HTTP semantic conventions (`http.server.request.duration`,
+`http.server.active_requests`, spans named like `GET /query`), with the method, the route
+and the status. The query text, the query string, headers and the principal are never
+sent, because a SPARQL query can carry the values it asks about.
+
+It is configured with OpenTelemetry's standard variables:
+
+| Variable | Effect |
+|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Where to send, such as `http://otel-collector:4318`. Unset, nothing is sent |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `..._METRICS_ENDPOINT` | One signal elsewhere, or only one signal |
+| `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | The service's name (`holos` by default) and more about it |
+| `OTEL_METRIC_EXPORT_INTERVAL`, `OTEL_BSP_SCHEDULE_DELAY` | How often metrics and spans are sent, in milliseconds |
+| `OTEL_SDK_DISABLED=true`, `OTEL_TRACES_EXPORTER=none`, `OTEL_METRICS_EXPORTER=none` | Everything off, or one signal off |
+
+The export is OTLP as protobuf over plain HTTP. An OpenTelemetry Collector takes it from
+there, with its `azuremonitor` exporter sending traces and metrics to Application Insights
+over TLS. `deploy/azure/telemetry/collector.yaml` is an example. On AKS, run the collector
+as a service and set the chart's `telemetry.otlpEndpoint`. On Container Apps, run it as a
+sidecar and point the server at `http://localhost:4318`. The Container Apps managed agent
+accepts only gRPC, and its Application Insights destination takes no metrics. An `https`
+endpoint or `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` is refused when the server starts, with a
+message that says why, rather than failing on every export.
+
 ## Entra ID
 
 The server does not check tokens. Two Azure services do it for it:

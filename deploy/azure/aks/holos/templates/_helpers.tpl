@@ -50,6 +50,21 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- end }}
 {{- end -}}
 
+{{/* OTEL_* variables for a server pod; call with (dict "Values" .Values "role" "writer"). */}}
+{{- define "holos.telemetryEnv" -}}
+{{- with .Values.telemetry.otlpEndpoint }}
+{{- if hasPrefix "https:" (lower .) }}
+{{- fail "telemetry.otlpEndpoint must be a collector's plain-http receiver (http://...:4318): the server's OTLP export has no TLS" }}
+{{- end }}
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: {{ . | quote }}
+- name: OTEL_SERVICE_NAME
+  value: {{ $.Values.telemetry.serviceName | quote }}
+- name: OTEL_RESOURCE_ATTRIBUTES
+  value: {{ printf "holos.role=%s" $.role | quote }}
+{{- end }}
+{{- end -}}
+
 {{- define "holos.probes" -}}
 startupProbe:
   httpGet: { path: /health, port: http }

@@ -114,6 +114,15 @@ service:
   type: ClusterIP
   port: 80
 
+# OpenTelemetry: a span and a duration per request, over OTLP/HTTP, from the writer and the
+# replicas. `otlpEndpoint` is an OpenTelemetry Collector's HTTP receiver, plain http on port
+# 4318, which forwards to Application Insights or Azure Monitor; the example in
+# deploy/azure/telemetry/collector.yaml does. Empty sends nothing. Each pod adds
+# holos.role=writer or replica to its resource attributes.
+telemetry:
+  otlpEndpoint: ""
+  serviceName: holos
+
 # Only the listed sources may reach the server's port. Empty `from` means only pods in
 # this release (replicas reach nothing; the backup job reaches the writer).
 networkPolicy:
