@@ -21,10 +21,16 @@
 //! The file keeps the blob's name, so the format is still taken from its extension
 //! (`.ttl.gz`, `.parquet`). It lives in a directory under the system temporary directory
 //! (`TMPDIR`, or `TMP` on Windows), removed when the command finishes.
+//!
+//! Writing goes the other way and is explicit: [`upload`] and [`download`] copy a file or a
+//! directory tree, such as a store checkpoint, to and from a blob prefix, for `semops
+//! upload`, `semops download` and `semops backup --to <URL>`. The value of an output flag
+//! (`--to`, `--out`, `--output`, `-o`) is never fetched, and a blob URL there is refused
+//! rather than written to a local file named like it.
 
 use anyhow::{Context, Result, bail};
-use object_store::ObjectStoreExt;
 use object_store::azure::{MicrosoftAzure, MicrosoftAzureBuilder};
+use object_store::{ObjectStore, ObjectStoreExt};
 use std::ffi::OsString;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -34,6 +40,9 @@ const SCHEMES: [&str; 5] = ["abfss", "abfs", "az", "azure", "adl"];
 
 /// The hosts on which an `https` URL names a blob.
 const HOSTS: [&str; 2] = [".blob.core.windows.net", ".dfs.core.windows.net"];
+
+/// Flags whose value a command writes rather than reads.
+const OUTPUT_FLAGS: [&str; 4] = ["--to", "--out", "--output", "-o"];
 
 /// Whether `arg` is a URL this module fetches.
 pub fn is_blob_url(arg: &str) -> bool {
@@ -93,12 +102,37 @@ pub fn localise_with(
     let mut dir: Option<tempfile::TempDir> = None;
     let mut fetched: Vec<(PathBuf, String)> = Vec::new();
     let mut out = Vec::with_capacity(args.len());
+    let mut after_output: Option<String> = None;
 
     for (i, arg) in args.into_iter().enumerate() {
+        let output_flag = after_output.take();
         let Some(text) = arg.to_str().filter(|_| i > 0) else {
             out.push(arg);
             continue;
         };
+        if OUTPUT_FLAGS.contains(&text) {
+            after_output = Some(text.to_owned());
+        }
+        // What a command writes is never fetched; a blob URL there would become a local file
+        // named like it, so it is refused.
+        let written = match (output_flag, text.split_once('=')) {
+            (Some(flag), _) => Some((flag, text)),
+            (None, Some((flag, value))) if OUTPUT_FLAGS.contains(&flag) => {
+                Some((flag.to_owned(), value))
+            }
+            _ => None,
+        };
+        if let Some((flag, value)) = written {
+            if is_blob_url(value) {
+                bail!(
+                    "{flag} {}: a command cannot write to Blob Storage; write a local file and \
+                     `semops upload` it (`semops backup --to <URL>` does both)",
+                    redact(value)
+                );
+            }
+            out.push(arg);
+            continue;
+        }
         let (prefix, url) = match text.split_once('=') {
             Some((flag, value)) if flag.starts_with("--") && is_blob_url(value) => {
                 (format!("{flag}="), value)
@@ -166,11 +200,7 @@ pub fn redact(url: &str) -> &str {
 /// Downloads one blob to `to`, streaming, and returns its size.
 fn fetch(url: &str, to: &Path) -> Result<u64> {
     let (store, path) = open(url)?;
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("starting the runtime for a download")?;
-    runtime.block_on(async {
+    runtime()?.block_on(async {
         use futures::StreamExt;
         let mut stream = store.get(&path).await?.into_stream();
         let mut file = std::io::BufWriter::new(
@@ -207,6 +237,217 @@ fn open(url: &str) -> Result<(MicrosoftAzure, object_store::path::Path)> {
         builder = builder.with_config(object_store::azure::AzureConfigKey::SasKey, sas.to_owned());
     }
     Ok((builder.build()?, path))
+}
+
+/// A blob URL ending in `/` names a prefix, as a path ending in `/` names a directory.
+fn is_prefix(url: &str) -> bool {
+    redact(url).ends_with('/')
+}
+
+/// `url` with `name` appended as one more path segment, the query kept.
+fn join(url: &str, name: &str) -> String {
+    let (address, query) = match url.split_once('?') {
+        Some((a, q)) => (a, Some(q)),
+        None => (url, None),
+    };
+    let mut joined = format!("{}/{name}", address.trim_end_matches('/'));
+    if let Some(q) = query {
+        joined.push('?');
+        joined.push_str(q);
+    }
+    joined
+}
+
+/// Where `semops upload FROM URL` puts `from`, as `cp -r` would: under a URL ending in `/` it
+/// keeps its own name, otherwise the URL names it. A directory's files go under the result.
+pub fn upload_target(from: &Path, url: &str) -> String {
+    if is_prefix(url) {
+        let name = from
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "upload".to_owned());
+        join(url, &name)
+    } else {
+        url.to_owned()
+    }
+}
+
+/// What a transfer moved.
+#[derive(Debug, Default)]
+pub struct Copied {
+    pub files: usize,
+    pub bytes: u64,
+}
+
+/// Uploads a file, or every file under a directory, to the blob or prefix `url` names, as
+/// [`upload_target`] decides. Files stream from disk; a large one goes up in blocks.
+pub fn upload(from: &Path, url: &str) -> Result<Copied> {
+    upload_to(from, &upload_target(from, url))
+}
+
+/// [`upload`], to exactly `target`: the blob a file becomes, or the prefix a directory's
+/// files go under.
+pub fn upload_to(from: &Path, target: &str) -> Result<Copied> {
+    let mut files: Vec<(PathBuf, String)> = Vec::new();
+    if from.is_dir() {
+        walk(from, from, &mut files)?;
+        files.sort();
+    } else if from.is_file() {
+        files.push((from.to_owned(), String::new()));
+    } else {
+        bail!("{} is neither a file nor a directory", from.display());
+    }
+    let runtime = runtime()?;
+    let mut copied = Copied::default();
+    for (path, relative) in files {
+        let url = if relative.is_empty() {
+            target.to_owned()
+        } else {
+            join(target, &relative)
+        };
+        let (store, blob) = open(&url)?;
+        let bytes = runtime
+            .block_on(put_file(store, blob, &path))
+            .with_context(|| format!("uploading {} to {}", path.display(), redact(&url)))?;
+        copied.files += 1;
+        copied.bytes += bytes;
+    }
+    Ok(copied)
+}
+
+/// Every file under `dir`, with its path relative to `root` written with `/`.
+fn walk(root: &Path, dir: &Path, out: &mut Vec<(PathBuf, String)>) -> Result<()> {
+    for entry in std::fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let path = entry?.path();
+        if path.is_dir() {
+            walk(root, &path, out)?;
+        } else {
+            let relative = path
+                .strip_prefix(root)
+                .expect("under the root it was found in")
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+                .join("/");
+            out.push((path, relative));
+        }
+    }
+    Ok(())
+}
+
+async fn put_file(
+    store: MicrosoftAzure,
+    blob: object_store::path::Path,
+    from: &Path,
+) -> Result<u64> {
+    use std::io::Read;
+    use tokio::io::AsyncWriteExt;
+    let store: std::sync::Arc<dyn object_store::ObjectStore> = std::sync::Arc::new(store);
+    // Up to its capacity a BufWriter makes one Put Blob; past it, blocks and a block list.
+    let mut writer = object_store::buffered::BufWriter::new(store, blob);
+    let mut file =
+        std::fs::File::open(from).with_context(|| format!("opening {}", from.display()))?;
+    let mut buffer = vec![0u8; 1 << 20];
+    let mut sent = 0u64;
+    loop {
+        let n = file.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        writer.write_all(&buffer[..n]).await?;
+        sent += n as u64;
+    }
+    writer.shutdown().await?;
+    Ok(sent)
+}
+
+/// Downloads the blob `url` names to the file `to`, or every blob under a prefix into the
+/// directory `to`, keeping their paths. A URL ending in `/` is a prefix; one that names no
+/// blob is tried as one. `to` must not exist, so a restore never mixes two checkpoints.
+pub fn download(url: &str, to: &Path) -> Result<Copied> {
+    if to.exists() {
+        bail!("{} already exists", to.display());
+    }
+    let runtime = runtime()?;
+    let (store, path) = open(url)?;
+    if !is_prefix(url) {
+        match runtime.block_on(store.head(&path)) {
+            Ok(_) => {
+                let bytes = fetch(url, to)?;
+                return Ok(Copied { files: 1, bytes });
+            }
+            Err(object_store::Error::NotFound { .. }) => {}
+            Err(e) => return Err(e).with_context(|| format!("reading {}", redact(url))),
+        }
+    }
+    let listed: Vec<object_store::ObjectMeta> = runtime.block_on(async {
+        use futures::TryStreamExt;
+        store.list(Some(&path)).try_collect().await
+    })?;
+    if listed.is_empty() {
+        bail!("nothing at {}", redact(url));
+    }
+    let base = path.parts().count();
+    let mut copied = Copied::default();
+    for meta in listed {
+        let parts: Vec<String> = meta
+            .location
+            .parts()
+            .skip(base)
+            .map(|p| p.as_ref().to_owned())
+            .collect();
+        // A blob name is the remote side's to choose; one that climbs out of `to` is refused.
+        if parts.is_empty() || parts.iter().any(|p| p == ".." || p.contains(['\\', ':'])) {
+            bail!("refusing the blob name {}", meta.location);
+        }
+        let dest = parts.iter().fold(to.to_owned(), |d, p| d.join(p));
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("creating {}", parent.display()))?;
+        }
+        let blob_url = parts.iter().fold(url.to_owned(), |u, p| join(&u, p));
+        copied.bytes += fetch(&blob_url, &dest)?;
+        copied.files += 1;
+    }
+    Ok(copied)
+}
+
+fn runtime() -> Result<tokio::runtime::Runtime> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("starting the runtime for a transfer")
+}
+
+/// The time now, as `20261125T093000Z`: the name `deploy/backup.sh` gives a checkpoint.
+pub fn utc_stamp() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or_default();
+    stamp(secs)
+}
+
+/// [`utc_stamp`] for a given Unix time, by Howard Hinnant's days-to-civil, which needs no
+/// calendar crate.
+fn stamp(secs: u64) -> String {
+    let days = (secs / 86_400) as i64;
+    let rem = secs % 86_400;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!(
+        "{year:04}{month:02}{day:02}T{:02}{:02}{:02}Z",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
 }
 
 #[cfg(test)]
@@ -338,6 +579,70 @@ mod tests {
             "{text}"
         );
         assert!(!text.contains("SECRET"), "{text}");
+    }
+
+    #[test]
+    fn an_output_flag_is_never_fetched_and_refuses_a_blob_url() {
+        let mut never = |_: &str, _: &Path| -> Result<u64> { panic!("outputs are not fetched") };
+        for args in [
+            &[
+                "semops",
+                "backup",
+                "--store",
+                "db",
+                "--to",
+                "az://backups/x",
+            ][..],
+            &[
+                "semops",
+                "check",
+                "a.ttl",
+                "--out=https://acct.blob.core.windows.net/r/x.sarif",
+            ],
+            &[
+                "semops",
+                "map",
+                "run",
+                "-o",
+                "abfss://c@acct.dfs.core.windows.net/out.nt",
+            ],
+        ] {
+            let err = localise_with(os(args), &mut never).err().expect("refused");
+            assert!(
+                format!("{err:#}").contains("cannot write to Blob Storage"),
+                "{err:#}"
+            );
+        }
+        let args = os(&["semops", "diff", "a", "b", "--out", "r.txt"]);
+        let local = localise_with(args.clone(), &mut never).unwrap();
+        assert_eq!(local.args, args);
+    }
+
+    #[test]
+    fn upload_targets_follow_cp() {
+        let ckpt = Path::new("var/backups/holos-20261125T020000Z");
+        assert_eq!(
+            upload_target(ckpt, "az://backups/"),
+            "az://backups/holos-20261125T020000Z"
+        );
+        assert_eq!(
+            upload_target(ckpt, "az://backups/nightly"),
+            "az://backups/nightly"
+        );
+        assert_eq!(
+            upload_target(
+                Path::new("r.sarif"),
+                "https://a.blob.core.windows.net/c/?sv=1&sig=s"
+            ),
+            "https://a.blob.core.windows.net/c/r.sarif?sv=1&sig=s"
+        );
+    }
+
+    #[test]
+    fn stamps_are_utc_calendar_times() {
+        assert_eq!(stamp(0), "19700101T000000Z");
+        assert_eq!(stamp(951_782_400), "20000229T000000Z");
+        assert_eq!(stamp(1_795_599_000), "20261125T093000Z");
     }
 
     #[test]

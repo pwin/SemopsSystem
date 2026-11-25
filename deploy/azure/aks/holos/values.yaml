@@ -72,6 +72,16 @@ backup:
   role: backup
   # Checkpoints kept; older ones are removed by the job.
   keep: 7
+  # Copy each checkpoint off the cluster to Azure Blob Storage once it is taken. `url` is a
+  # container or prefix ending in `/`, under which each checkpoint goes as holos-<UTC time>/
+  # (`semops upload`). The job signs in with AKS workload identity: `clientId` is the client
+  # id of a user-assigned managed identity that holds Storage Blob Data Contributor on the
+  # container and has a federated credential for the service account <release>-backup.
+  # The `keep` above applies to the shared volume only; on Blob Storage, retention is a
+  # lifecycle rule on the account (deploy/azure/backup/lifecycle-policy.json).
+  blob:
+    url: ""
+    clientId: ""
 
 # Where a request's identity comes from. HOLOS authenticates nobody: the edge does.
 #   none       Every request is anonymous.

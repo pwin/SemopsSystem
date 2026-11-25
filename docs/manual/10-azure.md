@@ -74,7 +74,9 @@ sudo mkdir -p /mnt/holos/store /mnt/holos/checkpoints /mnt/holos/snapshots
 sudo chown -R 10001:10001 /mnt/holos
 ```
 
-## Reading from Blob Storage
+## Blob Storage
+
+### Reading from Blob Storage
 
 Every `semops` subcommand takes a blob wherever it takes an input file:
 
@@ -106,8 +108,41 @@ Credentials come from the environment:
 | `AZURE_SKIP_SIGNATURE=true` | A public container, with no credentials |
 
 The download goes to the system temporary directory (`TMPDIR`, or `TMP` on Windows). For a
-large dump, point that at a disk with room. Writing to Blob Storage, such as uploading a
-checkpoint, is not done yet ([chapter 12](12-not-finished.md)).
+large dump, point that at a disk with room.
+
+### Writing to Blob Storage, and backups
+
+A command never writes to a URL. An output flag (`--to`, `--out`, `--output`, `-o`) given a
+blob URL is refused, so a report or a store is written locally and then copied up:
+
+```sh
+semops upload report.sarif https://acct.blob.core.windows.net/reports/ci/
+semops download https://acct.blob.core.windows.net/reports/ci/report.sarif ./report.sarif
+```
+
+Under a URL ending in `/` the file or directory keeps its own name, as `cp -r` would.
+Otherwise the URL names it. A directory's files go up with their paths, and a large file
+goes up in blocks. `download` of a URL ending in `/` (or one that names no blob) fetches
+everything under that prefix into a new directory.
+
+`semops backup --to` takes a blob URL, which is the one exception:
+
+```sh
+semops backup --store /var/lib/holos/store --to https://acct.blob.core.windows.net/holos-backups/
+```
+
+The checkpoint is taken beside the store, uploaded as `holos-<UTC time>/`, and removed.
+Beside the store means on the same filesystem, so it costs no extra disk. On AKS the
+writer takes checkpoints itself, and the chart's backup job uploads each one when
+`backup.blob.url` is set, signing in with workload identity (`deploy/azure/README.md`).
+Retention is a lifecycle rule on the storage account (`deploy/azure/backup/`).
+
+To restore, download a checkpoint into a new directory and open it as a store:
+
+```sh
+semops download https://acct.blob.core.windows.net/holos-backups/holos-20261125T020000Z/ ./store
+semops serve --store ./store
+```
 
 ## Entra ID
 
