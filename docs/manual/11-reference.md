@@ -61,6 +61,10 @@ Azure Key Vault reference supplies one.
 | `HOLOS_BACKUP_DIR`, `HOLOS_BACKUP_ROLE` | `--backup-dir`, `--backup-role` | none: no backup endpoint |
 | `HOLOS_EXTRA_ARGS` | Anything else, passed as written | none |
 
+`semops` reads Azure's own variables (`AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_CLIENT_ID` and the
+rest) when an argument is a Blob Storage URL. [Chapter 10](10-azure.md#reading-from-blob-storage)
+lists them.
+
 One more is read by the store itself, wherever it runs:
 
 | Variable | Effect |
