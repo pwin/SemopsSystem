@@ -15,6 +15,7 @@ names is that command.
 | `semops check` | The ontology quality checks, `semops` only | `semops check --help` |
 | `semops diff` | Version comparison: the suggested bump between two versions, `semops` only | `semops diff --help` |
 | `semops repair` | The quality checks' repairs, applied to a file, `semops` only | `semops repair --help` |
+| `semops upload`, `semops download` | Copies a file or a directory to and from Azure Blob Storage, `semops` only | `semops upload --help` |
 
 | Command | From | What it is for | Its own help |
 |---|---|---|---|

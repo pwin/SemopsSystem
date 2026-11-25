@@ -94,6 +94,46 @@ helm install holos deploy/azure/aks/holos -n semops \
   --set backup.enabled=true --set identity.mode=forwarded \
   --set replicas.enabled=true --set replicas.count=3
 kubectl -n semops create job --from=cronjob/holos-backup first-checkpoint
+
+# The same, with each checkpoint also copied off the cluster to Blob Storage.
+helm install holos deploy/azure/aks/holos -n semops \
+  --set shared.enabled=true \
+  --set backup.enabled=true --set identity.mode=forwarded \
+  --set backup.blob.url=https://<account>.blob.core.windows.net/holos-backups/ \
+  --set backup.blob.clientId=<managed identity client id>
+```
+
+#### Checkpoints to Blob Storage
+
+With `backup.blob.url` set, the backup job uploads each checkpoint, after the writer takes
+it, to `<url>holos-<UTC time>/` with `semops upload`. It signs in with AKS workload
+identity, so no key is stored in the cluster:
+
+```sh
+az identity create -g <rg> -n holos-backup
+az role assignment create --assignee <identity principal id> \
+  --role "Storage Blob Data Contributor" \
+  --scope <storage account id>/blobServices/default/containers/holos-backups
+az identity federated-credential create -g <rg> --identity-name holos-backup \
+  -n holos-backup --issuer <cluster OIDC issuer URL> \
+  --subject system:serviceaccount:semops:holos-backup
+```
+
+The cluster needs workload identity and its OIDC issuer enabled
+(`az aks update --enable-oidc-issuer --enable-workload-identity`). Retention on Blob
+Storage is a lifecycle rule. [`backup/lifecycle-policy.json`](backup/lifecycle-policy.json)
+deletes checkpoints in `holos-backups` 30 days after they were written:
+
+```sh
+az storage account management-policy create -g <rg> --account-name <account> \
+  --policy @deploy/azure/backup/lifecycle-policy.json
+```
+
+To restore, download a checkpoint and open it as a store:
+
+```sh
+semops download https://<account>.blob.core.windows.net/holos-backups/holos-20261125T020000Z/ ./store
+semops serve --store ./store
 ```
 
 The chart refuses combinations that cannot work: replicas or backups without the shared

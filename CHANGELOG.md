@@ -25,6 +25,12 @@ and `tarka/`, for their history before the workspace.
   file (`abfss://`, `az://`, `https://<account>.blob.core.windows.net/…`), with credentials
   from the environment, a managed identity included
   ([ADR 0012](docs/decisions/0012-blob-urls-as-inputs.md)).
+- Checkpoints to Blob Storage. `semops upload` and `semops download` copy a file or a
+  directory to and from a blob prefix, and `semops backup --to <URL>` checkpoints a store
+  and uploads it. The AKS chart's backup job uploads each checkpoint when `backup.blob.url`
+  is set, signing in with workload identity, and `deploy/azure/backup/` has a lifecycle
+  rule for retention. An output flag given a blob URL is now refused instead of fetched
+  ([ADR 0013](docs/decisions/0013-checkpoints-to-blob-storage.md)).
 
 ## 0.30.0, 23 November 2026
 

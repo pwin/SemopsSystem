@@ -74,7 +74,7 @@ enum Command {
     /// Write a store out as RDF (holos dump).
     #[command(disable_help_flag = true, disable_version_flag = true)]
     Dump(Forward),
-    /// Checkpoint a store (holos backup).
+    /// Checkpoint a store (holos backup). With `--to <blob URL>`, upload the checkpoint.
     #[command(disable_help_flag = true, disable_version_flag = true)]
     Backup(Forward),
     /// Copy a store's live data into a fresh one (holos compact).
@@ -86,6 +86,29 @@ enum Command {
     /// Run SHACL-AF or SPARQL rules over a store (holos rules).
     #[command(disable_help_flag = true, disable_version_flag = true)]
     Rules(Forward),
+    /// Upload a file or a directory, such as a checkpoint, to Azure Blob Storage.
+    ///
+    /// Under a URL ending in `/` the source keeps its own name, as `cp -r` would; otherwise
+    /// the URL names it. A directory's files go under that prefix with their paths. Files
+    /// stream from disk, a large one in blocks. Credentials come from the AZURE_* environment
+    /// variables or a managed identity.
+    Upload {
+        /// The file or directory to upload.
+        from: PathBuf,
+        /// The blob, or with a trailing `/` the prefix, to upload to.
+        to: String,
+    },
+    /// Download a blob, or every blob under a prefix, from Azure Blob Storage.
+    ///
+    /// A URL ending in `/`, or one that names no blob, is a prefix: its blobs are written
+    /// under TO with their paths, which is how a checkpoint uploaded by `semops backup --to`
+    /// is restored. TO must not exist.
+    Download {
+        /// The blob, or the prefix.
+        from: String,
+        /// The file or directory to create.
+        to: PathBuf,
+    },
     /// Compare two versions of an ontology and suggest a semantic-version bump.
     ///
     /// Classes, properties, subclass edges, disjointness, equivalence, domains, ranges,
@@ -327,6 +350,12 @@ fn forward(name: &str, Forward { args }: Forward) -> ExitCode {
 }
 
 fn run_cli(args: Vec<OsString>) -> Result<ExitCode> {
+    match args.get(1).and_then(|a| a.to_str()) {
+        // Their URLs are what they transfer, not inputs to fetch first.
+        Some("upload" | "download") => return transfer(Cli::parse_from(args).command),
+        Some("backup") if blob_destination(&args[2..]).is_some() => return backup_to_blob(&args),
+        _ => {}
+    }
     // Blob URLs are fetched before anything parses the arguments, and the files live until
     // the command returns (`remote`).
     let local = remote::localise(args)?;
@@ -386,8 +415,105 @@ fn run_cli(args: Vec<OsString>) -> Result<ExitCode> {
             return repair(&file, &checks, &standards, target);
         }
         check @ Command::Check { .. } => return run_check(check),
+        transferring @ (Command::Upload { .. } | Command::Download { .. }) => {
+            return transfer(transferring);
+        }
     };
     Ok(forward(forwarded.0, forwarded.1))
+}
+
+/// `semops upload` and `semops download`.
+fn transfer(command: Command) -> Result<ExitCode> {
+    let (copied, verb, url) = match command {
+        Command::Upload { from, to } => (remote::upload(&from, &to)?, "uploaded", to),
+        Command::Download { from, to } => (remote::download(&from, &to)?, "downloaded", from),
+        _ => unreachable!("only the transfer commands come here"),
+    };
+    eprintln!(
+        "semops: {verb} {} file{}, {} bytes ({})",
+        copied.files,
+        if copied.files == 1 { "" } else { "s" },
+        copied.bytes,
+        remote::redact(&url)
+    );
+    Ok(ExitCode::SUCCESS)
+}
+
+/// The value of `--to` among a command's arguments, when it is a blob URL.
+fn blob_destination(args: &[OsString]) -> Option<String> {
+    let mut args = args.iter().filter_map(|a| a.to_str());
+    while let Some(arg) = args.next() {
+        let value = match arg.strip_prefix("--to=") {
+            Some(value) => Some(value),
+            None if arg == "--to" => args.next(),
+            None => None,
+        };
+        if let Some(value) = value.filter(|v| remote::is_blob_url(v)) {
+            return Some(value.to_owned());
+        }
+    }
+    None
+}
+
+/// `semops backup --store DIR --to <blob URL>`: a checkpoint, uploaded, then removed.
+///
+/// The checkpoint is taken beside the store, so on the same filesystem RocksDB hard-links its
+/// files: instant, and no disk beyond what the upload reads. It is uploaded as
+/// `holos-<UTC time>`, the name `deploy/backup.sh` gives one, under a URL ending in `/`, or
+/// to exactly the URL given otherwise, and removed whether or not the upload succeeds.
+fn backup_to_blob(args: &[OsString]) -> Result<ExitCode> {
+    let url = blob_destination(&args[2..]).expect("checked by the caller");
+    let mut store: Option<PathBuf> = None;
+    let mut rest: Vec<OsString> = Vec::new();
+    let mut it = args[2..].iter();
+    while let Some(arg) = it.next() {
+        match arg.to_str() {
+            Some("--store") => store = it.next().map(PathBuf::from),
+            Some(a) if a.starts_with("--store=") => store = Some(PathBuf::from(&a[8..])),
+            Some("--to") => {
+                it.next();
+            }
+            Some(a) if a.starts_with("--to=") => {}
+            _ => rest.push(arg.clone()),
+        }
+    }
+    let store = store.context("`semops backup` needs --store DIR")?;
+    let name = format!("holos-{}", remote::utc_stamp());
+    let beside = store
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let store_name = store
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "store".to_owned());
+    let local = beside.join(format!(".{store_name}-{name}"));
+
+    let mut argv: Vec<OsString> = ["semops backup", "backup", "--store"]
+        .map(OsString::from)
+        .into();
+    argv.push(store.into_os_string());
+    argv.push("--to".into());
+    argv.push(local.clone().into_os_string());
+    argv.extend(rest);
+    let code = holos_cli::main_with(argv);
+    if code != ExitCode::SUCCESS {
+        let _ = std::fs::remove_dir_all(&local);
+        return Ok(code);
+    }
+
+    let target = remote::upload_target(Path::new(&name), &url);
+    let uploaded = remote::upload_to(&local, &target);
+    let removed = std::fs::remove_dir_all(&local);
+    let copied = uploaded?;
+    removed.with_context(|| format!("removing the local checkpoint {}", local.display()))?;
+    eprintln!(
+        "semops: uploaded the checkpoint, {} files, {} bytes, to {}",
+        copied.files,
+        copied.bytes,
+        remote::redact(&target)
+    );
+    Ok(ExitCode::SUCCESS)
 }
 
 fn diff(

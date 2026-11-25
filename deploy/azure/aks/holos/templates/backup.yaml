@@ -2,6 +2,14 @@
 {{- if ne .Values.identity.mode "forwarded" }}
 {{- fail "backup.enabled needs identity.mode=forwarded: POST /backup admits only a principal holding backup.role" }}
 {{- end }}
+{{- with .Values.backup.blob.url }}
+{{- if not (hasSuffix "/" .) }}
+{{- fail "backup.blob.url must end in /: each checkpoint is uploaded under it as holos-<time>/" }}
+{{- end }}
+{{- if not $.Values.backup.blob.clientId }}
+{{- fail "backup.blob.url needs backup.blob.clientId: the upload signs in with workload identity" }}
+{{- end }}
+{{- end }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -22,9 +30,17 @@ spec:
           labels:
             {{- include "holos.labels" . | nindent 12 }}
             app.kubernetes.io/component: backup
+            {{- if .Values.backup.blob.url }}
+            # The workload identity webhook projects a token for the service account and
+            # sets AZURE_CLIENT_ID, AZURE_TENANT_ID and AZURE_FEDERATED_TOKEN_FILE.
+            azure.workload.identity/use: "true"
+            {{- end }}
         spec:
           restartPolicy: Never
           automountServiceAccountToken: false
+          {{- if .Values.backup.blob.url }}
+          serviceAccountName: {{ include "holos.fullname" . }}-backup
+          {{- end }}
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
           containers:
@@ -33,8 +49,9 @@ spec:
               imagePullPolicy: {{ .Values.image.pullPolicy }}
               command: ["/bin/sh", "-c"]
               # The writer takes the checkpoint itself (a second process cannot open a
-              # store its writer holds); then the oldest are pruned, the newest kept.
-              # Replicas notice the new one themselves (replicas.refreshSeconds).
+              # store its writer holds); with backup.blob.url the newest is uploaded; then
+              # the oldest are pruned, the newest kept. Replicas notice the new one
+              # themselves (replicas.refreshSeconds).
               args:
                 - |
                   set -eu
@@ -42,6 +59,10 @@ spec:
                     -H "X-Holos-Roles: {{ .Values.backup.role }}" \
                     http://{{ include "holos.fullname" . }}-writer:{{ .Values.server.port }}/backup
                   cd {{ .Values.shared.mountPath }}/checkpoints
+                  {{- if .Values.backup.blob.url }}
+                  newest="$(ls -1d holos-* | grep -v '\.tmp$' | sort | tail -n 1)"
+                  semops upload "$newest" {{ .Values.backup.blob.url | quote }}
+                  {{- end }}
                   ls -1d holos-* | grep -v '\.tmp$' | sort | head -n -{{ .Values.backup.keep }} | xargs -r rm -rf
               securityContext:
                 {{- toYaml .Values.securityContext | nindent 16 }}

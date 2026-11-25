@@ -69,8 +69,9 @@ so turning on the `azure` feature adds the Azure client and little else.
 
 ## Not done
 
-- **Writing to Blob Storage.** Uploading a checkpoint (`semops backup`) or a report is
-  still to do, and the manual says so.
+- **Writing to Blob Storage.** Not done here: [0013](0013-checkpoints-to-blob-storage.md)
+  added `semops upload`, `semops download` and `semops backup --to <URL>`, and made output
+  flags refuse a blob URL.
 - **S3 and GCS.** `object_store` handles them, but the proposal asked for Azure, and every
   added scheme is another argument form to keep apart from IRIs.
 - **`semops serve` loading its data from Blob at start-up.** That works through the same

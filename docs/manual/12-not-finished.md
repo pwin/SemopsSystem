@@ -24,7 +24,6 @@ gap from a mistake, and says what to use meanwhile.
 | Not yet | Meanwhile |
 |---|---|
 | A deployment of the templates to a subscription | The templates are linted and schema-checked in CI; the first deployment confirms resource versions |
-| Checkpoint upload to Blob Storage, with lifecycle rules | Checkpoints on an NFS share, which Blob NFS can hold |
 | OpenTelemetry export to Azure Monitor | Container logs to Log Analytics |
 | Marketplace listings for the GitHub Action and an Azure DevOps extension | The Helm chart and the Bicep template; `semops check --format junit` or `sarif` in a script step |
 
