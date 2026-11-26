@@ -43,14 +43,24 @@ fn local() -> String {
 
 /// The endpoint's data: a population for two of the three linked resources, and a great many
 /// other populations, so a query that fails to restrict itself pulls in far more than it wants.
+/// Each of the two also has a census that counted it, stating the population as an RDF 1.2
+/// triple term.
 fn remote() -> Dataset {
     let population = NamedNode::new_unchecked(format!("{EX}population"));
+    let counted = NamedNode::new_unchecked(format!("{EX}counted"));
     let mut quads: Vec<Quad> = Vec::new();
     for (resource, people) in [("r-sedbergh", 2765), ("r-hay", 1500)] {
+        let node = NamedNode::new_unchecked(format!("{EX}{resource}"));
         quads.push(Quad::new(
-            NamedNode::new_unchecked(format!("{EX}{resource}")),
+            node.clone(),
             population.clone(),
             oxrdf::Literal::from(people),
+            GraphName::DefaultGraph,
+        ));
+        quads.push(Quad::new(
+            NamedNode::new_unchecked(format!("{EX}census-{resource}")),
+            counted.clone(),
+            oxrdf::Triple::new(node, population.clone(), oxrdf::Literal::from(people)),
             GraphName::DefaultGraph,
         ));
     }
@@ -400,5 +410,35 @@ ex:town ex:sameAs [ ex:kind \"anonymous\" ] .
         !sent[0].contains("VALUES"),
         "a blank node must not be pushed: {}",
         sent[0]
+    );
+}
+
+#[test]
+fn a_key_inside_a_triple_term_is_sent() {
+    // `?remote` is used only inside an RDF 1.2 triple term in the clause. The variables there
+    // used to be skipped: the clause went out with no keys, and without `?remote` among the
+    // variables asked for, so it came back unbound and every census joined every town.
+    let (rows, sent) = run(&format!(
+        "{PREFIX}
+         SELECT ?name ?census WHERE {{
+           ?town a ex:Town ; ex:name ?name ; ex:sameAs ?remote .
+           SERVICE <{REMOTE}> {{ ?census ex:counted <<( ?remote ex:population ?population )>> }}
+         }}"
+    ));
+    assert_eq!(sent.len(), 1, "{sent:?}");
+    assert!(sent[0].contains("VALUES"), "{}", sent[0]);
+    for resource in ["r-hay", "r-sedbergh", "r-wigtown"] {
+        assert!(
+            sent[0].contains(&format!("<{EX}{resource}>")),
+            "{resource} missing from {}",
+            sent[0]
+        );
+    }
+    assert_eq!(
+        rows,
+        [
+            "census=<http://example.com/census-r-hay> name=\"hay\"",
+            "census=<http://example.com/census-r-sedbergh> name=\"sedbergh\"",
+        ]
     );
 }

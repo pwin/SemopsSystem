@@ -140,3 +140,94 @@ ex:S a sh:NodeShape ; sh:targetSubjectsOf ex:born ; ex:stillHolds true .
         .collect();
     assert_eq!(focus, [person(1)]);
 }
+
+/// Blank-node focus nodes are bound by the evaluator's own substitution rather than the
+/// algebra rewrite the fix is in. That route was right already; pinned here, so the two keep
+/// agreeing. The same people as blank nodes: one result, the one born 1901 whose source saw
+/// 1900.
+#[test]
+fn a_blank_node_focus_inside_a_triple_term_is_the_focus_node() {
+    let data_text = r#"
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+_:p1 ex:born "1901-02-03"^^xsd:date .
+_:p2 ex:born "1910-05-05"^^xsd:date .
+ex:source1 rdf:reifies <<( _:p1 ex:born "1900-12-31"^^xsd:date )>> .
+ex:source2 rdf:reifies <<( _:p2 ex:born "1910-05-05"^^xsd:date )>> .
+"#;
+    let query = format!(
+        "SELECT $this WHERE {{ ?r {REIFIES} <<( $this ?p ?o )>> . FILTER NOT EXISTS {{ $this ?p ?o }} }}"
+    );
+    let mut store = TermStore::new();
+    let vocab = Vocab::new(&mut store);
+    let data = parse(data_text, 0, &mut store);
+    let shapes_graph = parse(&shapes(&query), 1, &mut store);
+    let compiled = Shapes::compile(&shapes_graph, &store, &vocab).expect("shapes compile");
+    let report = shacl::validate::validate_in(&data, &compiled, &shapes_graph, &mut store, &vocab)
+        .expect("validation runs");
+    assert_eq!(
+        report.results.len(),
+        1,
+        "one result, not one per reified statement"
+    );
+    let focus = report.results[0].focus_node;
+    assert!(matches!(store.to_oxrdf(focus), Term::BlankNode(_)));
+    let born = store
+        .get_named_node("http://example.org/born")
+        .expect("ex:born is interned");
+    let dates: Vec<String> = data
+        .objects(focus, born)
+        .map(|d| store.to_oxrdf(d).to_string())
+        .collect();
+    assert_eq!(
+        dates,
+        ["\"1901-02-03\"^^<http://www.w3.org/2001/XMLSchema#date>"]
+    );
+}
+
+/// The same route through an ASK validator, whose only `$this` is inside the triple term:
+/// "every person has a sourced birth date". Person 3 has none and is the one result; a `$this`
+/// left free would let person 1's source answer for everybody, and nobody would be flagged.
+#[test]
+fn an_ask_validator_binds_a_blank_node_focus_inside_a_triple_term() {
+    let data_text = r#"
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+_:p1 ex:born "1901-02-03"^^xsd:date .
+_:p3 ex:born "1920-07-07"^^xsd:date .
+ex:source1 rdf:reifies <<( _:p1 ex:born "1901-02-03"^^xsd:date )>> .
+"#;
+    let shapes_text = format!(
+        r#"
+@prefix ex: <http://example.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+ex:Sourced a sh:ConstraintComponent ;
+    sh:parameter [ sh:path ex:sourced ] ;
+    sh:validator [ a sh:SPARQLAskValidator ;
+        sh:ask """ASK {{ ?r {REIFIES} <<( $this <http://example.org/born> ?date )>> }}""" ] .
+ex:S a sh:NodeShape ; sh:targetSubjectsOf ex:born ; ex:sourced true .
+"#
+    );
+    let mut store = TermStore::new();
+    let vocab = Vocab::new(&mut store);
+    let data = parse(data_text, 0, &mut store);
+    let shapes_graph = parse(&shapes_text, 1, &mut store);
+    let compiled = Shapes::compile(&shapes_graph, &store, &vocab).expect("shapes compile");
+    let report = shacl::validate::validate_in(&data, &compiled, &shapes_graph, &mut store, &vocab)
+        .expect("validation runs");
+    assert_eq!(report.results.len(), 1, "person 3, and only person 3");
+    let focus = report.results[0].focus_node;
+    let born = store
+        .get_named_node("http://example.org/born")
+        .expect("ex:born is interned");
+    let dates: Vec<String> = data
+        .objects(focus, born)
+        .map(|d| store.to_oxrdf(d).to_string())
+        .collect();
+    assert_eq!(
+        dates,
+        ["\"1920-07-07\"^^<http://www.w3.org/2001/XMLSchema#date>"]
+    );
+}
