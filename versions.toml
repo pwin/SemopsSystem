@@ -16,19 +16,19 @@ version = "0.31.1"
 pypi = "semops-system"
 
 [engines.holos]
-version = "0.31.0"
+version = "0.31.1"
 source = "holos/"
 pypi = ["holosdb"]
 npm = ["holos-wasm", "holos-wasm-node"]
 
 [engines.shacl]
-version = "0.31.0"
+version = "0.31.1"
 source = "shacl/"
 pypi = ["shacl"]
 npm = ["shacl-wasm", "shacl-wasm-node"]
 
 [engines.tarka]
-version = "0.31.0"
+version = "0.31.1"
 source = "tarka/"
 pypi = ["tarka-rdf"]
 
