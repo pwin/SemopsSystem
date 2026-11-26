@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Check that every consumer of the toolchain runs the engine releases in versions.toml.
+"""Check that every consumer of the toolchain runs the releases in versions.toml.
 
     python scripts/check_pins.py --repos DIR
 
 DIR holds a checkout of each consumer repository, named as in versions.toml. A consumer
-whose checkout is absent is reported and skipped. The exit status is 1 if any locked engine
-version differs from versions.toml, 2 if nothing could be checked, and 0 otherwise.
+whose checkout is absent is reported and skipped. The packages checked are the platform's
+(semops-system, semops-wasm, semops-wasm-node) and each engine's. A consumer whose lockfiles
+name none of them is reported as unchecked, since it cannot be said to be in line. The exit
+status is 1 if any locked version differs from versions.toml or a consumer is unchecked, 2 if
+nothing could be checked, and 0 otherwise.
 
 Standard library only, so it runs anywhere Python 3.11+ does.
 """
@@ -22,13 +25,18 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def expected_versions(pins: dict) -> dict[tuple[str, str], str]:
-    """(ecosystem, package name) -> the version versions.toml says it must be."""
+    """(ecosystem, package name) -> the version versions.toml says it must be.
+
+    The platform's packages and each engine's. Leaving out the platform's made a consumer that
+    had moved to semops-wasm invisible: its lockfile named no package this looked for, so it
+    was neither in line nor out of it, and the report said nothing about it.
+    """
     out: dict[tuple[str, str], str] = {}
-    for engine in pins["engines"].values():
-        for name in engine.get("pypi", []):
-            out[("pypi", name)] = engine["version"]
-        for name in engine.get("npm", []):
-            out[("npm", name)] = engine["version"]
+    for component in [pins["platform"], *pins["engines"].values()]:
+        for ecosystem in ("pypi", "npm"):
+            names = component.get(ecosystem, [])
+            for name in [names] if isinstance(names, str) else names:
+                out[(ecosystem, name)] = component["version"]
     return out
 
 
@@ -67,12 +75,15 @@ def main() -> int:
     want = expected_versions(pins)
     checked = 0
     mismatches = 0
+    unchecked = 0
 
     for consumer, spec in pins["consumers"].items():
         repo = args.repos / consumer
         if not repo.is_dir():
             print(f"skip  {consumer}: no checkout at {repo}")
             continue
+        checked_before = checked
+        read_any = False
         for lockfile in spec["lockfiles"]:
             path = repo / lockfile
             if not path.is_file():
@@ -80,6 +91,7 @@ def main() -> int:
                 continue
             ecosystem, read = READERS[Path(lockfile).name]
             locked = read(path)
+            read_any = True
             for (eco, name), version in sorted(want.items()):
                 if eco != ecosystem or name not in locked:
                     continue
@@ -89,12 +101,15 @@ def main() -> int:
                 else:
                     mismatches += 1
                     print(f"DRIFT {consumer}: {name} is {locked[name]}, versions.toml says {version}")
+        if read_any and checked == checked_before:
+            unchecked += 1
+            print(f"NONE  {consumer}: its lockfiles name no package versions.toml pins")
 
     if checked == 0:
-        print("nothing checked: no consumer lockfile names an engine package")
+        print("nothing checked: no consumer lockfile names a pinned package")
         return 2
-    print(f"\n{checked} pins checked, {mismatches} out of line")
-    return 1 if mismatches else 0
+    print(f"\n{checked} pins checked, {mismatches} out of line, {unchecked} consumers unchecked")
+    return 1 if mismatches or unchecked else 0
 
 
 if __name__ == "__main__":
