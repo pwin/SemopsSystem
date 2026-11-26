@@ -3,6 +3,14 @@
 SemOps System's own releases. The engines keep their own changelogs, in `holos/`, `shacl/`
 and `tarka/`, for their history before the workspace.
 
+## Unreleased
+
+- A pre-bound `$this` inside an RDF 1.2 triple term, as in
+  `?r rdf:reifies <<( $this ?p ?o )>>`, is the focus node. SHACL-SPARQL substituted the focus
+  node everywhere but there, so the pattern matched other focus nodes' reified statements:
+  a constraint reported the wrong nodes, and the right ones more than once. In `shacl` and in
+  HOLOS, for `sh:select` and `sh:ask` validators alike.
+
 ## 0.31.0, 25 November 2026
 
 - Each engine is published from the workspace on its own, at the workspace version:

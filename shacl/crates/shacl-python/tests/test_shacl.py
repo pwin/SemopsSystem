@@ -706,3 +706,26 @@ def test_sparql_constraint_reports_a_computed_value():
         assert r.value_plain == "5", data
         assert r.message == "value is 5", data
         assert f"<http://www.w3.org/ns/shacl#value> {integer_5}" in report.serialize("nt"), data
+
+
+def test_this_inside_a_triple_term_is_the_focus_node():
+    """A pre-bound $this inside an RDF 1.2 triple term is substituted like anywhere else.
+    It used to stay free there, so each focus node matched the others' reified statements:
+    this example gave person 1 twice and person 2, where only person 1's statement no
+    longer holds."""
+    shapes = shacl.Shapes.from_turtle("""
+        @prefix ex: <http://example.org/> . @prefix sh: <http://www.w3.org/ns/shacl#> .
+        ex:S a sh:NodeShape ; sh:targetSubjectsOf ex:born ;
+          sh:sparql [ sh:select '''SELECT $this WHERE {
+              ?r <http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies> <<( $this ?p ?o )>> .
+              FILTER NOT EXISTS { $this ?p ?o } }''' ] .
+    """)
+    report = shapes.validate_turtle("""
+        @prefix ex: <http://example.org/> . @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        ex:person1 ex:born "1901-02-03"^^xsd:date .
+        ex:person2 ex:born "1910-05-05"^^xsd:date .
+        ex:source1 rdf:reifies <<( ex:person1 ex:born "1900-12-31"^^xsd:date )>> .
+        ex:source2 rdf:reifies <<( ex:person2 ex:born "1910-05-05"^^xsd:date )>> .
+    """)
+    assert [r.focus_node for r in report.results] == ["<http://example.org/person1>"]
