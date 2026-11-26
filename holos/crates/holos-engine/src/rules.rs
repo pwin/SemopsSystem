@@ -255,16 +255,6 @@ fn check(query: &Query) -> Result<(), String> {
     else {
         return Err("a rule must be a CONSTRUCT: SELECT, ASK and DESCRIBE derive nothing".into());
     };
-    // A blank node inside an RDF 1.2 triple term is as fresh every round as one outside.
-    fn has_blank_node(term: &TermPattern) -> bool {
-        match term {
-            TermPattern::BlankNode(_) => true,
-            TermPattern::Triple(triple) => {
-                has_blank_node(&triple.subject) || has_blank_node(&triple.object)
-            }
-            _ => false,
-        }
-    }
     for triple in template {
         for term in [&triple.subject, &triple.object] {
             if has_blank_node(term) {
@@ -277,6 +267,18 @@ fn check(query: &Query) -> Result<(), String> {
         }
     }
     walk(pattern)
+}
+
+/// Whether a template term is or holds a blank node. One inside an RDF 1.2 triple term, at
+/// any depth, is as fresh every round as one outside.
+fn has_blank_node(term: &TermPattern) -> bool {
+    match term {
+        TermPattern::BlankNode(_) => true,
+        TermPattern::Triple(triple) => {
+            has_blank_node(&triple.subject) || has_blank_node(&triple.object)
+        }
+        _ => false,
+    }
 }
 
 /// Walks a rule body for anything that breaks monotonicity or termination.

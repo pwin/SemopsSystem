@@ -646,9 +646,10 @@ fn pattern_expression(t: &TermPattern) -> Expression {
         TermPattern::NamedNode(n) => Expression::NamedNode(n.clone()),
         TermPattern::Literal(l) => Expression::Literal(l.clone()),
         // A blank node in a pattern is a variable that is not projected, as `unblank` has it.
-        TermPattern::BlankNode(b) => {
-            Expression::Variable(Variable::new_unchecked(format!("__semops_b_{}", b.as_str())))
-        }
+        TermPattern::BlankNode(b) => Expression::Variable(Variable::new_unchecked(format!(
+            "__semops_b_{}",
+            b.as_str()
+        ))),
         TermPattern::Triple(triple) => Expression::FunctionCall(
             Function::Triple,
             vec![

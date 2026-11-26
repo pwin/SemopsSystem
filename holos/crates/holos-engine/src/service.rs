@@ -430,7 +430,8 @@ mod tests {
     /// unbound.
     #[test]
     fn a_service_binds_the_variables_inside_a_triple_term() {
-        let reifies = NamedNode::new_unchecked("http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies");
+        let reifies =
+            NamedNode::new_unchecked("http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies");
         let statement = oxrdf::Triple::new(ex("a"), ex("knows"), ex("b"));
         let remote = Dataset::from_iter([Quad::new(
             ex("r"),
@@ -448,10 +449,8 @@ mod tests {
             .expect("parse");
         let evaluator = crate::Engine::evaluator().with_default_service_handler(handler);
         let local = Dataset::new();
-        let QueryResults::Solutions(solutions) = evaluator
-            .prepare(&query)
-            .execute(&local)
-            .expect("execute")
+        let QueryResults::Solutions(solutions) =
+            evaluator.prepare(&query).execute(&local).expect("execute")
         else {
             panic!("a SELECT gives solutions");
         };
