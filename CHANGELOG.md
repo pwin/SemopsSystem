@@ -10,6 +10,13 @@ and `tarka/`, for their history before the workspace.
   node everywhere but there, so the pattern matched other focus nodes' reified statements:
   a constraint reported the wrong nodes, and the right ones more than once. In `shacl` and in
   HOLOS, for `sh:select` and `sh:ask` validators alike.
+- `scripts/check_pins.py` checks the platform's packages, `semops-system`, `semops-wasm` and
+  `semops-wasm-node`, at the workspace version, as well as each engine's. It checked the
+  engines' packages only, so the editor and the VS Code extension disappeared from its report
+  when they moved to `semops-wasm` 0.31.0: their lockfiles named nothing it looked for. A
+  consumer whose lockfiles name no pinned package is now reported as unchecked and fails the
+  check, rather than passing by saying nothing. In `versions.toml`, `[platform]` lists its
+  packages, and `pypi` is a list, as the engines' is.
 
 ## 0.31.0, 25 November 2026
 

@@ -1,19 +1,22 @@
 # The one version-pin file (roadmap phase 1).
 #
 # The consumers (the browser editor, the VS Code extension, the Python suite and its evidence
-# repository, the manual) still take the engines as separate packages, and every one has to
-# take the same release, or a graph can pass in the editor and fail in CI. From 0.31.0 the
-# engine packages are built from this workspace, at its version. This file says which releases belong
-# together; `scripts/check_pins.py` reads each consumer's lockfile and reports any that
-# disagree. Phase 1's gate is that it reports none.
+# repository, the manual) take either the platform's packages below or the engines' separate
+# ones, and every one has to take the same release, or a graph can pass in the editor and fail
+# in CI. From 0.31.0 the engine packages are built from this workspace, at its version. This
+# file says which releases belong together; `scripts/check_pins.py` reads each consumer's
+# lockfile and reports any that disagree. Phase 1's gate is that it reports none.
 #
 # When a component releases, change its version here first, then bring the consumers up to it.
 
 [platform]
 # The workspace version (Cargo.toml). semops-system 0.29.0 was the first release published
-# under it, to PyPI.
+# under it, to PyPI. The packages that carry the whole platform are pinned at it, as each
+# engine's are at the engine's version: a consumer on semops-wasm is checked as one on
+# holos-wasm is.
 version = "0.31.0"
-pypi = "semops-system"
+pypi = ["semops-system"]
+npm = ["semops-wasm", "semops-wasm-node"]
 
 [engines.holos]
 version = "0.31.0"
