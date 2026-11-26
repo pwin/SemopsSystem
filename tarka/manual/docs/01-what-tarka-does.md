@@ -5,6 +5,10 @@ from databases, Parquet files in a lake. A knowledge graph wants the same facts 
 terms of an ontology, with every thing named by an IRI and every value typed. tarka is the step
 between: it reads the tables and writes the graph.
 
+tarka is one of the engines of [SemOps System](https://github.com/pwin/SemopsSystem), built,
+versioned and released with the HOLOS store, the SHACL engine and the ontology quality checks
+that the later chapters use to prove its output right.
+
 ## One plan, three ways to write it
 
 You tell tarka how a row becomes triples with a **mapping**, and you can write the mapping in
@@ -63,7 +67,8 @@ made. From Python, the triples can also come back as a Polars frame of N-Triples
 inspected before anything is written.
 
 **Around:** tarka writes SHACL shapes describing what a mapping makes, validates its output
-against them or any shapes you give it (with [SHACL_Engine](https://github.com/pwin/SHACL_Engine)),
+against them or any shapes you give it (with SemOps System's
+[SHACL engine](https://github.com/pwin/SemopsSystem/tree/main/shacl)),
 and checks OTTR libraries with a linter that reports what Lutra's does, and more.
 
 ## Faithful, then fast
@@ -87,14 +92,15 @@ and the bOTTR map in 5.6 seconds where Lutra took 152. The numbers are in
 
 ## What tarka is not
 
-- **Not a store.** It makes RDF; [HOLOS](https://github.com/pwin/triplestore) or any store with
-  the Graph Store Protocol keeps it. tarka uses HOLOS's SPARQL engine to evaluate queries, but
+- **Not a store.** It makes RDF; [HOLOS](https://github.com/pwin/SemopsSystem/tree/main/holos),
+  SemOps System's store, or any store with the Graph Store Protocol keeps it. tarka uses HOLOS's SPARQL engine to evaluate queries, but
   it holds nothing between runs.
 - **Not a reasoner.** It writes what the mapping says, not what follows from it. Inference is a
   later stage ([SemOps Manual, Chapter 11](https://www.semantechs.co.uk/SemOps_Manual/11-rules-and-inference.html)).
 - **Not RDF 1.2.** tarka reads and writes RDF 1.1 and SPARQL 1.1. A triple term, or a literal
   with a base direction (`"…"@ar--rtl`), is refused with a message rather than half-handled;
-  [Chapter 5](05-tarql-in-depth.md) shows where the trail meets that edge.
+  [Chapter 5](05-tarql-in-depth.md) shows where the trail meets that edge. For RDF 1.2, load
+  tarka's output into HOLOS and build it there with SPARQL 1.2.
 
 ## Where it sits in a semantic practice
 

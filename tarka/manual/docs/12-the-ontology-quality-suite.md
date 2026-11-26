@@ -1,16 +1,26 @@
-# 12. The Ontology Quality Suite
+# 12. The ontology quality checks
 
-SHACL checks what you wrote rules for, and SPARQL what you thought to ask. The
-[Ontology Quality Suite](https://pypi.org/project/ontology-quality-suite/) brings a registry of
-checks someone else thought of: sixty-odd of them, over the ontology, the mappings and the data,
-each with an identifier, a severity and a remedy. It is the gate of the
-[SemOps Manual](https://www.semantechs.co.uk/SemOps_Manual/)'s toolchain, and
+SHACL checks what you wrote rules for, and SPARQL what you thought to ask. The ontology quality
+checks are a registry of checks someone else thought of: sixty-one of them, over the ontology,
+the mappings and the data, each with an identifier, a severity and a remedy. They are the gate of
+the [SemOps Manual](https://www.semantechs.co.uk/SemOps_Manual/)'s toolchain, and
 [its Chapter 10](https://www.semantechs.co.uk/SemOps_Manual/10-ingest-and-transform.html) runs
-it around the ingest stage. This chapter runs two of its stages on the trail: `sketch`, on the
-mappings, before any data is read, and `data`, on what tarka made.
+them around the ingest stage.
+
+The registry runs in two places:
+
+- **`semops check`**, in SemOps System, the same release as tarka. It runs the checks over an
+  ontology and its data natively, in about a second: 42 of the 61, each as a SHACL shape and as
+  a SPARQL query, with the findings merged.
+- **The [Ontology Quality Suite](https://pypi.org/project/ontology-quality-suite/)**, in Python.
+  It runs the other checks too: the ones that need OWL reasoning, the conformance checks, and the
+  analysis of TARQL mappings. SemOps System has no equivalent for that analysis yet.
+
+So this chapter runs the suite's `sketch` on the mappings, before any data is read, and
+`semops check` on what tarka made.
 
 ```sh
-pip install ontology-quality-suite        # the command is ontology-quality-suite
+pip install ontology-quality-suite        # for sketch; semops comes with tarka (Chapter 2)
 ```
 
 ## Before any data: sketch the mappings
@@ -25,7 +35,7 @@ ontology-quality-suite sketch --queries tarql/ \
     --ontology reference/01-vocabulary.ttl --out-dir out/oqs/sketch --fail-on never
 ```
 
-The first time this manual's queries were sketched, the suite reported:
+The first time this manual's queries were sketched, with the suite at 0.27.0, it reported:
 
 ```text
 Findings: 29 total (4 Violation, 2 Warning, 23 Info)
@@ -58,95 +68,103 @@ six serious ones were fair, and changed the queries:
   The output is the same graph, triple for triple ([Chapter 11](11-sparql-checks.md)'s round trip
   says so). A mapping that a static check can read is easier for people to read, too.
 
-The sketch again:
+The other two violations were the suite's. `bs:locatedIn` and `bs:founded` have a union for a
+domain, `[ owl:unionOf ( bs:Bookshop bs:Publisher ) ]`, and a bookshop is in it; the suite at
+0.27.0 did not read a union in `rdfs:domain`. A finding is a question, and that one had an
+answer. The suite at 0.28.0 reads the union, and the sketch now says:
 
 ```text
-Findings: 24 total (2 Violation, 0 Warning, 22 Info)
+Findings: 22 total (0 Violation, 0 Warning, 22 Info)
+Sketch used 5 query file(s); 48 triples, 37 entities.
 ```
 
-What remains:
+What remains is information:
 
-- **CNF-005, Info (20).** Classes the ontology declares that the sketch never populates: places,
+- **CNF-005, Info (19).** Classes the ontology declares that the sketch never populates: places,
   people, publishers. Expected: they are reference data, and no spreadsheet makes them.
 - **TQL-003, Info (3).** `?isbn`, `?kind` and `?language` are used in a template and bound
   nowhere in the query. In TARQL that is ordinary, since each is a column, and the suite says so,
   asking only that someone check the columns exist.
-- **CNF-003, Violation (2).** *shop_iri uses property bs:locatedIn but its type doesn't match any
-  of the property's declared domain classes*, and the same for `bs:founded`. These are not
-  violations. The domain of both is a union, `[ owl:unionOf ( bs:Bookshop bs:Publisher ) ]`,
-  and a bookshop is in it; the suite, at 0.27.0, does not read a union in `rdfs:domain`. Know
-  your tools' edges: a finding is a question, and this one has an answer.
 
-## After the run: assess the data
+## After the run: check the data
 
-`data` assesses RDF itself: structure, conformance to the ontology, logic (with OWL RL
-reasoning), data quality. It wants what tarka made and the reference data it points into, so
-that the things the output links to have their types:
+`semops check` reads its files into one graph, the ontology with the data, so declarations are
+checked against their use and the other way round. It wants what tarka made and the reference
+data it points into, so that the things the output links to have their types:
 
 ```sh
-ontology-quality-suite data out/bookshops.ttl out/stocks.ttl out/stock.ttl out/events.ttl \
+semops check reference/01-vocabulary.ttl \
+    out/bookshops.ttl out/stocks.ttl out/stock.ttl out/events.ttl \
     out/works.ttl out/segments.ttl out/connections.ttl \
-    reference/02-genres.ttl reference/03-places.ttl reference/05-people.ttl \
-    --ontology reference/01-vocabulary.ttl --own-namespace https://example.org/bookshop-trail/ \
-    --engine sparql --out-dir out/oqs/data --fail-on never
+    reference/02-genres.ttl reference/03-places.ttl reference/05-people.ttl
 ```
+
+It writes one line per finding, then a count:
 
 ```text
-Findings: 634 total (181 Violation, 447 Warning, 6 Info)
+Violation STR-006  https://example.org/bookshop-trail/book-a-cold-coming  Object https://example.org/bookshop-trail/series-minster-mysteries of triple (…) is never given an rdf:type anywhere in the graph.
+…
+545 findings: 11 Violation, 532 Warning, 2 Info
 ```
 
-Six hundred and thirty-four is a number to sort, not to fear. By check:
+and exits with status 1, because something at or above `--fail-on` (a violation, by default) was
+found. Five hundred and forty-five is a number to sort, not to fear. By check:
 
 | Findings | Check | Severity | What it is about |
 |---:|---|---|---|
-| 228 | QUA-004 | Warning | resources without `skos:prefLabel` |
-| 83 | QUA-009 | Warning | classes and properties without one `skos:prefLabel` per language |
-| 83 | QUA-010 | Warning | classes and properties without `skos:definition` |
-| 92 | CNF-003 | Violation | `bs:founded` and `bs:locatedIn` on shops and publishers: the union domain again |
-| 78 | LOG-002 | Violation | `bs:locatedIn` and `bs:basedIn`, functional, with "more than one distinct value" |
+| 269 | QUA-004 | Warning | resources without `skos:prefLabel` |
+| 94 | QUA-009 | Warning | classes and properties without one `skos:prefLabel` per language |
+| 94 | QUA-010 | Warning | classes and properties without `skos:definition` |
 | 41 | DAT-002 | Warning | references to things not described: 30 DBpedia places, 11 series |
+| 17 | QUA-001 | Warning | classes and properties without `rdfs:label` |
+| 16 | STR-004 | Warning | classes with no formal definition |
 | 11 | STR-006 | Violation | objects with no type: the same 11 series |
-| 11 | STR-004 | Warning | classes with no formal definition |
-| 7 | (others) | | one property without domain or range, a duplicate literal, no `owl:versionIRI` … |
+| 3 | (others) | | a property without domain or range, a duplicate label, no `owl:versionIRI` |
 
-Read it in three piles.
+Read it in two piles.
 
-**About the ontology, not the transformation.** QUA-004, -009, -010 and STR-004, 405 findings,
-say the vocabulary labels its terms with `rdfs:label` rather than SKOS, and defines them in
-comments. That is a choice the Ontology course makes and discusses; it is the modeller's
-conversation, and no mapping can settle it. Scope a data assessment to what the data team owns.
-
-**False positives.** The 92 CNF-003s are the union domain the sketch also met. The 78 LOG-002s
-are subtler. The places are `owl:sameAs` their DBpedia resources, so after OWL RL reasoning a
-shop is `bs:locatedIn` both `bt:place-wigtown` and `dbr:Wigtown`. They are one place under two
-names, and a functional property may have one value under many names; the suite, at 0.27.0,
-counts the names. Both are the suite's to fix, and neither is about tarka.
+**About the ontology, not the transformation.** QUA-001, -004, -009, -010 and STR-004, 490
+findings, say the vocabulary labels its terms with `rdfs:label` rather than SKOS, and defines
+them in comments. That is a choice the Ontology course makes and discusses; it is the modeller's
+conversation, and no mapping can settle it.
 
 **Real findings.** Eleven works are `bs:inSeries` a series that nothing in the data describes
 (STR-006 and DAT-002): the committee keeps no spreadsheet of series, so the links point into
-nothing. tarka mapped exactly what it was given, and the assessment shows what was never given.
-That is the finding a data team needs: not a broken mapping, but a missing source. (The thirty
+nothing. tarka mapped exactly what it was given, and the check shows what was never given. That
+is the finding a data team needs: not a broken mapping, but a missing source. (The thirty
 DBpedia references are external links, as intended.)
 
-The report is `report.html`, with every finding located in the source where it can be, and
-`findings.txt`, plain text with the source line beside each.
+What `semops check` does not do is worth knowing too:
 
-## Where the suite fits
+- **No reasoning.** The checks run over the graph as it is. The suite's `data` stage, which
+  infers with OWL RL first, counted 78 LOG-002 violations here at 0.27.0: the places are
+  `owl:sameAs` their DBpedia resources, so after reasoning a shop was `bs:locatedIn` two names of
+  one place. `semops check` reasons nothing, and finds none.
+- **No conformance or vocabulary checks**, and none on TARQL mappings: those are the suite's.
+- **No scoping by namespace.** The suite's `--own-namespace` kept the ontology's own terms
+  apart; here every file's terms are checked. Choose the files to scope it.
+
+`--format` writes the findings as `json`, as `csv` (the suite's `full_results.csv` columns), as
+`junit` for a test-results view, or as `sarif` for code scanning, each finding at the line its
+node first appears on. `--engine` runs the shapes, the queries or both (the default), and
+`--list` lists the registry.
+
+## Where each fits
 
 - **Sketch in review.** It reads queries, not data, so it runs on every pull request that
   changes a mapping, in seconds.
-- **Assess after each run.** Scope it with `--own-namespace`, and track the counts between runs:
-  a change in them is the signal. [SemOps Manual §10.4](https://www.semantechs.co.uk/SemOps_Manual/10-ingest-and-transform.html)
-  shows how the counts move between suite versions, and why.
-- **Gate on what you own.** `--fail-on Violation` stops a pipeline. Turn it on once the false
-  positives above are understood, or scoped out; [Chapter 14](14-a-pipeline.md) shows the gate in
-  a pipeline.
+- **Check after each run.** Track the counts between runs: a change in them is the signal.
+  [SemOps Manual §10.4](https://www.semantechs.co.uk/SemOps_Manual/10-ingest-and-transform.html)
+  shows how the counts move between versions, and why.
+- **Gate on what you own.** `semops check` fails on a violation by default; `--fail-on` moves
+  the line (`Warning`, `Info`, or `never` to report only). [Chapter 14](14-a-pipeline.md) runs it
+  as a gate, through SemOps System's GitHub Action, with the findings in code scanning.
 
-The suite also has `triplify`, which drives oxi-gen; for tarka, run tarka and give `data` its
-output, as here. [SemOps Manual, Chapter 9](https://www.semantechs.co.uk/SemOps_Manual/09-continuous-integration.html)
-covers the suite in continuous integration, and its
-[Chapter 14](https://www.semantechs.co.uk/SemOps_Manual/14-coverage-and-gaps.html) what it
-covers and what it does not.
+The same checks run from Python, as `semops_system.check(*paths)`, and in the browser through
+`semops-wasm`. [SemOps Manual, Chapter 9](https://www.semantechs.co.uk/SemOps_Manual/09-continuous-integration.html)
+covers the checks in continuous integration, and its
+[Chapter 14](https://www.semantechs.co.uk/SemOps_Manual/14-coverage-and-gaps.html) what they
+cover and what they do not.
 
 ---
 

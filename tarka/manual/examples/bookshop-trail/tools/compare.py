@@ -17,7 +17,7 @@ Exits with status 1 when any of the three is not zero.
 import sys
 from pathlib import Path
 
-import holosdb
+import semops_system as so
 
 HERE = Path(__file__).resolve().parents[1]
 
@@ -52,7 +52,7 @@ INFORMATION = {"base direction (RDF 1.2), which tarka does not write"}
 
 
 def main(files: list[str]) -> int:
-    store = holosdb.Store()
+    store = so.holos.Store()
     for f in sorted((HERE / "reference").glob("0*.ttl")):
         store.load(str(f), graph="urn:course")
     for f in files:

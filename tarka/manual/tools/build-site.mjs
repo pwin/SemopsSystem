@@ -15,7 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import {
-  BUILD, CHAPTERS, DESCRIPTION, DIAGRAMS, GITHUB, MANUAL, PARTS, RELEASES, SITE_HOME, SUBTITLE, TITLE,
+  BUILD, CHAPTERS, DESCRIPTION, DIAGRAMS, GITHUB_BLOB, GITHUB_TARKA, GITHUB_TREE, MANUAL, PARTS, RELEASES, SITE_HOME, SUBTITLE, TITLE,
   prepareReadme, readSource, stripLogo, stripNav,
 } from './book.mjs';
 
@@ -46,7 +46,7 @@ function substituteDiagrams(md, rel, byKey) {
 /** The example files' raw GitHub copies, which the EPUB and PDF link to. The web edition
  * publishes its own copies (EXAMPLES below) and links to those, so that viewer.js can show
  * them from the same site. */
-const RAW_EXAMPLES = 'https://raw.githubusercontent.com/pwin/tarka/main/manual/examples/';
+const RAW_EXAMPLES = 'https://raw.githubusercontent.com/pwin/SemopsSystem/main/tarka/manual/examples/';
 
 /** Chapter links become links between pages; links into the repository go to GitHub; links
  * to the example files go to the copies published with the pages. */
@@ -58,8 +58,7 @@ function rewriteLinks(html) {
     const clean = file.replace(/^(\.\.?\/)+/, '');
     const base = path.basename(clean);
     if (PAGE_OF.has(base)) return `href="${PAGE_OF.get(base)}${hash ? '#' + hash : ''}"`;
-    const kind = clean.endsWith('/') ? 'tree' : 'blob';
-    return `href="${GITHUB}/${kind}/main/manual/${clean}${hash ? '#' + hash : ''}"`;
+    return `href="${clean.endsWith('/') ? GITHUB_TREE : GITHUB_BLOB}/${clean}${hash ? '#' + hash : ''}"`;
   });
 }
 
@@ -115,7 +114,7 @@ function page(ch, i, body) {
 <header class="topbar">
   <a class="home" href="${SITE_HOME}">&larr; Semantechs home</a>
   <a class="title" href="index.html"><img src="semantechs-logo-320.png" alt="" width="28" height="28">${TITLE}</a>
-  <span class="links"><a href="${RELEASES}">EPUB</a><a href="${RELEASES}">A4 PDF</a><a href="${GITHUB}">GitHub</a></span>
+  <span class="links"><a href="${RELEASES}">EPUB</a><a href="${RELEASES}">A4 PDF</a><a href="${GITHUB_TARKA}">GitHub</a></span>
 </header>
 <div class="shell">
   <details class="rail" open>

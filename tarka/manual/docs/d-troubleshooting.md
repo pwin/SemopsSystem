@@ -13,7 +13,7 @@ while this manual was written.
 column name) leaves its triples out on every row. The Ontology Quality Suite's `sketch` reports
 such variables (TQL-003).
 
-With OTTR templates over a table, tarka 0.3.1 refuses instead (next entry). Before it, a
+With OTTR templates over a table, tarka refuses instead (next entry). Before its 0.3.1, a
 mandatory parameter with no column made nothing like this.
 
 ## the input has no column for the mandatory parameter floorArea (is it floor_area?)
@@ -88,8 +88,8 @@ message, and `--report FILE`, say which nodes and why.
 
 `STRDT("c.1972", xsd:gYear)` writes `"c.1972"^^xsd:gYear`, and not every validator checks every
 datatype's lexical form. SHACL_Engine before 0.3.9 (tarka before 0.3.1) and HOLOS before 0.27.0
-do not check `xsd:gYear`'s, nor the other gregorian types' and the duration subtypes'. Upgrade,
-or add a `sh:pattern` where the form matters, or cast where SPARQL has a cast for the type (a
+do not check `xsd:gYear`'s, nor the other gregorian types' and the duration subtypes'; SemOps
+System's one SHACL engine, in `tarka --validate` and in the store, does. Upgrade, or add a `sh:pattern` where the form matters, or cast where SPARQL has a cast for the type (a
 failed cast binds nothing, and a required-property shape then reports it).
 
 ## Validation with my own shapes reports a class constraint I am sure holds
@@ -101,7 +101,7 @@ the reference data, in a store ([Chapter 10](10-shapes-and-shacl.md)).
 ## X is not supported
 
 A query uses something tarka will not evaluate as written: a property function that reads the
-data, `afn:sprintf`, a property function inside `OPTIONAL`, an RDF 1.2 feature, a function the
+data, `apf:blankNode`, a property function inside `OPTIONAL`, an RDF 1.2 feature, a function the
 engine does not have. [Chapter 5](05-tarql-in-depth.md#what-tarka-refuses) lists them.
 
 ## The library has 5 errors
