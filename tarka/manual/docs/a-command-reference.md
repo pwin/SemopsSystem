@@ -1,7 +1,8 @@
 # Appendix A. Command reference
 
-`tarka <command> [options]`. Options and file names may come in any order. Every command that
-writes RDF takes the output options below.
+`tarka <command> [options]`, or `semops map <command> [options]`: the same command, argument for
+argument, from the same SemOps System release ([Chapter 2](02-installing.md)). Options and file
+names may come in any order. Every command that writes RDF takes the output options below.
 
 ## tarka run
 

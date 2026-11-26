@@ -1,8 +1,12 @@
 # Appendix B. Python reference
 
 ```python
-import tarka_rdf          # pip install tarka-rdf
+import semops_system as so          # pip install "semops-system[polars]"
 ```
+
+Everything here is `so.tarka`: `so.tarka.Mapping`, `so.tarka.expand`, `so.tarka.bottr`. The
+`tarka-rdf` package is the same module on its own, imported as `tarka_rdf`, with the same
+names ([Chapter 2](02-installing.md)).
 
 Paths are strings or `os.PathLike`. Formats are `"turtle"` (`"ttl"`), `"ntriples"` (`"nt"`) and
 `"nquads"` (`"nq"`, which needs `graph`).
@@ -56,27 +60,31 @@ does.
 shapes(base="urn:tarka:shapes:") -> str
 ```
 
-SHACL shapes for the RDF this mapping makes, as Turtle. With SHACL_Engine's package:
-`shacl.Shapes.from_turtle(m.shapes()).validate_turtle(m.write(df))`.
+SHACL shapes for the RDF this mapping makes, as Turtle. To validate a frame's RDF with them, with
+the SHACL engine:
+
+```python
+so.shacl.Shapes.from_turtle(m.shapes()).validate_turtle(m.write(df))
+```
 
 ## Functions
 
 ```python
-tarka_rdf.expand(library, instances, output=None, format="turtle", graph=None) -> str | None
+so.tarka.expand(library, instances, output=None, format="turtle", graph=None) -> str | None
 ```
 
 Expands OTTR instances (stOTTR files) with a library, as Lutra does; writes to `output`, or
 returns the text.
 
 ```python
-tarka_rdf.bottr(library, maps, output=None, format="turtle", graph=None, strict=True) -> str | None
+so.tarka.bottr(library, maps, output=None, format="turtle", graph=None, strict=True) -> str | None
 ```
 
 Runs bOTTR instance maps (Turtle files) with a library; writes to `output`, or returns the text.
 Instances that cannot be made are left out, and a `ValueError` lists them after the rest are
 written, unless `strict=False`.
 
-`tarka_rdf.__version__` is the package's version.
+`so.tarka.__version__` is the version: SemOps System's, 0.31.0 for this edition.
 
 ## Data frame cells
 

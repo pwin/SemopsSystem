@@ -8,7 +8,7 @@ Writes out/bookshops-frame.ttl and out/shop-stock-frame.nt, and prints what it m
 from pathlib import Path
 
 import polars as pl
-import tarka_rdf
+import semops_system as so
 
 HERE = Path(__file__).resolve().parents[1]
 OUT = HERE / "out"
@@ -33,7 +33,7 @@ def main() -> None:
     #    with types inferred, "80.0" would arrive as the float 80.0 and be written "80.0"
     #    all the same, but a column of shop names could not be told from one of numbers.
     shops = pl.read_csv(HERE / "data" / "bookshops.csv", infer_schema=False)
-    query = tarka_rdf.Mapping.tarql_file(HERE / "tarql" / "bookshops.rq")
+    query = so.tarka.Mapping.tarql_file(HERE / "tarql" / "bookshops.rq")
     triples = query.triplify(shops)  # a frame of N-Triples terms: subject, predicate, object
     print(f"{query.name}: {shops.height} rows, {triples.height} triples")
     print(short(triples.filter(pl.col("subject") == "<https://example.org/bookshop-trail/shop-marginalia>").head(6)))
@@ -43,7 +43,7 @@ def main() -> None:
     #    parameters as they are, with no separator; the Decimal prices keep their scale.
     stock = pl.read_parquet(HERE / "data" / "prepared" / "shop-stock.parquet")
     print(stock.schema)
-    templates = tarka_rdf.Mapping.ottr([HERE / "ottr"], ["tt:ShopStock"])
+    templates = so.tarka.Mapping.ottr([HERE / "ottr"], ["tt:ShopStock"])
     templates.write(stock, OUT / "shop-stock-frame.nt", format="ntriples")
 
     # 3. The triples are a frame, so Polars can ask questions of them before any store

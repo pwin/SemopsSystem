@@ -12,7 +12,7 @@ for a query whose every row is a fault, in a pipeline.
 import sys
 from pathlib import Path
 
-import holosdb
+import semops_system as so
 
 HERE = Path(__file__).resolve().parents[1]
 REFERENCE = ["01-vocabulary.ttl", "02-genres.ttl", "03-places.ttl", "05-people.ttl"]
@@ -33,7 +33,7 @@ def main(args: list[str]) -> int:
     reference = "--no-reference" not in args
     expect_none = "--expect-none" in args
     query, *files = [a for a in args if a not in ("--no-reference", "--expect-none")]
-    store = holosdb.Store()
+    store = so.holos.Store()
     if reference:
         for name in REFERENCE:
             store.load(str(HERE / "reference" / name))

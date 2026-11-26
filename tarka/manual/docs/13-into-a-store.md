@@ -7,11 +7,12 @@ SPARQL 1.1 Graph Store Protocol, as the triples are made.
 
 ## A store to load
 
-[HOLOS](https://github.com/pwin/triplestore) serves the protocol at `/graph`, and SPARQL at
-`/query`. Its server, from the HOLOS releases, starts in memory with one command:
+[HOLOS](https://github.com/pwin/SemopsSystem/tree/main/holos), SemOps System's store, serves the
+protocol at `/graph`, and SPARQL at `/query`. Its server is `semops serve` (`holos-server`, under
+its old name), and it starts in memory with one command:
 
 ```sh
-holos-server --listen 127.0.0.1:7878
+semops serve --listen 127.0.0.1:7878
 ```
 
 (`--store DIR` keeps the store on disk, in RocksDB; `--data FILE` loads files at start.) Any
@@ -154,5 +155,5 @@ Every command uses the same codes, so a pipeline can tell what happened:
 
 ---
 
-| [← 12. The Ontology Quality Suite](12-the-ontology-quality-suite.md) | [14. A pipeline →](14-a-pipeline.md) |
+| [← 12. The ontology quality checks](12-the-ontology-quality-suite.md) | [14. A pipeline →](14-a-pipeline.md) |
 |---|---|

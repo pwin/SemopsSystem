@@ -12,7 +12,7 @@ import csv
 import sys
 from pathlib import Path
 
-import holosdb
+import semops_system as so
 
 HERE = Path(__file__).resolve().parents[1]
 BT = "https://example.org/bookshop-trail/"
@@ -77,7 +77,7 @@ def write(name, header, records):
 
 
 def main() -> None:
-    store = holosdb.Store()
+    store = so.holos.Store()
     for f in sorted((HERE / "reference").glob("0*.ttl")):
         store.load(str(f))
 

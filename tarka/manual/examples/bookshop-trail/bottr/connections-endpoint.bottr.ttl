@@ -1,7 +1,7 @@
 # bs:connectsTo again, from a store this time: a SPARQL endpoint source sends the SELECT to
 # the endpoint with the SPARQL 1.1 Protocol. Load the segments into HOLOS first (Chapter 13):
 #
-#   holos-server --listen 127.0.0.1:7878
+#   semops serve --listen 127.0.0.1:7878
 #   tarka bottr -l ottr/ bottr/segments.bottr.ttl --post http://127.0.0.1:7878/graph \
 #       --graph https://example.org/bookshop-trail/graph/trail
 #   tarka bottr -l ottr/ bottr/connections-endpoint.bottr.ttl -o out/connections-endpoint.ttl

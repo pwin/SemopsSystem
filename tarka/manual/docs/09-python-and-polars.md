@@ -2,9 +2,9 @@
 
 Spreadsheets are rarely ready to map. Columns need joining, splitting, gathering into lists,
 renaming; values need reformatting. In a pipeline that work belongs to a table tool, and in
-Python the table tool is [Polars](https://pola.rs). tarka's Python package, `tarka-rdf`, takes a
-Polars data frame wherever the command takes a file, so the preparing and the mapping happen in
-one process, without a CSV file between them.
+Python the table tool is [Polars](https://pola.rs). tarka in Python, `semops_system.tarka`
+([Chapter 2](02-installing.md)), takes a Polars data frame wherever the command takes a file, so
+the preparing and the mapping happen in one process, without a CSV file between them.
 
 This chapter does both: it walks through `python/prepare.py`, which made the prepared tables
 Part III used, and `python/frames.py`, which maps frames and a Parquet file from Python.
@@ -98,10 +98,10 @@ data/prepared/shop-stock.parquet: 5174 bytes
 
 ```python
 import polars as pl
-import tarka_rdf
+import semops_system as so
 
 shops = pl.read_csv("data/bookshops.csv", infer_schema=False)
-query = tarka_rdf.Mapping.tarql_file("tarql/bookshops.rq")
+query = so.tarka.Mapping.tarql_file("tarql/bookshops.rq")
 triples = query.triplify(shops)
 ```
 
@@ -141,7 +141,7 @@ for CSV, which is why the frame was read with `infer_schema=False`.
 ```python
 stock = pl.read_parquet("data/prepared/shop-stock.parquet")
 print(stock.schema)
-templates = tarka_rdf.Mapping.ottr(["ottr"], ["tt:ShopStock"])
+templates = so.tarka.Mapping.ottr(["ottr"], ["tt:ShopStock"])
 templates.write(stock, "out/shop-stock-frame.nt", format="ntriples")
 ```
 
@@ -222,8 +222,8 @@ raised, so the good rows are not lost.
 ```python
 m.name, m.prefixes                    # the plan's name; the prefixes, for Turtle
 m.shapes(base="https://example.org/bookshop-trail/shapes#")    # SHACL shapes, as Turtle
-tarka_rdf.expand(["ottr"], ["instances/two-rivers.stottr"], "out/two-rivers.ttl")
-tarka_rdf.bottr(["ottr"], ["bottr/bookshops.bottr.ttl"], "out/bookshops-bottr.ttl")
+so.tarka.expand(["ottr"], ["instances/two-rivers.stottr"], "out/two-rivers.ttl")
+so.tarka.bottr(["ottr"], ["bottr/bookshops.bottr.ttl"], "out/bookshops-bottr.ttl")
 ```
 
 Each gives the same RDF as the command. The mapping runs without Python's global interpreter

@@ -208,7 +208,8 @@ Compare TARQL's `IF(?second_hand = "yes", true, …)`, which leaves the triple o
 nothing. The map leaves the whole shop out and says why: stricter, because a bOTTR map declares
 what each column is.
 
-From Python: `tarka_rdf.bottr(["ottr/"], ["bottr/bookshops.bottr.ttl"], "out/bookshops.ttl")`.
+From Python: `so.tarka.bottr(["ottr/"], ["bottr/bookshops.bottr.ttl"], "out/bookshops.ttl")`, with
+`import semops_system as so`.
 
 ---
 

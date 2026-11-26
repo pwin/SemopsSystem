@@ -14,7 +14,7 @@
 (function () {
   'use strict';
 
-  var GITHUB_RAW = 'https://raw.githubusercontent.com/pwin/tarka/main/manual/';
+  var GITHUB_RAW = 'https://raw.githubusercontent.com/pwin/SemopsSystem/main/tarka/manual/';
 
   var esc = function (s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

@@ -114,8 +114,9 @@ requires one can notice.
 
 `STRDT("c.1972", xsd:gYear)` writes `"c.1972"^^xsd:gYear`: an *ill-typed* literal, its text not
 in the datatype's lexical space. `sh:datatype xsd:gYear` rejects it, as above, but only in a
-validator that checks a gYear's lexical form. SHACL_Engine checks it from 0.3.9 (in tarka
-0.3.1) and HOLOS from 0.27.0. Their earlier releases rejected `"seven"^^xsd:integer`,
+validator that checks a gYear's lexical form. SemOps System has one SHACL engine, the one tarka
+embeds for `--validate` and the HOLOS store validates with, and it does. The engines before it
+(SHACL_Engine before 0.3.9, HOLOS before 0.27.0) rejected `"seven"^^xsd:integer`,
 `"2025-02-31"^^xsd:date` and `"yes"^^xsd:boolean`, and let `"c.1972"^^xsd:gYear` through, as
 other validators may still. A pattern states the rule outright, whichever engine reads it, and
 its message says what a year should be. Where a value's form matters, say what the form is.
@@ -132,7 +133,7 @@ reference data together, which is a job for a store: `python/validate.py` loads 
 HOLOS store and validates there.
 
 ```python
-store = holosdb.Store()
+store = so.holos.Store()
 for name in ["01-vocabulary.ttl", "02-genres.ttl", "03-places.ttl", "05-people.ttl"]:
     store.load(f"reference/{name}")
 for f in files:
@@ -205,18 +206,23 @@ refer to, guard the meaning. Use all three: the first two as the file is written
 
 ## SHACL from Python, and from the command line
 
-From Python, without a store, SHACL_Engine validates text:
+From Python, without a store, the SHACL engine validates text:
 
 ```python
-import shacl, tarka_rdf
-m = tarka_rdf.Mapping.tarql_file("tarql/bookshops.rq")
-report = shacl.Shapes.from_turtle(m.shapes()).validate_turtle(m.write(df))
+import semops_system as so
+m = so.tarka.Mapping.tarql_file("tarql/bookshops.rq")
+report = so.shacl.Shapes.from_turtle(m.shapes()).validate_turtle(m.write(df))
 report.conforms, [(r.focus_node, r.path, r.component) for r in report.results]
 ```
 
-and `shacl.validate("data.ttl", "shapes.ttl")` validates files. SHACL_Engine's own command
-line, from its [releases](https://github.com/pwin/SHACL_Engine/releases), does the same in a
-shell. HOLOS's `holos validate` validates a store.
+and `so.shacl.validate("data.ttl", "shapes.ttl")` validates files. From the shell,
+`semops validate` does the same, each `--data` and `--shapes` repeatable, so the output and the
+reference data can be one graph without a store:
+
+```sh
+semops validate --data out/bookshops.ttl --data reference/03-places.ttl \
+    --shapes reference/s64-the-whole-trail-in-one-shapes-graph.ttl
+```
 
 The [SHACL course](https://www.semantechs.co.uk/SHACL_Course/) teaches every shape in s64, and
 [SemOps Manual, Chapter 8](https://www.semantechs.co.uk/SemOps_Manual/08-model-and-validate.html)
