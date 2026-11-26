@@ -12,7 +12,7 @@
 [platform]
 # The workspace version (Cargo.toml). semops-system 0.29.0 was the first release published
 # under it, to PyPI.
-version = "0.31.0"
+version = "0.31.1"
 pypi = "semops-system"
 
 [engines.holos]

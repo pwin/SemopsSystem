@@ -47,7 +47,7 @@ you want RDF 1.2 from mapped data, load tarka's output into the store and build 
 
 ## One version
 
-Every part comes from one Cargo workspace and carries one version number, 0.31.0 for this
+Every part comes from one Cargo workspace and carries one version number, 0.31.1 for this
 manual. A store written by one version's `holos` is read by the same version's
 `holos-server`, and the functions a query can call are the functions a SHACL constraint can
 call, because both register the same library.

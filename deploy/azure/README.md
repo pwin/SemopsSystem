@@ -164,12 +164,12 @@ azd up
 | --- | --- | --- |
 | `AZURE_ENV_NAME` | `namePrefix` | (the environment name) |
 | `AZURE_LOCATION` | `location` | (asked for) |
-| `SEMOPS_IMAGE` | `image` | `ghcr.io/pwin/semops:0.31.0` |
+| `SEMOPS_IMAGE` | `image` | `ghcr.io/pwin/semops:0.31.1` |
 | `SEMOPS_MODE` | `mode` | `replica` |
 | `SEMOPS_SNAPSHOT_FILE` | `snapshotFile` | `snapshots/latest.nq.gz` |
 | `ENTRA_CLIENT_ID` | `entraClientId` | empty: no sign-in |
 
-`SEMOPS_IMAGE` defaults to the 0.31.0 release's image on GitHub Container Registry. In
+`SEMOPS_IMAGE` defaults to the 0.31.1 release's image on GitHub Container Registry. In
 production, pin a digest, or point it at a mirror in Azure Container Registry. `azd env
 get-values` shows the deployment's outputs, `ENDPOINT` among them.
 

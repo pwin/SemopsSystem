@@ -137,7 +137,7 @@ loaded 588 quads from out/bookshops.ttl
 loaded 509 quads from reference/01-vocabulary.ttl
 loaded 215 quads from reference/02-genres.ttl
 …
-holos-server 0.31.0 (<commit>) listening on http://127.0.0.1:7878
+holos-server 0.31.1 (<commit>) listening on http://127.0.0.1:7878
   console  http://127.0.0.1:7878/
   query    http://127.0.0.1:7878/query
 ```
