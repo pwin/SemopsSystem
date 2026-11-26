@@ -320,29 +320,20 @@ fn render_list(
     next: &mut u64,
     out: &mut Vec<Quad>,
 ) -> Result<Term, ShaclError> {
-    let nil = match shapes_graph.term(sh.rdf_nil)? {
-        Some(Term::NamedNode(n)) => n,
-        _ => {
-            return Err(ShaclError::IllFormedShape(
-                "rdf:nil should be an IRI".into(),
-            ))
-        }
+    let Some(Term::NamedNode(nil)) = shapes_graph.term(sh.rdf_nil)? else {
+        return Err(ShaclError::IllFormedShape(
+            "rdf:nil should be an IRI".into(),
+        ));
     };
-    let first = match shapes_graph.term(sh.rdf_first)? {
-        Some(Term::NamedNode(n)) => n,
-        _ => {
-            return Err(ShaclError::IllFormedShape(
-                "rdf:first should be an IRI".into(),
-            ))
-        }
+    let Some(Term::NamedNode(first)) = shapes_graph.term(sh.rdf_first)? else {
+        return Err(ShaclError::IllFormedShape(
+            "rdf:first should be an IRI".into(),
+        ));
     };
-    let rest = match shapes_graph.term(sh.rdf_rest)? {
-        Some(Term::NamedNode(n)) => n,
-        _ => {
-            return Err(ShaclError::IllFormedShape(
-                "rdf:rest should be an IRI".into(),
-            ))
-        }
+    let Some(Term::NamedNode(rest)) = shapes_graph.term(sh.rdf_rest)? else {
+        return Err(ShaclError::IllFormedShape(
+            "rdf:rest should be an IRI".into(),
+        ));
     };
     // Built back to front, so each cell knows the tail it points at.
     let mut tail = Term::NamedNode(nil);

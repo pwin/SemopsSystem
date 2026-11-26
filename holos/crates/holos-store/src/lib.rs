@@ -331,7 +331,6 @@ impl Store {
     ///
     /// See [`Storage::quads_with_object_in`]. The span narrows the scan; the caller's own
     /// filter still decides what matches.
-    #[must_use]
     pub fn quads_with_object_in(
         &self,
         subject: Option<TermId>,
@@ -457,6 +456,10 @@ impl Store {
     }
 
     /// `Ok(None)` means the graph term is unknown; `Ok(Some(None))` means the default graph.
+    #[allow(
+        clippy::option_option,
+        reason = "three answers: unknown, default graph, named"
+    )]
     fn lookup_graph_name(&self, graph: GraphNameRef<'_>) -> Result<Option<Option<TermId>>> {
         Ok(match graph {
             GraphNameRef::DefaultGraph => Some(None),

@@ -488,6 +488,6 @@ mod tests {
         let index = SpatialIndex::default();
         assert!(index.is_empty());
         let probe: Geometry = geo::Point::new(0.0, 0.0).into();
-        assert!(index.candidates(&probe).is_empty());
+        assert_eq!(index.candidates(&probe), [] as [holos_core::TermId; 0]);
     }
 }

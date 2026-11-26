@@ -117,7 +117,13 @@ macro_rules! build {
 pub fn stamp() {
     let manifest = std::env::var("CARGO_MANIFEST_DIR").expect("set by cargo for a build script");
     let root = std::path::Path::new(&manifest).join("../..");
-    for watched in ["crates", "Cargo.toml", "Cargo.lock", ".git/HEAD", ".git/index"] {
+    for watched in [
+        "crates",
+        "Cargo.toml",
+        "Cargo.lock",
+        ".git/HEAD",
+        ".git/index",
+    ] {
         println!("cargo:rerun-if-changed={}", root.join(watched).display());
     }
     let git = |args: &[&str]| {
@@ -172,7 +178,10 @@ mod tests {
         let build = Build::new("0.13.0", "", false);
         assert_eq!(build.to_string(), "0.13.0");
         assert_eq!(build.product("holos"), "holos/0.13.0");
-        assert_eq!(build.json_members(), r#""version":"0.13.0","modified":false"#);
+        assert_eq!(
+            build.json_members(),
+            r#""version":"0.13.0","modified":false"#
+        );
     }
 
     /// This crate is built inside the repository, so the stamp would name a commit — the

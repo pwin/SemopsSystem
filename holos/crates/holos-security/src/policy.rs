@@ -291,13 +291,14 @@ impl Policy {
                     Some(id) => merge_map(&mut predicate, id, entry),
                     None => unresolved.push(p.clone()),
                 },
-                Scope::GraphPredicate(g, p) => match (resolve(g)?, resolve(p)?) {
-                    (Some(g), Some(p)) => merge_map(&mut graph_predicate, (g, p), entry),
-                    _ => {
+                Scope::GraphPredicate(g, p) => {
+                    if let (Some(g), Some(p)) = (resolve(g)?, resolve(p)?) {
+                        merge_map(&mut graph_predicate, (g, p), entry);
+                    } else {
                         unresolved.push(g.clone());
                         unresolved.push(p.clone());
                     }
-                },
+                }
             }
         }
 
@@ -729,8 +730,14 @@ mod tests {
                 value: "finance".into(),
             },
         ));
-        assert!(!visible(&store, &policy.compile(&store, &finance).unwrap()).is_empty());
-        assert!(visible(&store, &policy.compile(&store, &other).unwrap()).is_empty());
+        assert_ne!(
+            visible(&store, &policy.compile(&store, &finance).unwrap()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            visible(&store, &policy.compile(&store, &other).unwrap()),
+            [] as [String; 0]
+        );
     }
 
     #[test]

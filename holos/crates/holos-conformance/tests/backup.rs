@@ -9,7 +9,7 @@
 use holos_conformance::protocol::{self, HttpResponse, ScriptedRequest};
 
 mod harness;
-use harness::{Server, server_binary};
+use harness::{server_binary, Server};
 
 const EX: &str = "http://holos.example/";
 

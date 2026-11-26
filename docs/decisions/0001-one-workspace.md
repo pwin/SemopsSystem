@@ -84,13 +84,10 @@ which had locked HOLOS's dependency tree independently).
   22 November 2026: see [0005](0005-check-registry.md).)
 - One SHACL validator. Done on 25 November 2026 ([0011](0011-one-shacl-engine.md)): HOLOS
   validates with `shacl`, and its copy, `holos-shacl-engine`, is gone.
-- rustfmt and clippy over `holos/`. HOLOS was never gated on either: it has 74 rustfmt
-  differences and about 270 clippy warnings, inherited from upstream. Both wait until
-  pwin/triplestore stops taking commits, so subtree pulls stay clean. Until then CI gates
-  `shacl/`, `tarka/` and `vendor/` (no rustfmt difference, no clippy warning) and reports
-  HOLOS's count. The gate is by directory because clippy lints every workspace member a
-  build compiles, so `-p shacl -- -D warnings` failed on `vendor/spareval` as a dependency.
-  That crate now allows the two default lints Oxigraph's design trips.
+- rustfmt and clippy over `holos/`. Done on 25 November 2026, once pwin/triplestore was
+  archived and subtree pulls from it ended: HOLOS is formatted, its 178 remaining clippy
+  warnings are fixed or allowed at the site with a reason, and CI runs `cargo fmt --check
+  --all` and fails on any clippy warning in the workspace.
 - Release workflows. Each engine's old `release.yml` came in with its subtree but does not
   run (GitHub reads only the root `.github/`). They are the reference for phase 3's single
   release.

@@ -579,7 +579,7 @@ fn entails(closure: &Graph, conclusion: &Dataset) -> bool {
     }
     // Ground goals first. One either matches or fails outright, so putting them ahead of the
     // goals carrying blank nodes prunes the search before any binding is guessed.
-    goals.sort_by_key(|t| blank_count(t));
+    goals.sort_by_key(blank_count);
     // Sorted, so the search visits candidates in the same order on every run. The answer
     // does not depend on the order — that is what the backtracking is for — but the work
     // does, and a conformance tool whose cost and diagnostics move with a hash seed is one

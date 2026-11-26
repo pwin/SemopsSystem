@@ -85,10 +85,8 @@ pub fn from_dataset(dataset: &Dataset) -> Result<Expected> {
         .ok_or_else(|| anyhow!("no rs:ResultSet in the file"))?;
 
     // An ASK result carries rs:boolean and no solutions.
-    if let Some(value) = object_of(dataset, node, &rs("boolean")) {
-        if let TermRef::Literal(literal) = value {
-            return Ok(Expected::Boolean(literal.value() == "true"));
-        }
+    if let Some(TermRef::Literal(literal)) = object_of(dataset, node, &rs("boolean")) {
+        return Ok(Expected::Boolean(literal.value() == "true"));
     }
 
     // The declared variables. Order is not significant here — the comparison is by name —

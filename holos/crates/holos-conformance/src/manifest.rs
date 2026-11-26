@@ -560,41 +560,6 @@ fn has_drive_letter(path: &str) -> bool {
         && (bytes.len() == 2 || bytes[2] == b'/')
 }
 
-#[cfg(test)]
-mod url_tests {
-    use super::{file_url_to_path, path_to_file_url};
-    use std::path::{Path, PathBuf};
-
-    #[test]
-    fn a_unix_path_keeps_its_root() {
-        assert_eq!(
-            file_url_to_path("file:///home/runner/suite/manifest.ttl"),
-            Some(PathBuf::from("/home/runner/suite/manifest.ttl"))
-        );
-    }
-
-    #[test]
-    fn a_windows_path_loses_the_slash_before_its_drive() {
-        assert_eq!(
-            file_url_to_path("file:///C:/repos/suite/manifest.ttl"),
-            Some(PathBuf::from("C:/repos/suite/manifest.ttl"))
-        );
-    }
-
-    #[test]
-    fn a_path_survives_the_round_trip() {
-        let path = Path::new("/srv/suites/a%20b/manifest.ttl");
-        let url = path_to_file_url(path);
-        assert_eq!(url, "file:///srv/suites/a%20b/manifest.ttl");
-        // Percent-decoding is the point of the reverse direction, so the escape comes back as
-        // a space.
-        assert_eq!(
-            file_url_to_path(&url),
-            Some(PathBuf::from("/srv/suites/a b/manifest.ttl"))
-        );
-    }
-}
-
 fn percent_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -647,4 +612,39 @@ pub fn parse_dataset(path: &Path, base: &str) -> Result<oxrdf::Dataset> {
 #[must_use]
 pub fn base_for(test: &TestEntry, path: &Path) -> String {
     rebase(&test.base, &test.manifest_dir, path)
+}
+
+#[cfg(test)]
+mod url_tests {
+    use super::{file_url_to_path, path_to_file_url};
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn a_unix_path_keeps_its_root() {
+        assert_eq!(
+            file_url_to_path("file:///home/runner/suite/manifest.ttl"),
+            Some(PathBuf::from("/home/runner/suite/manifest.ttl"))
+        );
+    }
+
+    #[test]
+    fn a_windows_path_loses_the_slash_before_its_drive() {
+        assert_eq!(
+            file_url_to_path("file:///C:/repos/suite/manifest.ttl"),
+            Some(PathBuf::from("C:/repos/suite/manifest.ttl"))
+        );
+    }
+
+    #[test]
+    fn a_path_survives_the_round_trip() {
+        let path = Path::new("/srv/suites/a%20b/manifest.ttl");
+        let url = path_to_file_url(path);
+        assert_eq!(url, "file:///srv/suites/a%20b/manifest.ttl");
+        // Percent-decoding is the point of the reverse direction, so the escape comes back as
+        // a space.
+        assert_eq!(
+            file_url_to_path(&url),
+            Some(PathBuf::from("/srv/suites/a b/manifest.ttl"))
+        );
+    }
 }

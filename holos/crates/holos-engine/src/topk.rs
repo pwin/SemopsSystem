@@ -65,9 +65,9 @@ use std::sync::Arc;
 use holos_core::TermId;
 use oxrdf::{NamedOrBlankNode, Term};
 use spareval::{ExpressionTerm, ExpressionTriple, QueryEvaluator, QuerySolutionIter};
-use spargebra::Query;
 use spargebra::algebra::{Expression, GraphPattern, OrderExpression};
 use spargebra::term::Variable;
+use spargebra::Query;
 
 use crate::{DatasetView, EngineError, ViewError};
 
@@ -521,12 +521,12 @@ impl Plan {
         // here so the client is told which ceiling rather than handed an I/O failure.
         let io = |e: std::io::Error| -> EngineError {
             match e.downcast::<crate::spill::DiskLimitExceeded>() {
-                Ok(over) => EngineError::Evaluation(
-                    spareval::QueryEvaluationError::Dataset(Box::new(over)),
-                ),
-                Err(other) => EngineError::Evaluation(
-                    spareval::QueryEvaluationError::Dataset(Box::new(other)),
-                ),
+                Ok(over) => {
+                    EngineError::Evaluation(spareval::QueryEvaluationError::Dataset(Box::new(over)))
+                }
+                Err(other) => EngineError::Evaluation(spareval::QueryEvaluationError::Dataset(
+                    Box::new(other),
+                )),
             }
         };
 
@@ -575,16 +575,10 @@ impl Plan {
                 match merged.next_row() {
                     Ok(None) => return None,
                     Err(e) => {
-                        return Some(Err(
-                            match e.downcast::<crate::spill::DiskLimitExceeded>() {
-                                Ok(over) => {
-                                    spareval::QueryEvaluationError::Dataset(Box::new(over))
-                                }
-                                Err(other) => {
-                                    spareval::QueryEvaluationError::Dataset(Box::new(other))
-                                }
-                            },
-                        ))
+                        return Some(Err(match e.downcast::<crate::spill::DiskLimitExceeded>() {
+                            Ok(over) => spareval::QueryEvaluationError::Dataset(Box::new(over)),
+                            Err(other) => spareval::QueryEvaluationError::Dataset(Box::new(other)),
+                        }))
                     }
                     Ok(Some(row)) => {
                         if skipped < start {
@@ -755,8 +749,8 @@ fn cmp_triples(a: &ExpressionTriple, b: &ExpressionTriple) -> Ordering {
 /// give a value to — `xsd:gYear` and its kin, and every user-defined type — is not
 /// comparable by value, and falls to the lexical order.
 fn partial_cmp_literals(a: &ExpressionTerm, b: &ExpressionTerm) -> Option<Ordering> {
-    use ExpressionTerm as T;
     use oxsdatatypes::{Decimal, Double, Float};
+    use ExpressionTerm as T;
     match (a, b) {
         (T::StringLiteral(a), T::StringLiteral(b)) => a.partial_cmp(b),
         (
@@ -838,11 +832,9 @@ fn lexical_cmp(a: &ExpressionTerm, b: &ExpressionTerm) -> Ordering {
         return va.cmp(vb).then_with(|| da.as_str().cmp(db.as_str()));
     }
     match (Term::from(a.clone()), Term::from(b.clone())) {
-        (Term::Literal(a), Term::Literal(b)) => (a.value(), a.datatype(), a.language()).cmp(&(
-            b.value(),
-            b.datatype(),
-            b.language(),
-        )),
+        (Term::Literal(a), Term::Literal(b)) => {
+            (a.value(), a.datatype(), a.language()).cmp(&(b.value(), b.datatype(), b.language()))
+        }
         // Both sides are literals here; the arms above have sent every other kind away.
         _ => Ordering::Equal,
     }
@@ -901,16 +893,39 @@ mod tests {
         let recognised = |q: &str| plan(&parse(q)).is_some();
 
         // The heap takes a sort with a LIMIT it can hold.
-        assert_eq!(heap(&format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY DESC(?o) LIMIT 4")), Some(4));
-        assert_eq!(heap(&format!("{p}SELECT * WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 2 LIMIT 4")), Some(6));
-        assert_eq!(heap(&format!("{p}SELECT ?s WHERE {{ ?s ex:died ?o }} ORDER BY DESC(?o) ?s LIMIT 4")), Some(4));
-        assert_eq!(heap(&format!("{p}SELECT ?s WHERE {{ ?s ex:rank ?r }} ORDER BY (?r * 2) LIMIT 4")), Some(4));
+        assert_eq!(
+            heap(&format!(
+                "{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY DESC(?o) LIMIT 4"
+            )),
+            Some(4)
+        );
+        assert_eq!(
+            heap(&format!(
+                "{p}SELECT * WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 2 LIMIT 4"
+            )),
+            Some(6)
+        );
+        assert_eq!(
+            heap(&format!(
+                "{p}SELECT ?s WHERE {{ ?s ex:died ?o }} ORDER BY DESC(?o) ?s LIMIT 4"
+            )),
+            Some(4)
+        );
+        assert_eq!(
+            heap(&format!(
+                "{p}SELECT ?s WHERE {{ ?s ex:rank ?r }} ORDER BY (?r * 2) LIMIT 4"
+            )),
+            Some(4)
+        );
 
         // Recognised, but past what the heap will hold, so the spilling sort takes it.
         for query in [
             format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY DESC(?o)"),
             format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 5"),
-            format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT {}", MAX_HELD + 1),
+            format!(
+                "{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT {}",
+                MAX_HELD + 1
+            ),
         ] {
             assert!(recognised(&query), "{query}");
             assert_eq!(heap(&query), None, "{query}");
@@ -918,14 +933,24 @@ mod tests {
 
         // Not a sort this module answers at all, by either route.
         // A DISTINCT between the sort and the slice is another operator.
-        assert!(!recognised(&format!("{p}SELECT DISTINCT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 4")));
+        assert!(!recognised(&format!(
+            "{p}SELECT DISTINCT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 4"
+        )));
         // A key the evaluator's public entry point cannot answer.
-        assert!(!recognised(&format!("{p}SELECT ?s WHERE {{ ?s ex:died ?o }} ORDER BY RAND() LIMIT 4")));
-        assert!(!recognised(&format!("{p}SELECT ?s WHERE {{ ?s ex:died ?o }} ORDER BY EXISTS {{ ?s ex:rank ?r }} LIMIT 4")));
+        assert!(!recognised(&format!(
+            "{p}SELECT ?s WHERE {{ ?s ex:died ?o }} ORDER BY RAND() LIMIT 4"
+        )));
+        assert!(!recognised(&format!(
+            "{p}SELECT ?s WHERE {{ ?s ex:died ?o }} ORDER BY EXISTS {{ ?s ex:rank ?r }} LIMIT 4"
+        )));
         // Nothing to return.
-        assert!(!recognised(&format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 0")));
+        assert!(!recognised(&format!(
+            "{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 0"
+        )));
         // No sort.
-        assert!(!recognised(&format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} LIMIT 4")));
+        assert!(!recognised(&format!(
+            "{p}SELECT ?o WHERE {{ ?s ex:died ?o }} LIMIT 4"
+        )));
     }
 
     #[test]
@@ -944,7 +969,10 @@ mod tests {
         let names: Vec<&str> = variables.iter().map(Variable::as_str).collect();
         assert_eq!(names, ["s", "o", "r"]);
         assert_eq!(plan.projected.len(), 1);
-        assert_eq!((plan.start, plan.length, plan.held()), (0, Some(2), Some(2)));
+        assert_eq!(
+            (plan.start, plan.length, plan.held()),
+            (0, Some(2), Some(2))
+        );
     }
 
     #[test]
@@ -1001,8 +1029,21 @@ mod tests {
         let session = Session::unrestricted(e.store()).unwrap();
         let view = e.view(&session);
         let p = "PREFIX ex: <http://example.com/> ";
-        assert!(rows(&view, &format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 10 LIMIT 3")).is_empty());
-        assert_eq!(rows(&view, &format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 100")).len(), 5);
+        assert_eq!(
+            rows(
+                &view,
+                &format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o OFFSET 10 LIMIT 3")
+            ),
+            [] as [Vec<Option<String>>; 0]
+        );
+        assert_eq!(
+            rows(
+                &view,
+                &format!("{p}SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 100")
+            )
+            .len(),
+            5
+        );
     }
 
     /// The terms of every kind the order has a rule for, with pairs that tie by value and
@@ -1031,9 +1072,7 @@ mod tests {
             "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> SELECT ?x WHERE {{ {{ VALUES ?x {{ {MIXED} }} }} UNION {{ BIND(BNODE() AS ?x) }} UNION {{ BIND(BNODE() AS ?x) }} }} ORDER BY {direction}(?x) {limit}"
         );
         let terms = match Engine::query(&view, &query, None).unwrap() {
-            QueryResults::Solutions(iter) => iter
-                .map(|s| s.unwrap().get(0).cloned())
-                .collect(),
+            QueryResults::Solutions(iter) => iter.map(|s| s.unwrap().get(0).cloned()).collect(),
             _ => panic!("expected solutions"),
         };
         terms
@@ -1085,7 +1124,11 @@ mod tests {
                 } else {
                     Ordering::Less
                 };
-                assert_ne!(ordering, wrong, "{direction}: {:?} before {:?}", pair[0], pair[1]);
+                assert_ne!(
+                    ordering, wrong,
+                    "{direction}: {:?} before {:?}",
+                    pair[0], pair[1]
+                );
             }
         }
     }

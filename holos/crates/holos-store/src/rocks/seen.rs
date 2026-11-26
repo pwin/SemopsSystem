@@ -191,6 +191,7 @@ mod tests {
         let false_positives = (0..keys)
             .filter(|i| seen.may_contain(format!("absent{i}").as_bytes()))
             .count();
+        #[allow(clippy::cast_precision_loss, reason = "a count of at most `keys`")]
         let rate = false_positives as f64 / f64::from(keys);
         assert!(
             (0.002..0.03).contains(&rate),

@@ -77,7 +77,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let queries = [
         (
             "memberOf/partOf*  (closure's left side is a variable)",
-            format!("PREFIX ex: <{EX}> SELECT ?u WHERE {{ <{EX}p1000> ex:memberOf/ex:partOf* ?u }}"),
+            format!(
+                "PREFIX ex: <{EX}> SELECT ?u WHERE {{ <{EX}p1000> ex:memberOf/ex:partOf* ?u }}"
+            ),
         ),
         (
             "unit340 partOf+   (anchored, was already fast)",

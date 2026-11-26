@@ -333,7 +333,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let seconds = r.nanos as f64 / 1e9;
         println!(
             "     of which dictionary reads         {seconds:>8.2} s   {:>7} ns/quad   ({} hits, {} misses, {:.1} us each; {} skipped by the filter, {} kept hot)",
-            (r.nanos / quads.max(1) as u64),
+            (r.nanos / quads.max(1)),
             r.hits,
             r.misses,
             if r.hits + r.misses == 0 { 0.0 } else { r.nanos as f64 / 1e3 / (r.hits + r.misses) as f64 },

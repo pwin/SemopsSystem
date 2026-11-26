@@ -1,0 +1,8 @@
+# Names written as prose in documentation: standards, products, a repository and the WKT
+# geometry types, which clippy's `doc_markdown` would otherwise want in backticks as if they
+# were code. ".." keeps clippy's own list (GitHub, JavaScript, ...).
+doc-valid-idents = [
+    "GeoSPARQL", "GeoJSON", "RocksDB", "BlobDB", "DBpedia", "SHACL_Engine", "IdP", "NVMe",
+    "LineString", "MultiPoint", "MultiLineString", "MultiPolygon", "GeometryCollection",
+    "..",
+]

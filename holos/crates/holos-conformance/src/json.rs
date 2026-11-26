@@ -237,7 +237,7 @@ impl Parser<'_> {
 
     fn number(&mut self) -> Option<Json> {
         let start = self.at;
-        if self.eat(b'-') {}
+        self.eat(b'-');
         while matches!(self.bytes.get(self.at), Some(b) if b.is_ascii_digit()) {
             self.at += 1;
         }

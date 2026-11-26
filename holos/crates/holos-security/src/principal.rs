@@ -252,9 +252,12 @@ fn urn_escape(s: &str) -> String {
         if c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_' | '~') {
             out.push(c);
         } else {
+            const HEX: &[u8; 16] = b"0123456789ABCDEF";
             let mut buf = [0u8; 4];
-            for b in c.encode_utf8(&mut buf).as_bytes() {
-                out.push_str(&format!("%{b:02X}"));
+            for &b in c.encode_utf8(&mut buf).as_bytes() {
+                out.push('%');
+                out.push(char::from(HEX[usize::from(b >> 4)]));
+                out.push(char::from(HEX[usize::from(b & 0x0F)]));
             }
         }
     }

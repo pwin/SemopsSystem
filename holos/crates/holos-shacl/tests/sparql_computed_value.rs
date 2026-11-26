@@ -77,5 +77,8 @@ fn computed_iri_value_and_path_are_rendered() {
     ));
     assert_eq!(n, 1);
     assert_eq!(objects(&quads, "value"), ["<http://example.org/a/derived>"]);
-    assert_eq!(objects(&quads, "resultPath"), ["<http://example.org/elsewhere>"]);
+    assert_eq!(
+        objects(&quads, "resultPath"),
+        ["<http://example.org/elsewhere>"]
+    );
 }

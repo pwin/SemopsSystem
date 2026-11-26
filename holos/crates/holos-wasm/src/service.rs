@@ -44,9 +44,9 @@
 use holos_engine::service::pattern_variables;
 use oxiri::Iri;
 use oxrdf::NamedNode;
+use sparesults::{QueryResultsFormat, QueryResultsParser, ReaderQueryResultsParserOutput};
 use spareval::{DefaultServiceHandler, QueryEvaluationError, QuerySolutionIter};
 use spargebra::algebra::GraphPattern;
-use sparesults::{QueryResultsFormat, QueryResultsParser, ReaderQueryResultsParserOutput};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
@@ -85,9 +85,10 @@ impl CachingServiceHandler {
     /// Records an endpoint's answer to a query, as SPARQL Results JSON.
     pub fn cache(&self, endpoint: &str, query: &str, results_json: &str) {
         if let Ok(mut shared) = self.shared.lock() {
-            shared
-                .answers
-                .insert((endpoint.to_owned(), query.to_owned()), results_json.to_owned());
+            shared.answers.insert(
+                (endpoint.to_owned(), query.to_owned()),
+                results_json.to_owned(),
+            );
         }
     }
 
@@ -163,11 +164,11 @@ impl DefaultServiceHandler for CachingServiceHandler {
         // The endpoint's own variables, not the pattern's: a SELECT may answer with fewer
         // columns than were asked for, and the join has to see what actually came back.
         let parser = QueryResultsParser::from_format(QueryResultsFormat::Json);
-        let reader = parser
-            .for_reader(json.as_bytes())
-            .map_err(|e| QueryEvaluationError::Service(Box::new(ServiceFailure(format!(
+        let reader = parser.for_reader(json.as_bytes()).map_err(|e| {
+            QueryEvaluationError::Service(Box::new(ServiceFailure(format!(
                 "{endpoint} returned results that could not be read: {e}"
-            )))))?;
+            ))))
+        })?;
         let ReaderQueryResultsParserOutput::Solutions(solutions) = reader else {
             return Err(QueryEvaluationError::Service(Box::new(ServiceFailure(
                 format!("{endpoint} answered a SELECT with a boolean"),
@@ -184,7 +185,7 @@ impl DefaultServiceHandler for CachingServiceHandler {
             })?;
             rows.push(Ok(solution));
         }
-        Ok(QuerySolutionIter::new(endpoint_vars, rows.into_iter()))
+        Ok(QuerySolutionIter::new(endpoint_vars, rows))
     }
 }
 
