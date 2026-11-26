@@ -12,12 +12,15 @@ export const TITLE = 'The tarka Manual';
 export const SUBTITLE = 'From tables to triples along the Bookshop Trail';
 export const AUTHOR = 'Peter Winstanley';
 export const DESCRIPTION =
-  'The tarka Manual: TARQL queries, OTTR templates and data frames to RDF, on the Bookshop Trail, and how to know the RDF is right with SHACL, SPARQL and the Ontology Quality Suite.';
+  'The tarka Manual: TARQL queries, OTTR templates and data frames to RDF, on the Bookshop Trail, and how to know the RDF is right with SHACL, SPARQL and the ontology quality checks.';
 
-/** Where the manual's own files live on GitHub, for links into the repository. */
-export const GITHUB = 'https://github.com/pwin/tarka';
-export const GITHUB_TREE = `${GITHUB}/tree/main/manual`;
-export const GITHUB_BLOB = `${GITHUB}/blob/main/manual`;
+/** Where the manual's own files live on GitHub, for links into the repository: tarka is
+ * developed and released in SemOps System, and the manual is its tarka/manual/. */
+export const GITHUB = 'https://github.com/pwin/SemopsSystem';
+export const GITHUB_TREE = `${GITHUB}/tree/main/tarka/manual`;
+export const GITHUB_BLOB = `${GITHUB}/blob/main/tarka/manual`;
+/** tarka itself, in the SemOps System repository. */
+export const GITHUB_TARKA = `${GITHUB}/tree/main/tarka`;
 /** The EPUB and the PDF are release assets, not committed files. */
 export const RELEASES = `${GITHUB}/releases/latest`;
 export const SITE_HOME = '/';

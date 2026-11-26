@@ -11,8 +11,8 @@ them, it is deliberate, and here.
 | A backslash in a quoted CSV field | taken literally | escapes the next character, as in oxi-gen; change it with `-p` |
 | File encoding | the platform's (on Windows, not UTF-8) | UTF-8, everywhere |
 | Typed values | as Jena writes them: `"2.0e0"^^xsd:double` | canonical: `"2"^^xsd:double` (the same value) |
-| `afn:sprintf` | formats as Java's `String.format` | refused, with a message |
-| `afn:bnode` | a blank node's label | not available (tarka's labels are made afresh) |
+| `afn:sprintf` | formats as Java's `String.format` | the same for strings and numbers; a date conversion (`%tY` …) binds nothing |
+| `afn:bnode` | the label of the blank node, as the output writes it | a label that changes from run to run, and is not the one the output writes: do not rely on it |
 | Property functions that read the data (`list:member`, `rdfs:member`, `apf:bag` …) | match nothing in a row | refused, with a message |
 | A property function inside `OPTIONAL`, `UNION`, a nested group | evaluated | refused, with a message |
 

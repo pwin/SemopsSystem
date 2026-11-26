@@ -11,7 +11,7 @@ three editions from them, in the same way as the
 | A4 PDF, for print | `node build-pdf.mjs` | `build/The-tarka-Manual-A4.pdf` | pandoc, typst, Chromium |
 
 ```bash
-cd manual/tools
+cd tarka/manual/tools
 npm install
 npx puppeteer browsers install chrome-headless-shell   # once
 npm run all                                           # diagrams, then the three editions
@@ -28,15 +28,17 @@ puppeteer cache for Chromium).
 ## Publishing
 
 - **Web**: build into the website repository's `tarka_Manual/` directory,
-  `node build-site.mjs --out ../../../semantechs/tarka_Manual`, and deploy the site; it is served
+  `node build-site.mjs --out ../../../../semantechs/tarka_Manual` (from a SemopsSystem checkout
+  beside the website's), and deploy the site; it is served
   at <https://www.semantechs.co.uk/tarka_Manual/>. The pages make no third-party requests.
-- **EPUB and PDF**: attach them to a tarka release, with the version in the file name, rather
-  than committing them:
+- **EPUB and PDF**: attach them to the SemOps System release whose tarka they describe, with the
+  version in the file name, rather than committing them:
 
   ```bash
-  cp build/The-tarka-Manual.epub build/The-tarka-Manual-v0.3.1.epub
-  cp build/The-tarka-Manual-A4.pdf build/The-tarka-Manual-v0.3.1-A4.pdf
-  gh release upload v0.3.1 build/The-tarka-Manual-v0.3.1.epub build/The-tarka-Manual-v0.3.1-A4.pdf
+  cp build/The-tarka-Manual.epub build/The-tarka-Manual-v0.31.0.epub
+  cp build/The-tarka-Manual-A4.pdf build/The-tarka-Manual-v0.31.0-A4.pdf
+  gh release upload v0.31.0 -R pwin/SemopsSystem \
+      build/The-tarka-Manual-v0.31.0.epub build/The-tarka-Manual-v0.31.0-A4.pdf
   ```
 
 ## Files

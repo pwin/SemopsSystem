@@ -3,8 +3,8 @@
 SHACL validates nodes against shapes. Some questions are not about one node: do two
 spreadsheets agree? Did the transformation make what the source data has, no more, no less? Can
 the graph answer the questions it was built for? Those are SPARQL's, and HOLOS answers them:
-`tools/sparql.py` loads tarka's output, with the reference data, into a HOLOS store (`holosdb`)
-and runs a query.
+`tools/sparql.py` loads tarka's output, with the reference data, into a HOLOS store
+(`so.holos.Store`, from `semops-system`) and runs a query.
 
 ## First, count
 
@@ -191,17 +191,17 @@ build; an answer that changes is a finding. The
 
 ## Running queries elsewhere
 
-`tools/sparql.py` is a few lines of `holosdb`; the queries are plain SPARQL and run in any
-store. HOLOS's command line runs them over files with no Python at all, and validates too:
+`tools/sparql.py` is a few lines of `so.holos`; the queries are plain SPARQL and run in any
+store. `semops` runs them over files with no Python at all, and validates too:
 
 ```sh
-holos query --data out/bookshops.ttl --data reference/03-places.ttl --query-file sparql/cross-file-checks.rq
-holos validate --data out/bookshops.ttl --data reference/03-places.ttl --shapes reference/s64-the-whole-trail-in-one-shapes-graph.ttl
+semops query --data out/bookshops.ttl --data reference/03-places.ttl --query-file sparql/cross-file-checks.rq
+semops validate --data out/bookshops.ttl --data reference/03-places.ttl --shapes reference/s64-the-whole-trail-in-one-shapes-graph.ttl
 ```
 
 Against the server of [Chapter 13](13-into-a-store.md), any SPARQL client can.
 
 ---
 
-| [← 10. Shapes and SHACL](10-shapes-and-shacl.md) | [12. The Ontology Quality Suite →](12-the-ontology-quality-suite.md) |
+| [← 10. Shapes and SHACL](10-shapes-and-shacl.md) | [12. The ontology quality checks →](12-the-ontology-quality-suite.md) |
 |---|---|

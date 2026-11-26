@@ -1,22 +1,26 @@
 # 2. Installing
 
-tarka comes two ways, and most people want both: the **`tarka` command**, for the shell and
-for pipelines, and the **`tarka-rdf` Python package**, for notebooks and data-frame work. They
-share one engine and give the same RDF.
+tarka is developed and released in [SemOps System](https://github.com/pwin/SemopsSystem), with
+the HOLOS store and SPARQL engine, the SHACL engine and the ontology quality checks. It comes two
+ways, and most people want both: a **command**, for the shell and for pipelines, and a **Python
+package**, for notebooks and data-frame work. They share one engine and give the same RDF.
 
 ## The command
 
-Each [release](https://github.com/pwin/tarka/releases) carries the command, built and tested on
-its platform, in an archive with the licences and the README:
+Each [SemOps System release](https://github.com/pwin/SemopsSystem/releases) carries tarka's
+command, built and tested on its platform, in an archive with the licences and the README, beside
+the `semops` command that holds tarka and everything else:
 
-| Platform | Archive |
-|---|---|
-| Linux, x86_64 | `tarka-0.3.1-x86_64-unknown-linux-gnu.tar.gz` |
-| macOS, Apple Silicon | `tarka-0.3.1-aarch64-apple-darwin.tar.gz` |
-| Windows, x86_64 | `tarka-0.3.1-x86_64-pc-windows-msvc.zip` |
+| Platform | tarka on its own | All of SemOps System |
+|---|---|---|
+| Linux, x86_64 | `tarka-0.31.0-x86_64-unknown-linux-gnu.tar.gz` | `semops-0.31.0-x86_64-unknown-linux-gnu.tar.gz` |
+| Linux, ARM64 | `tarka-0.31.0-aarch64-unknown-linux-gnu.tar.gz` | `semops-0.31.0-aarch64-unknown-linux-gnu.tar.gz` |
+| macOS, Apple Silicon | `tarka-0.31.0-aarch64-apple-darwin.tar.gz` | `semops-0.31.0-aarch64-apple-darwin.tar.gz` |
+| macOS, Intel | `tarka-0.31.0-x86_64-apple-darwin.tar.gz` | `semops-0.31.0-x86_64-apple-darwin.tar.gz` |
+| Windows, x86_64 | `tarka-0.31.0-x86_64-pc-windows-msvc.zip` | `semops-0.31.0-x86_64-pc-windows-msvc.zip` |
 
-Unpack it and put `tarka` (or `tarka.exe`) on your `PATH`. `SHA256SUMS`, beside the archives,
-lets you check what you downloaded:
+Unpack one and put `tarka` (or `semops`) on your `PATH`. `SHA256SUMS`, beside the archives, lets
+you check what you downloaded:
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
@@ -24,64 +28,86 @@ tarka --version
 ```
 
 ```text
-tarka 0.3.1
+tarka 0.31.0
 ```
 
-The command needs nothing else installed: no Java, no Python.
+tarka carries SemOps System's version: 0.31.0 is the tarka that was 0.3.1 in its own repository,
+in the release that holds it. The command needs nothing else installed: no Java, no Python.
+
+### tarka as `semops map`
+
+`semops map` is tarka, argument for argument, so every command in this manual can be written
+either way:
+
+```sh
+tarka run -q tarql/bookshops.rq -i data/bookshops.csv
+semops map run -q tarql/bookshops.rq -i data/bookshops.csv      # the same
+```
+
+The manual writes `tarka`. With only `semops` installed, a copy or link of it named `tarka` is
+tarka too, chosen by the name it is run under. `semops` also validates (`semops validate`),
+queries (`semops query`), serves a store (`semops serve`) and runs the quality checks
+(`semops check`), which Chapters 10 to 13 use.
 
 ### From source
 
-With Rust 1.90 or later and a clone of the repository:
+With Rust 1.95 or later and a clone of SemOps System:
 
 ```sh
-cargo install --path crates/tarka-cli      # installs `tarka` into ~/.cargo/bin
-cargo build --release -p tarka-cli         # or build it as target/release/tarka
+cargo install --path tarka/crates/tarka-cli     # installs `tarka` into ~/.cargo/bin
+cargo build --release -p tarka-cli              # or build it as target/release/tarka
+cargo build --release -p semops                 # and the semops command
 ```
 
-A plain `cargo build --release` in the repository builds the command too, and leaves the Python
-module out on purpose: built in the same run, the module's dependencies would link Python into
-the command, which then would not start without it.
+A plain `cargo build --release` in the repository builds the commands too, and leaves the Python
+modules out on purpose: built in the same run, their dependencies would link Python into the
+commands, which then would not start without it.
 
 ## The Python package
 
 ```sh
-pip install tarka-rdf
+pip install "semops-system[polars]"
 ```
 
-The package is `tarka-rdf` on PyPI and is imported as `tarka_rdf`: the name `tarka` belongs to
-another project. One wheel per platform serves every CPython from 3.10 on, and it needs
-[Polars](https://pola.rs), which pip installs with it.
+`semops-system` is SemOps System as one Python package, imported as `semops_system`. tarka is its
+`tarka` module, beside `holos` (the store), `shacl` (the SHACL engine) and `check` (the quality
+checks). The `[polars]` extra installs [Polars](https://pola.rs), for mapping data frames. One
+wheel per platform serves every CPython from 3.11 on, and it installs the `semops` command as
+well.
 
 ```python
-import tarka_rdf
-print(tarka_rdf.__version__)        # 0.3.1
+import semops_system as so
+mapping = so.tarka.Mapping.tarql_file("tarql/bookshops.rq")
 ```
+
+The manual writes `so.` for it throughout. `so.tarka` is the module the `tarka-rdf` package
+carries, with the same classes and functions, so code written for one runs on the other: for
+tarka alone, or on Python 3.10, `pip install tarka-rdf` and `import tarka_rdf` instead.
 
 ## The companions
 
-tarka makes RDF. The manual also checks it, and for that it uses three more packages, each of
-which also stands on its own:
+tarka makes RDF. The manual also checks it, and `semops-system` has what that needs: the HOLOS
+store, for loading output and running SPARQL checks over it, and the SHACL engine, which tarka
+embeds for `--validate`. One more package does what SemOps System does not do yet:
 
 | Package | What it is | Used in |
 |---|---|---|
-| `holosdb` | [HOLOS](https://github.com/pwin/triplestore), the RDF 1.2 store and SPARQL 1.2 engine, as a Python library. tarka's own SPARQL engine is HOLOS's | Chapters 10 and 11: loading output, SPARQL checks, SHACL with reference data |
-| `shacl` | [SHACL_Engine](https://github.com/pwin/SHACL_Engine), the SHACL validator tarka embeds for `--validate` | Chapter 10 |
-| `ontology-quality-suite` | the Ontology Quality Suite: a registry of checks for ontologies, mappings and data | Chapter 12 |
+| `ontology-quality-suite` | the Ontology Quality Suite, the Python home of the quality checks, whose `sketch` reads TARQL mappings | Chapter 12 |
 
 ```sh
-pip install holosdb shacl ontology-quality-suite
+pip install ontology-quality-suite
 ```
 
-`holosdb`, the suite and recent Polars need Python 3.11 or later. This edition was checked with
-tarka-rdf 0.3.1, polars 2.1.0, holosdb 0.27.0, shacl 0.3.9 and ontology-quality-suite 0.27.0.
+This edition was checked with SemOps System 0.31.0 (the `tarka` and `semops` commands and
+`semops-system`), Polars 2.2.0 and ontology-quality-suite 0.28.0.
 
-The store itself, `holos-server`, is a separate download from the
-[HOLOS releases](https://github.com/pwin/triplestore/releases); it is needed only for
-[Chapter 13](13-into-a-store.md), to load tarka's output over HTTP.
+The store's server is `semops serve`, needed only for [Chapter 13](13-into-a-store.md), to load
+tarka's output over HTTP.
 
 ## The examples
 
-Everything the manual runs is in the repository, under `manual/examples/bookshop-trail/`:
+Everything the manual runs is in the SemOps System repository, under
+`tarka/manual/examples/bookshop-trail/`:
 
 ```text
 bookshop-trail/
@@ -92,7 +118,7 @@ bookshop-trail/
   ottr-mistakes/  a first draft of some templates, mistakes and all, for tarka lint
   instances/    OTTR instances written by hand, for tarka expand
   bottr/        bOTTR mapping files
-  python/       Polars and tarka-rdf scripts
+  python/       Polars and semops-system scripts
   shapes/       SHACL shapes of the manual's own
   sparql/       SPARQL checks
   tools/        the spreadsheets' generator, a graph comparer, a query runner
@@ -102,7 +128,7 @@ bookshop-trail/
 [Appendix E](e-the-example-files.md) describes every file. To run the lot:
 
 ```sh
-cd manual/examples/bookshop-trail
+cd tarka/manual/examples/bookshop-trail
 python check.py
 ```
 

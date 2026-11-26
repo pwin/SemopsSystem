@@ -13,7 +13,7 @@ tarka safe to automate. The stages run in the order of their numbers, left to ri
 flowchart TD
     subgraph Check["Check, then load"]
       direction TB
-      X["5 · cross-file<br/>SPARQL"]:::ci --> V["6 · domain shapes<br/>s64 + reference"]:::ci --> D["7 · assess<br/>quality suite"]:::govern --> St["8 · load the store<br/>main only"]:::ops
+      X["5 · cross-file<br/>SPARQL"]:::ci --> V["6 · domain shapes<br/>s64 + reference"]:::ci --> D["7 · check the data<br/>semops check"]:::govern --> St["8 · load the store<br/>main only"]:::ops
     end
     subgraph Make["Make"]
       direction TB
@@ -34,18 +34,20 @@ classDef ops     fill:#D9F5EC,stroke:#0CB88E,stroke-width:2px,color:#14243A;
 | Stage | Runs | Stops the pipeline when | Protects against |
 |---|---|---|---|
 | 1. Lint | `tarka lint -l ottr/ --deny-warnings` | a template library has an error or a warning | a template that cannot be right, before it makes anything |
-| 2. Sketch | `ontology-quality-suite sketch` | (reported) | a mapping that uses terms the ontology does not declare, or uses them wrongly |
+| 2. Sketch | `ontology-quality-suite sketch --fail-on Violation` | a violation | a mapping that uses terms the ontology does not declare, or uses them wrongly |
 | 3. Prepare | `python python/prepare.py` | the script fails | tables OTTR cannot read |
 | 4. Map | `tarka run`, `tarka bottr`, with `--validate` and `--shapes` | a row left out (status 1), output that breaks a shape (status 3) | values that do not fit their mapping, or the project's own rules |
 | 5. Cross-file | `tools/sparql.py sparql/cross-file-checks.rq … --expect-none` | any row | files that are each right and disagree |
-| 6. Domain shapes | `python/validate.py` (s64, in HOLOS, with the reference data) | any violation | output that is wrong for the trail: unknown towns, impossible values |
-| 7. Assess | `ontology-quality-suite data` | (reported) | everything else the suite's registry knows |
+| 6. Domain shapes | `python/validate.py` (s64, in a HOLOS store, with the reference data) | any violation | output that is wrong for the trail: unknown towns, impossible values |
+| 7. Check the data | `semops check`, through SemOps System's GitHub Action | (reported, in code scanning) | everything else the quality checks know |
 | 8. Load | the validated files, into the store | on `main` only | a store holding anything that did not pass |
 
-Stages 2 and 7 report and do not gate, here, because the suite's two false positives
-([Chapter 12](12-the-ontology-quality-suite.md)) would stop every run; their reports go with the
-run's artefacts, and a reviewer reads them. Gate on them with `--fail-on Violation` once the
-findings you accept are scoped out.
+Stage 2 gates: with the suite at 0.28.0 the sketch finds no violation in the trail's mappings
+([Chapter 12](12-the-ontology-quality-suite.md)), so one would be news. Stage 7 reports and
+does not gate, here: its eleven violations are the series no spreadsheet describes, a finding for
+the committee, not a fault in the run. Its findings go to the pull request, through code
+scanning, and with the run's artefacts. Gate on it (`fail-on: Violation`) once the series have a
+source.
 
 ## As a workflow
 
@@ -74,9 +76,25 @@ The heart:
 
       - name: Validate with the SHACL course's shapes
         run: python python/validate.py out/bookshops.ttl out/stocks.ttl out/stock.ttl out/events.ttl out/works.ttl out/segments.ttl out/connections.ttl
+
+      - name: Check the data
+        uses: pwin/SemopsSystem/actions/check@v0.31.0
+        with:
+          files: >-
+            reference/01-vocabulary.ttl out/bookshops.ttl out/stocks.ttl out/stock.ttl out/events.ttl
+            out/works.ttl out/segments.ttl out/connections.ttl
+            reference/02-genres.ttl reference/03-places.ttl reference/05-people.ttl
+          fail-on: never
+          sarif: out/semops.sarif
+          version: "==0.31.0"
 ```
 
-and the load, which sends exactly the files that passed, one graph per source, each replaced so
+The Action installs `semops-system`, runs `semops check`, writes the findings as SARIF and
+uploads them to code scanning, which needs `security-events: write` in the workflow's
+permissions, which `trail.yml` asks for. tarka itself comes from the SemOps System
+release, and the Python scripts from one `pip install "semops-system[polars]"`.
+
+And the load, which sends exactly the files that passed, one graph per source, each replaced so
 that a reload is idempotent:
 
 ```yaml

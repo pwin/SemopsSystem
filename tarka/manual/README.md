@@ -15,9 +15,10 @@
 
 **tarka** turns tables into RDF. A CSV file, a Parquet or Arrow file, or a Polars data frame
 goes in; a knowledge graph comes out, shaped by a mapping you write in one of three languages:
-a **TARQL** query, a set of **OTTR** templates, or a **bOTTR** mapping file. It runs as a
-command, `tarka`, and as a Python package, `tarka-rdf`, and it is built on
-[HOLOS](https://github.com/pwin/triplestore), whose SPARQL engine evaluates every query.
+a **TARQL** query, a set of **OTTR** templates, or a **bOTTR** mapping file. It is part of
+[SemOps System](https://github.com/pwin/SemopsSystem), with the HOLOS store and SPARQL engine,
+which evaluates every query, the SHACL engine and the ontology quality checks. It runs as a
+command, `tarka` (or `semops map`), and from Python, as `semops_system.tarka`.
 
 This manual teaches all of it, from a first five-line mapping to a pipeline that checks its
 own output, on one dataset throughout: **the Bookshop Trail**, a fictional network of
@@ -39,7 +40,7 @@ rivers". tarka lives where two ways of making RDF meet: TARQL, and OTTR, which i
   the way they meant it.
 - **Anyone running a semantic practice**: the manual connects to the
   [SemOps Manual](https://www.semantechs.co.uk/SemOps_Manual/), whose Chapter 10 puts tarka in
-  the ingest stage of a pipeline, and to the Ontology Quality Suite that assesses what it
+  the ingest stage of a pipeline, and to the ontology quality checks that assess what it
   produces.
 
 You need to read a little SPARQL and Turtle. Nothing else is assumed; OTTR is taught from the
@@ -56,7 +57,7 @@ order, or go straight to the one you need:
 | II. TARQL | map a spreadsheet with a SPARQL `CONSTRUCT` query, simply and then in depth | [4](docs/04-a-first-mapping.md), [5](docs/05-tarql-in-depth.md) |
 | III. OTTR | build a library of templates, run it over tables and instance files, and map with bOTTR | [6](docs/06-templates.md), [7](docs/07-ottr-over-tables.md), [8](docs/08-bottr.md) |
 | IV. Data frames | prepare tables with Polars and map frames and Parquet from Python | [9](docs/09-python-and-polars.md) |
-| V. Checking the transformation | prove the RDF is right: SHACL, SPARQL, and the Ontology Quality Suite | [10](docs/10-shapes-and-shacl.md), [11](docs/11-sparql-checks.md), [12](docs/12-the-ontology-quality-suite.md) |
+| V. Checking the transformation | prove the RDF is right: SHACL, SPARQL, and the ontology quality checks | [10](docs/10-shapes-and-shacl.md), [11](docs/11-sparql-checks.md), [12](docs/12-the-ontology-quality-suite.md) |
 | VI. In production | load a store, and run the whole thing as a pipeline | [13](docs/13-into-a-store.md), [14](docs/14-a-pipeline.md) |
 | Appendices | look something up | [A](docs/a-command-reference.md) commands, [B](docs/b-python-reference.md) Python, [C](docs/c-differences.md) differences, [D](docs/d-troubleshooting.md) troubleshooting, [E](docs/e-the-example-files.md) the example files |
 
@@ -67,7 +68,7 @@ Every command and every output in this manual comes from the files in
 order the chapters give them, and checks each result:
 
 ```sh
-cd manual/examples/bookshop-trail
+cd tarka/manual/examples/bookshop-trail
 python check.py
 ```
 
@@ -77,11 +78,13 @@ If a chapter and the script ever disagree, the script is right, and the chapter 
 
 The manual is written in Markdown, one file per chapter, and built three ways from the same
 source: the web edition at <https://www.semantechs.co.uk/tarka_Manual/>, an EPUB for e-readers,
-and an A4 PDF for print, both attached to each [release](https://github.com/pwin/tarka/releases).
+and an A4 PDF for print, both attached to the
+[SemOps System release](https://github.com/pwin/SemopsSystem/releases) whose tarka they describe.
 [`tools/`](tools/) builds them; see its README.
 
-This edition describes **tarka 0.3.1**. It was checked with HOLOS (`holosdb` 0.27.0),
-SHACL_Engine (`shacl` 0.3.9), Polars 2.1.0 and the Ontology Quality Suite 0.27.0.
+This edition describes **tarka in SemOps System 0.31.0**: the `tarka` and `semops` commands and
+the `semops-system` package of that release. It was checked with them, Polars 2.2.0 and the
+Ontology Quality Suite 0.28.0.
 
 <p align="center">
   <img src="assets/semantechs-logo-320.png" alt="" width="64"><br/>

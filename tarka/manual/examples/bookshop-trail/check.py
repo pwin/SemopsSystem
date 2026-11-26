@@ -2,11 +2,14 @@
 what each one does: the exit status, and what it made against the course's own graph.
 
     python check.py              # needs tarka on PATH (or TARKA=path/to/tarka), and the
-                                 # Python packages tarka-rdf, polars, holosdb and shacl
+                                 # Python package semops-system[polars]
 
 Output goes to out/ (written afresh). With TARKA_EXAMPLES_OUT=E:/somewhere, out/ is made a
 directory junction to that folder, so large or temporary output lives on another drive while
-the commands keep their paths. The script stops at the first check that fails.
+the commands keep their paths. Chapter 12's `semops check` and Chapter 13's store steps (against
+`semops serve`) run when there is a `semops` command, on the PATH (the wheel installs one) or at
+SEMOPS=path/to/semops; Chapter 12's sketch runs when there is an `ontology-quality-suite`, on the
+PATH or at OQS=path/to/it. The script stops at the first check that fails.
 """
 
 import os
@@ -15,11 +18,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-import holosdb
+import semops_system as so
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
 TARKA = os.environ.get("TARKA", "tarka")
+# semops (the semops-system wheel installs it) for Chapters 12 and 13, and the Ontology Quality
+# Suite for Chapter 12's sketch: each step runs when its command is here, and is left out if not
+SEMOPS = os.environ.get("SEMOPS") or shutil.which("semops")
+OQS = os.environ.get("OQS") or shutil.which("ontology-quality-suite")
 PY = sys.executable
 LISTS = ["--list", "records", ";", "--list", "books", ";", "--list", "copies", ";", "--list", "prices", ";"]
 passed = 0
@@ -51,7 +58,7 @@ def same_triples(a: str, b: list[str]) -> None:
     """The file a holds exactly the triples of the files b."""
     global passed
     def triples(files):
-        store = holosdb.Store()
+        store = so.holos.Store()
         for f in files:
             store.load(str(HERE / f))
         return set(store.query("CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }"))
@@ -67,7 +74,7 @@ def same_values(a: str, b: list[str]) -> None:
     """The file a holds the triples of the files b, literals compared by value: bOTTR writes a
     typed literal as the cell has it ("80.0"), where a TARQL cast writes its canonical form ("80")."""
     global passed
-    store = holosdb.Store()
+    store = so.holos.Store()
     store.load(str(HERE / a), graph="urn:a")
     for f in b:
         store.load(str(HERE / f), graph="urn:b")
@@ -180,18 +187,28 @@ def main() -> None:
     python("every shop answers", "tools/sparql.py", "sparql/every-shop-answers.rq", "out/bookshops.ttl",
            "--no-reference", "--expect-none", needle="ASK: no")
 
-    # Chapter 13: a store, when there is one to start (HOLOS_SERVER=path/to/holos-server)
-    if os.environ.get("HOLOS_SERVER"):
+    # Chapter 12: the quality checks, with whichever of the two commands is here
+    if SEMOPS:
+        step("semops check finds the missing series", [SEMOPS, "check", "reference/01-vocabulary.ttl", "out/bookshops.ttl",
+             *rest, "reference/02-genres.ttl", "reference/03-places.ttl", "reference/05-people.ttl"],
+             status=1, needle="545 findings: 11 Violation, 532 Warning, 2 Info")
+    if OQS:
+        step("the suite sketches the mappings", [OQS, "sketch", "--queries", "tarql/", "--query-pattern",
+             "bookshops.rq,stocks.rq,stock.rq,events.rq,works.rq", "--ontology", "reference/01-vocabulary.ttl",
+             "--out-dir", "out/oqs/sketch", "--fail-on", "never"], needle="Findings: 22 total (0 Violation, 0 Warning, 22 Info)")
+
+    # Chapter 13: a store, when there is one to start
+    if SEMOPS:
         store_steps()
 
     print(f"\n{passed} checks passed")
 
 
 def store_steps() -> None:
-    """Loads the segments into a HOLOS server, and reads the connections back from it."""
+    """Loads the segments into a store served by `semops serve`, and reads the connections back."""
     import time
     import urllib.request
-    server = subprocess.Popen([os.environ["HOLOS_SERVER"], "--listen", "127.0.0.1:7878"],
+    server = subprocess.Popen([SEMOPS, "serve", "--listen", "127.0.0.1:7878"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(100):

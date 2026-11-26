@@ -3,12 +3,12 @@
 #
 # Stages, and what stops the run:
 #   1. lint the templates            tarka lint --deny-warnings       a lint error or warning
-#   2. sketch the mappings           Ontology Quality Suite           (reported, not gated)
+#   2. sketch the mappings           Ontology Quality Suite           a violation
 #   3. prepare the tables            Polars                           a failed script
 #   4. map, validating as it writes  tarka run/bottr --validate       a row left out (1), a shape broken (3)
 #   5. check the set of files        SPARQL, --expect-none            any row
 #   6. validate with the domain      s64 with the reference data      any violation
-#   7. assess the data               Ontology Quality Suite           (reported, not gated)
+#   7. check the data                semops check (SemOps System)     (reported, in code scanning)
 #   8. load the store                the validated files, PUT         on main only
 
 name: bookshop-trail
@@ -17,22 +17,26 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+  security-events: write          # stage 7 puts its findings in code scanning
+
 jobs:
   transform:
     runs-on: ubuntu-latest
     env:
-      TARKA_VERSION: "0.3.1"
+      SEMOPS_VERSION: "0.31.0"
     steps:
       - uses: actions/checkout@v4
 
       - name: Install tarka and the checkers
         run: |
-          curl -sSL "https://github.com/pwin/tarka/releases/download/v${TARKA_VERSION}/tarka-${TARKA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar xz
-          echo "$PWD/tarka-${TARKA_VERSION}-x86_64-unknown-linux-gnu" >> "$GITHUB_PATH"
+          curl -sSL "https://github.com/pwin/SemopsSystem/releases/download/v${SEMOPS_VERSION}/tarka-${SEMOPS_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar xz
+          echo "$PWD/tarka-${SEMOPS_VERSION}-x86_64-unknown-linux-gnu" >> "$GITHUB_PATH"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install tarka-rdf polars holosdb shacl ontology-quality-suite
+      - run: pip install "semops-system[polars]==${SEMOPS_VERSION}" ontology-quality-suite
 
       # 1. A library with an error does not get to make data
       - name: Lint the templates
@@ -43,7 +47,7 @@ jobs:
         run: |
           ontology-quality-suite sketch --queries tarql/ \
             --query-pattern "bookshops.rq,stocks.rq,stock.rq,events.rq,works.rq" \
-            --ontology reference/01-vocabulary.ttl --out-dir out/oqs/sketch --fail-on never
+            --ontology reference/01-vocabulary.ttl --out-dir out/oqs/sketch --fail-on Violation
 
       # 3. The tables OTTR wants, from the committee's spreadsheets
       - name: Prepare the tables
@@ -68,12 +72,18 @@ jobs:
       - name: Validate with the SHACL course's shapes
         run: python python/validate.py out/bookshops.ttl out/stocks.ttl out/stock.ttl out/events.ttl out/works.ttl out/segments.ttl out/connections.ttl
 
-      # 7. A full assessment, kept with the run
-      - name: Assess the data
-        run: |
-          ontology-quality-suite data out/*.ttl reference/02-genres.ttl reference/03-places.ttl reference/05-people.ttl \
-            --ontology reference/01-vocabulary.ttl --own-namespace https://example.org/bookshop-trail/ \
-            --engine sparql --out-dir out/oqs/data --fail-on never
+      # 7. The quality checks over the data and the ontology, in code scanning and kept with the run.
+      #    Reported, not gated: their violations are the series no spreadsheet describes
+      - name: Check the data
+        uses: pwin/SemopsSystem/actions/check@v0.31.0
+        with:
+          files: >-
+            reference/01-vocabulary.ttl out/bookshops.ttl out/stocks.ttl out/stock.ttl out/events.ttl
+            out/works.ttl out/segments.ttl out/connections.ttl
+            reference/02-genres.ttl reference/03-places.ttl reference/05-people.ttl
+          fail-on: never
+          sarif: out/semops.sarif
+          version: "==0.31.0"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

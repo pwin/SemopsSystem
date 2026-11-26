@@ -182,8 +182,10 @@ prefix is declared for you, in oxi-gen's namespace, and TARQL's own works too.
 
 ## Functions beyond SPARQL
 
-A TARQL query is evaluated by HOLOS's engine, and can call four libraries beyond SPARQL's own:
-Jena's, as TARQL proper has them, and HOLOS's XPath, SPIN and GeoSPARQL functions.
+A TARQL query is evaluated by HOLOS's engine, and can call five libraries beyond SPARQL's own:
+Jena's, as TARQL proper has them, XPath's functions and its maths, SPIN's, and GeoSPARQL's. They
+are SemOps System's one function library, which HOLOS's queries and the SHACL engine call too,
+so a function gives the same answer in a mapping, a query and a shape.
 `tarql/functions-tour.rq` uses many of them on the bookshops, and writes a small guide to the
 trail in a namespace of its own (`guide:`), since these values illustrate the functions rather
 than belong in the ontology:
@@ -230,27 +232,33 @@ The libraries, in full:
 
 | Library | Namespace | Functions |
 |---|---|---|
-| Jena property functions | `apf:` `<http://jena.apache.org/ARQ/property#>` | `strSplit`, `splitIRI`, `concat`, `str`, `assign` |
-| Jena functions | `afn:` `<http://jena.apache.org/ARQ/function#>` | `localname`, `namespace`, `strjoin`, `substr` (and `substring`), `sha1sum`, `min`, `max`, `sqrt`, `pi`, `e`, `now` |
-| XPath | `fn:` `<http://www.w3.org/2005/xpath-functions#>` | `upper-case`, `lower-case`, `string-length`, `string`, `concat`, `substring`, `substring-before`, `substring-after`, `contains`, `starts-with`, `ends-with`, `normalize-space`, `translate`, `compare`, `abs`, `ceiling`, `floor`, `round`, `not`, `boolean`, `year-from-dateTime` … `seconds-from-dateTime` |
-| SPIN | `spif:` `<http://spinrdf.org/spif#>` | `trim`, `indexOf`, `lastIndexOf`, `buildString`, `upperCase`, `lowerCase`, `titleCase`, `unCamelCase`, `encodeURL`, `decodeURL`, `generateUUID`, `name` |
+| Jena property functions | `apf:` `<http://jena.apache.org/ARQ/property#>` | `strSplit`, `splitIRI` (and `splitURI`), `concat`, `str`, `assign`; and SPIN's `spif:split`, which splits as `apf:strSplit` does |
+| Jena functions | `afn:` `<http://jena.apache.org/ARQ/function#>` | `localname`, `namespace`, `strjoin`, `substr` (and `substring`), `sprintf`, `sha1sum`, `min`, `max`, `sqrt`, `pi`, `e`, `bnode`, `now` |
+| XPath | `fn:` `<http://www.w3.org/2005/xpath-functions#>` | 61: the string functions (`upper-case` … `translate`, `compare`, `matches`, `replace`, `encode-for-uri` …), the number functions (`abs`, `ceiling`, `floor`, `round` and `round-half-to-even` with a precision, `format-number` …), every `*-from-dateTime`, `*-from-date`, `*-from-time` and `*-from-duration`, the `adjust-*-to-timezone` functions, and `format-dateTime`, `-date` and `-time` |
+| XPath maths | `math:` `<http://www.w3.org/2005/xpath-functions/math#>` | `pi`, `exp`, `exp10`, `log`, `log10`, `pow`, `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2` |
+| SPIN | `spif:` `<http://spinrdf.org/spif#>` | `trim`, `indexOf`, `lastIndexOf`, `buildString`, `buildURI`, `upperCase`, `lowerCase`, `titleCase`, `unCamelCase`, `encodeURL`, `decodeURL`, `replaceAll`, `parseDate`, `dateFormat`, `decimalFormat`, `isValidURI`, `generateUUID`, `name`, `mod`, `cast`, `random`, `timeMillis`, `currentTimeMillis` |
 | GeoSPARQL | `geof:` `<http://www.opengis.net/def/function/geosparql/>` | `distance`, `buffer`, `envelope`, `convexHull`, `boundary`, `sfContains`, `sfIntersects`, `sfWithin`, `sfEquals` and the other Simple Features, Egenhofer and RCC8 relations |
 
 Jena's functions answer as Jena 4.8's do, which TARQL 1.3 records in `tests/fixtures/jena`;
-the old namespaces (`http://jena.hpl.hp.com/ARQ/…`) and the `java:` form work too. Four more,
-for completeness:
+the old namespaces (`http://jena.hpl.hp.com/ARQ/…`) and the `java:` form work too. The new SPIN
+functions follow RDF4J's implementation of the library, Java's date and number patterns
+included. A few more, for completeness:
 
 ```sparql
   ?text  apf:str    ?shop_iri .                 # "https://example.org/bookshop-trail/shop-bookbarrow"
   ?alias apf:assign ?name .                     # "Bookbarrow"
   BIND(afn:namespace(?shop_iri) AS ?ns)          # "https://example.org/bookshop-trail/"
   BIND(afn:min(xsd:integer(?staff), 4) AS ?n)    # 3
+  BIND(afn:sprintf("%s has %d staff", ?name, xsd:integer(?staff)) AS ?line)   # "Bookbarrow has 3 staff"
+  BIND(math:pow(2, 10) AS ?k)                     # 1024, a double
+  BIND(spif:buildURI("<https://example.org/shop/{?1}>", ?shop) AS ?page)       # <https://example.org/shop/bookbarrow>
 ```
 
-`afn:now()` is the time the run started, the same for every row; it makes the output differ
-from run to run, which is why the tour leaves it out. Two Jena functions are not here:
-`afn:bnode`, which gives a blank node's label (tarka makes those afresh), and `afn:sprintf`,
-which formats as Java does.
+`afn:sprintf` formats strings and numbers as Java's `String.format` does, without a locale, and
+gives what TARQL 1.3 gives; a date conversion (`%tY` …) binds nothing, where TARQL formats it. `afn:now()` is the time
+the run started, the same for every row; it makes the output differ from run to run, which is
+why the tour leaves it out. It leaves out `afn:bnode` too: in tarka it gives a label that changes
+from run to run, and is not the label the output writes ([Appendix C](c-differences.md)).
 
 ## What tarka refuses
 
@@ -259,7 +267,7 @@ rather than run to give nothing:
 
 ```text
 tarka: q.rq: list:member is not supported: it reads the data, and a TARQL row has none
-tarka: q.rq: afn:sprintf is not supported: Jena formats as Java's String.format does, which tarka does not reproduce
+tarka: q.rq: apf:blankNode is not supported: it gives a blank node's label, which tarka makes afresh on every run
 tarka: q.rq: a property function (apf:…) is evaluated at the top level of the WHERE clause, not inside OPTIONAL, UNION, MINUS, GRAPH, a sub-query or a nested group
 tarka: q.rq: an RDF 1.2 triple term is not supported (tarka works with RDF 1.1 and SPARQL 1.1)
 tarka: the mapping cannot be evaluated: rows 0–0: The custom function <http://e/nope> is not supported
