@@ -16,7 +16,7 @@ install worked.
 
 ::: note
 The release binaries, the container image and the Python package are all built from one
-tagged release of this workspace, 0.31.0 at the time of writing, so they agree with each
+tagged release of this workspace, 0.31.1 at the time of writing, so they agree with each
 other. A build from source has whatever has been merged since. The npm packages and the
 Azure templates come from the repository for now; [What is not finished](12-not-finished.md)
 says what is still to come.
@@ -87,9 +87,9 @@ shacl --version
 ```
 
 ```{.output}
-semops 0.31.0
-holos-server 0.31.0 (<commit>)
-shacl 0.31.0
+semops 0.31.1
+holos-server 0.31.1 (<commit>)
+shacl 0.31.1
 ```
 
 ## A container image {#container}
@@ -99,13 +99,13 @@ as links to it. It runs the server as a non-root user (uid 10001), and keeps its
 the volume `/var/lib/holos`. Build it from the workspace root:
 
 ```sh
-docker build -f holos/deploy/Dockerfile -t semops:0.31.0 .
+docker build -f holos/deploy/Dockerfile -t semops:0.31.1 .
 ```
 
 Run the server, with its store in a named volume:
 
 ```sh
-docker run -d --name semops -p 7878:7878 -v semops-data:/var/lib/holos semops:0.31.0
+docker run -d --name semops -p 7878:7878 -v semops-data:/var/lib/holos semops:0.31.1
 curl -s http://127.0.0.1:7878/health
 ```
 
@@ -117,7 +117,7 @@ Run the other commands from the same image by replacing the entry point. This ch
 ontology in the current directory:
 
 ```sh
-docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.31.0 check ontology.ttl
+docker run --rm --entrypoint semops -v "$PWD:/work" -w /work semops:0.31.1 check ontology.ttl
 ```
 
 `holos/deploy/docker-compose.yml` runs the server behind a front door that sets the
@@ -127,7 +127,7 @@ Each SemOps System release publishes the image as `ghcr.io/pwin/semops`, for amd
 arm64, tagged with the version, so there is no need to build it:
 
 ```sh
-docker pull ghcr.io/pwin/semops:0.31.0
+docker pull ghcr.io/pwin/semops:0.31.1
 ```
 
 For Kubernetes or Azure, pin it by digest, and mirror it into your own registry if your

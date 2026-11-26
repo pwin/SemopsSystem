@@ -3,19 +3,19 @@
 SemOps System's own releases. The engines keep their own changelogs, in `holos/`, `shacl/`
 and `tarka/`, for their history before the workspace.
 
-## Unreleased
+## 0.31.1, 26 November 2026
 
 - A pre-bound `$this` inside an RDF 1.2 triple term, as in
   `?r rdf:reifies <<( $this ?p ?o )>>`, is the focus node. SHACL-SPARQL substituted the focus
   node everywhere but there, so the pattern matched other focus nodes' reified statements:
   a constraint reported the wrong nodes, and the right ones more than once. In `shacl` and in
-  HOLOS, for `sh:select` and `sh:ask` validators alike.
+  HOLOS, for `sh:select` and `sh:ask` validators alike (#35).
 - HOLOS binds the variables inside an RDF 1.2 triple term in a `SERVICE` clause. They were
   left out of the query sent to the service, so in
-  `SERVICE <…> { ?r rdf:reifies <<( ?s ?p ?o )>> }` only `?r` came back bound.
+  `SERVICE <…> { ?r rdf:reifies <<( ?s ?p ?o )>> }` only `?r` came back bound (#43).
 - HOLOS refuses a rule whose `CONSTRUCT` template has a blank node inside a triple term, as
   it already refused one outside: the blank node is fresh every round, so the rule would
-  never stop deriving.
+  never stop deriving (#43).
 
 ## 0.31.0, 25 November 2026
 

@@ -74,6 +74,8 @@ INSERT { ?s ?p ?o {| ex:source ex:spreadsheet |} } WHERE { ?s ?p ?o }
 
 ## Releases
 
+- 0.31.1 fixes SHACL-SPARQL for a `$this` inside an RDF 1.2 triple term, and
+  HOLOS's `SERVICE` for the variables inside one.
 - 0.31.0 needs Polars only with `[polars]`, adds `upload` and `download` and reads Azure Blob
   Storage URLs as inputs, and carries the SHACL fix for a computed `?value`.
 - 0.30.0 installs the `semops` command, which now has `diff` and `repair`.
