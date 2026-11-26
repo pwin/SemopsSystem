@@ -344,7 +344,7 @@ mod tests {
                 let mut piece: Vec<[TermId; 3]> = all[chunk].to_vec();
                 runs.spill(&mut piece, perm).expect("spill");
             }
-            assert!(!runs.paths.is_empty());
+            assert_ne!(runs.paths, [] as [std::path::PathBuf; 0]);
             let mut nothing = Vec::new();
             let merged = runs.merge(&mut nothing, perm).expect("merge");
             assert_eq!(drain(merged), expected(&values, perm), "perm {perm:?}");

@@ -944,6 +944,10 @@ impl<'a> Validator<'a> {
         allowed
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "a constraint check's inputs, all of them"
+    )]
     fn range(
         &self,
         values: &[TermId],
@@ -963,6 +967,7 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
+    #[allow(clippy::unused_self, reason = "beside the validator's other methods")]
     fn result(
         &self,
         shape: &Shape,
@@ -1364,6 +1369,77 @@ fn g_month_day_is_valid(value: &str) -> bool {
     }
 }
 
+fn is_numeric(datatype: &str) -> bool {
+    matches!(
+        datatype,
+        "http://www.w3.org/2001/XMLSchema#integer"
+            | "http://www.w3.org/2001/XMLSchema#decimal"
+            | "http://www.w3.org/2001/XMLSchema#float"
+            | "http://www.w3.org/2001/XMLSchema#double"
+            | "http://www.w3.org/2001/XMLSchema#long"
+            | "http://www.w3.org/2001/XMLSchema#int"
+            | "http://www.w3.org/2001/XMLSchema#short"
+            | "http://www.w3.org/2001/XMLSchema#byte"
+            | "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+            | "http://www.w3.org/2001/XMLSchema#positiveInteger"
+            | "http://www.w3.org/2001/XMLSchema#nonPositiveInteger"
+            | "http://www.w3.org/2001/XMLSchema#negativeInteger"
+            | "http://www.w3.org/2001/XMLSchema#unsignedLong"
+            | "http://www.w3.org/2001/XMLSchema#unsignedInt"
+            | "http://www.w3.org/2001/XMLSchema#unsignedShort"
+            | "http://www.w3.org/2001/XMLSchema#unsignedByte"
+    )
+}
+
+/// BCP 47 basic filtering: `en` matches `en-GB`, but not the other way round.
+fn language_matches(tag: &str, range: &str) -> bool {
+    if range.is_empty() {
+        return false;
+    }
+    let tag = tag.to_ascii_lowercase();
+    let range = range.to_ascii_lowercase();
+    tag == range || tag.starts_with(&format!("{range}-"))
+}
+
+/// Compares two lexical forms of a date or time type by XSD's order relation.
+///
+/// The outer `Option` says whether this function handled the datatype at all; the inner one
+/// is the comparison, where `None` means *indeterminate* — a real XSD outcome for values
+/// whose timezones leave their order undecided.
+#[allow(
+    clippy::option_option,
+    reason = "handled or not, then the comparison; see above"
+)]
+fn temporal_cmp(datatype: &str, a: &str, b: &str) -> Option<Option<Ordering>> {
+    use std::str::FromStr;
+    const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
+    let local = datatype.strip_prefix(XSD)?;
+    match local {
+        "dateTime" => {
+            let (a, b) = (
+                oxsdatatypes::DateTime::from_str(a).ok()?,
+                oxsdatatypes::DateTime::from_str(b).ok()?,
+            );
+            Some(a.partial_cmp(&b))
+        }
+        "date" => {
+            let (a, b) = (
+                oxsdatatypes::Date::from_str(a).ok()?,
+                oxsdatatypes::Date::from_str(b).ok()?,
+            );
+            Some(a.partial_cmp(&b))
+        }
+        "time" => {
+            let (a, b) = (
+                oxsdatatypes::Time::from_str(a).ok()?,
+                oxsdatatypes::Time::from_str(b).ok()?,
+            );
+            Some(a.partial_cmp(&b))
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod lexical_tests {
     use super::lexical_is_valid;
@@ -1454,72 +1530,5 @@ mod lexical_tests {
         assert!(ok("whatever", "string"));
         assert!(ok("not a uri either", "anyURI"));
         assert!(lexical_is_valid("whatever", "http://example.org/ns#Custom"));
-    }
-}
-
-fn is_numeric(datatype: &str) -> bool {
-    matches!(
-        datatype,
-        "http://www.w3.org/2001/XMLSchema#integer"
-            | "http://www.w3.org/2001/XMLSchema#decimal"
-            | "http://www.w3.org/2001/XMLSchema#float"
-            | "http://www.w3.org/2001/XMLSchema#double"
-            | "http://www.w3.org/2001/XMLSchema#long"
-            | "http://www.w3.org/2001/XMLSchema#int"
-            | "http://www.w3.org/2001/XMLSchema#short"
-            | "http://www.w3.org/2001/XMLSchema#byte"
-            | "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
-            | "http://www.w3.org/2001/XMLSchema#positiveInteger"
-            | "http://www.w3.org/2001/XMLSchema#nonPositiveInteger"
-            | "http://www.w3.org/2001/XMLSchema#negativeInteger"
-            | "http://www.w3.org/2001/XMLSchema#unsignedLong"
-            | "http://www.w3.org/2001/XMLSchema#unsignedInt"
-            | "http://www.w3.org/2001/XMLSchema#unsignedShort"
-            | "http://www.w3.org/2001/XMLSchema#unsignedByte"
-    )
-}
-
-/// BCP 47 basic filtering: `en` matches `en-GB`, but not the other way round.
-fn language_matches(tag: &str, range: &str) -> bool {
-    if range.is_empty() {
-        return false;
-    }
-    let tag = tag.to_ascii_lowercase();
-    let range = range.to_ascii_lowercase();
-    tag == range || tag.starts_with(&format!("{range}-"))
-}
-
-/// Compares two lexical forms of a date or time type by XSD's order relation.
-///
-/// The outer `Option` says whether this function handled the datatype at all; the inner one
-/// is the comparison, where `None` means *indeterminate* — a real XSD outcome for values
-/// whose timezones leave their order undecided.
-fn temporal_cmp(datatype: &str, a: &str, b: &str) -> Option<Option<Ordering>> {
-    use std::str::FromStr;
-    const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
-    let local = datatype.strip_prefix(XSD)?;
-    match local {
-        "dateTime" => {
-            let (a, b) = (
-                oxsdatatypes::DateTime::from_str(a).ok()?,
-                oxsdatatypes::DateTime::from_str(b).ok()?,
-            );
-            Some(a.partial_cmp(&b))
-        }
-        "date" => {
-            let (a, b) = (
-                oxsdatatypes::Date::from_str(a).ok()?,
-                oxsdatatypes::Date::from_str(b).ok()?,
-            );
-            Some(a.partial_cmp(&b))
-        }
-        "time" => {
-            let (a, b) = (
-                oxsdatatypes::Time::from_str(a).ok()?,
-                oxsdatatypes::Time::from_str(b).ok()?,
-            );
-            Some(a.partial_cmp(&b))
-        }
-        _ => None,
     }
 }

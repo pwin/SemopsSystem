@@ -17,7 +17,7 @@ use std::time::Instant;
 fn rate(label: &str, quads: u64, seconds: f64) {
     println!(
         "{label:<44} {:>12} quads/s  {:>8.0} ns/quad",
-        format_args!("{:.0}", quads as f64 / seconds),
+        format!("{:.0}", quads as f64 / seconds),
         seconds * 1e9 / quads as f64
     );
 }

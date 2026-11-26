@@ -66,15 +66,16 @@ fn the_server_names_its_build_on_the_wire() {
     let header = response.header("server").expect("a Server header");
     assert!(header.starts_with("holos/"), "{header}");
     assert_eq!(version_of(header), version, "{header}");
-    assert_ne!(header, "tiny-http (Rust)", "the library's own name is not ours");
+    assert_ne!(
+        header, "tiny-http (Rust)",
+        "the library's own name is not ours"
+    );
 
     // And /stats carries it as data.
     let response = get(address, "/stats");
     assert_eq!(response.status, 200, "{}", response.body);
     assert!(
-        response
-            .body
-            .contains(&format!(r#""version":"{version}""#)),
+        response.body.contains(&format!(r#""version":"{version}""#)),
         "{}",
         response.body
     );

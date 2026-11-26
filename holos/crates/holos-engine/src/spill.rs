@@ -371,7 +371,7 @@ impl Merged {
     pub fn next_row(&mut self) -> std::io::Result<Option<Vec<Option<Term>>>> {
         let width = match self {
             Self::InMemory { rows, .. } => return Ok(rows.next()),
-            Self::Spilled { _owner, .. } => _owner.width,
+            Self::Spilled { _owner: owner, .. } => owner.width,
         };
         loop {
             let Self::Spilled {
@@ -509,11 +509,7 @@ impl Sorted {
     /// # Errors
     ///
     /// If the scratch directory cannot be made.
-    pub fn new(
-        row_width: usize,
-        descending: Arc<[bool]>,
-        budget: usize,
-    ) -> std::io::Result<Self> {
+    pub fn new(row_width: usize, descending: Arc<[bool]>, budget: usize) -> std::io::Result<Self> {
         let dir = scratch_dir("holos-sort")?;
         Ok(Self {
             dir,
@@ -796,9 +792,7 @@ fn split_record(record: &[u8], key_width: usize, row_width: usize) -> (Keys, Liv
 
 /// Sort keys as the terms they came from, for encoding.
 fn key_terms(keys: &[Option<ExpressionTerm>]) -> Live {
-    keys.iter()
-        .map(|key| key.clone().map(Term::from))
-        .collect()
+    keys.iter().map(|key| key.clone().map(Term::from)).collect()
 }
 
 /// What a row's keys cost in memory, near enough to bound a buffer by.

@@ -10,9 +10,9 @@
 //! ```
 
 use holos_shacl::bridge;
-use shacl::model::{loader, TermStore};
 use holos_store::{GraphFilter, Store};
 use oxrdfio::{RdfFormat, RdfParser};
+use shacl::model::{loader, TermStore};
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Instant;

@@ -242,22 +242,19 @@ impl QuadIndex {
         let bound = (subject.is_some(), predicate.is_some(), object.is_some());
         match graph {
             GraphFilter::Default => match bound {
-                (true, _, false) | (true, true, true) => "dspo",
+                (true, _, false) | (true, true, true) | (false, false, false) => "dspo",
                 (false, true, _) => "dpos",
                 (_, false, true) => "dosp",
-                (false, false, false) => "dspo",
             },
             GraphFilter::Named(_) => match bound {
-                (true, _, false) | (true, true, true) => "gspo",
+                (true, _, false) | (true, true, true) | (false, false, false) => "gspo",
                 (false, true, _) => "gpos",
                 (_, false, true) => "gosp",
-                (false, false, false) => "gspo",
             },
             GraphFilter::AnyNamed | GraphFilter::Any => match bound {
-                (true, _, false) | (true, true, true) => "spog",
+                (true, _, false) | (true, true, true) | (false, false, false) => "spog",
                 (false, true, _) => "posg",
                 (_, false, true) => "ospg",
-                (false, false, false) => "spog",
             },
         }
     }
@@ -293,7 +290,6 @@ impl QuadIndex {
     ///
     /// The caller still applies its filter. This narrows *what is read*; it does not decide
     /// what matches, and it must therefore admit at least everything that could.
-    #[must_use]
     pub fn quads_with_object_in(
         &self,
         subject: Option<TermId>,
@@ -517,6 +513,10 @@ impl QuadIndex {
     /// Because ids of one tag form a contiguous block ordered by payload, and unbound
     /// positions widen to the whole `TermId` space, a bound prefix is exactly a
     /// `BTreeSet` range — the in-memory equivalent of a RocksDB prefix seek.
+    #[allow(
+        clippy::unused_self,
+        reason = "a method beside the index's other scans"
+    )]
     fn scan3<'a>(
         &'a self,
         set: &'a BTreeSet<[TermId; 3]>,
@@ -533,6 +533,10 @@ impl QuadIndex {
     }
 
     /// Prefix range over a four-component order.
+    #[allow(
+        clippy::unused_self,
+        reason = "a method beside the index's other scans"
+    )]
     fn scan4<'a>(
         &'a self,
         set: &'a BTreeSet<[TermId; 4]>,

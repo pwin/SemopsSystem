@@ -91,6 +91,10 @@ pub fn server_binary() -> Option<PathBuf> {
 }
 
 /// Percent-encodes an IRI for use as a query-parameter value.
+#[allow(
+    dead_code,
+    reason = "used by some of the test binaries that share this module"
+)]
 pub fn percent_encode(value: &str) -> String {
     let mut out = String::with_capacity(value.len() * 2);
     for byte in value.bytes() {
@@ -110,6 +114,10 @@ pub fn percent_encode(value: &str) -> String {
 /// in bytes the manifest went to some trouble to specify. One failure here was a checkout
 /// translating line endings, visible only as `\r\r\n` in a body that looked perfectly
 /// ordinary at every other level.
+#[allow(
+    dead_code,
+    reason = "used by some of the test binaries that share this module"
+)]
 pub fn trace(request: &holos_conformance::protocol::ScriptedRequest) {
     if std::env::var("HOLOS_PROTOCOL_DEBUG").is_err() {
         return;

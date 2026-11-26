@@ -425,11 +425,9 @@ fn rdfs12_makes_a_container_position_a_member() {
     assert!(
         ask(
             &engine,
-            &format!(
-                "SELECT ?p WHERE {{ ?p a <http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty> }}"
-            )
+            "SELECT ?p WHERE { ?p a <http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty> }"
         )
-        .contains(&format!("p=<http://www.w3.org/1999/02/22-rdf-syntax-ns#_1>")),
+        .contains(&"p=<http://www.w3.org/1999/02/22-rdf-syntax-ns#_1>".to_string()),
         "and rdf:_1 is one"
     );
 }
@@ -450,9 +448,7 @@ fn rdf_reifies_has_range_proposition() {
     assert_eq!(
         ask(
             &engine,
-            &format!(
-                "SELECT ?x WHERE {{ ?x a <http://www.w3.org/2000/01/rdf-schema#Proposition> }}"
-            )
+            "SELECT ?x WHERE { ?x a <http://www.w3.org/2000/01/rdf-schema#Proposition> }"
         ),
         vec![format!("x=<{EX}statement>")]
     );

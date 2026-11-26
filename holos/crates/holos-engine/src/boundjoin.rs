@@ -69,9 +69,9 @@
 
 use crate::service::pattern_variables;
 use oxrdf::Variable;
-use spargebra::Query;
 use spargebra::algebra::GraphPattern;
 use spargebra::term::GroundTerm;
+use spargebra::Query;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// How many distinct key tuples may be pushed into one `SERVICE` clause.
@@ -127,6 +127,10 @@ pub fn with_pushed_keys(pattern: &GraphPattern, keys: Vec<Option<Keys>>) -> Grap
 ///
 /// `supply` is called once per clause, in pre-order. Both public entry points go through here so
 /// the order cannot drift between the pass that collects and the pass that fills.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one rewrite, one case per pattern form"
+)]
 fn rewrite_services(
     pattern: &GraphPattern,
     bound: &BTreeSet<Variable>,
@@ -464,7 +468,10 @@ pub fn keys_from_rows(candidates: &[Variable], rows: &[Vec<Option<GroundTerm>>])
     // A variable is pushed only if every row bound it: one unbound row means that solution
     // joins against the whole remote pattern, and a `VALUES` restricting it would lose rows.
     let keep: Vec<usize> = (0..candidates.len())
-        .filter(|i| rows.iter().all(|row| row.get(*i).is_some_and(Option::is_some)))
+        .filter(|i| {
+            rows.iter()
+                .all(|row| row.get(*i).is_some_and(Option::is_some))
+        })
         .collect();
     if keep.is_empty() {
         return None;
@@ -482,12 +489,9 @@ pub fn keys_from_rows(candidates: &[Variable], rows: &[Vec<Option<GroundTerm>>])
     for row in rows {
         let mut tuple = Vec::with_capacity(keep.len());
         for i in &keep {
-            match row.get(*i).and_then(Clone::clone) {
-                Some(term) => tuple.push(term),
-                // Unreachable while `keep` is derived as above. Giving up rather than emitting
-                // an `UNDEF` keeps a bug here from quietly widening the remote query back out
-                // to the scan this exists to avoid.
-                None => return None,
+            {
+                let term = row.get(*i).and_then(Clone::clone)?;
+                tuple.push(term);
             }
         }
         let key = tuple

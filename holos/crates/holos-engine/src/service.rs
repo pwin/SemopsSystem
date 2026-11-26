@@ -70,8 +70,9 @@ impl LocalServiceHandler {
                 self.endpoints.insert(endpoint, Arc::new(data));
             }
             Some(existing) => {
-                let mut merged = Dataset::from_iter(existing.iter().map(|q| q.into_owned()));
-                for quad in data.iter() {
+                let mut merged =
+                    Dataset::from_iter(existing.iter().map(oxrdf::QuadRef::into_owned));
+                for quad in &data {
                     merged.insert(quad);
                 }
                 self.endpoints.insert(endpoint, Arc::new(merged));
@@ -161,6 +162,7 @@ impl LocalServiceHandler {
 /// Public because any service handler needs it for the same reason this module does: the
 /// trait is handed a *pattern*, and turning that into something an endpoint can answer means
 /// wrapping it in a `SELECT` of what it binds. `holos-wasm`'s HTTP handler does exactly that.
+#[must_use]
 pub fn pattern_variables(pattern: &GraphPattern) -> Vec<oxrdf::Variable> {
     let mut out: Vec<oxrdf::Variable> = Vec::new();
     let mut seen = std::collections::BTreeSet::new();
@@ -216,7 +218,7 @@ fn collect_variables(
         | GraphPattern::Reduced { inner }
         | GraphPattern::Slice { inner, .. }
         | GraphPattern::OrderBy { inner, .. } => collect_variables(inner, out, seen),
-        GraphPattern::Graph { name, inner } => {
+        GraphPattern::Graph { name, inner } | GraphPattern::Service { inner, name, .. } => {
             if let NamedNodePattern::Variable(v) = name {
                 push(v, out, seen);
             }
@@ -228,7 +230,7 @@ fn collect_variables(
             collect_variables(inner, out, seen);
             push(variable, out, seen);
         }
-        GraphPattern::Project { variables, .. } => {
+        GraphPattern::Project { variables, .. } | GraphPattern::Values { variables, .. } => {
             for v in variables {
                 push(v, out, seen);
             }
@@ -244,17 +246,6 @@ fn collect_variables(
             for (v, _) in aggregates {
                 push(v, out, seen);
             }
-        }
-        GraphPattern::Values { variables, .. } => {
-            for v in variables {
-                push(v, out, seen);
-            }
-        }
-        GraphPattern::Service { inner, name, .. } => {
-            if let NamedNodePattern::Variable(v) = name {
-                push(v, out, seen);
-            }
-            collect_variables(inner, out, seen);
         }
     }
 }
@@ -411,7 +402,7 @@ mod tests {
         )]);
         let evaluator = crate::Engine::evaluator().with_default_service_handler(handler);
         let n = match evaluator.prepare(&query).execute(&local).expect("execute") {
-            QueryResults::Solutions(iter) => iter.filter(Result::is_ok).count(),
+            QueryResults::Solutions(iter) => iter.flatten().count(),
             _ => 0,
         };
         assert_eq!(n, 1, "only ex:a is in both the local data and the service");

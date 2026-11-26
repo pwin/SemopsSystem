@@ -745,6 +745,7 @@ impl Engine {
     /// partial copy of this one, and the copies fell behind: `Engine::query` missed 0.21's
     /// rewrites until 0.23.0, and `query_prepared_with_handler`, which the browser editor
     /// sends every query through, never had the index join at all.
+    #[allow(clippy::too_many_lines, reason = "one evaluation, read top to bottom")]
     fn run<'a>(
         view: &'a DatasetView<'a>,
         parsed: spargebra::Query,
@@ -761,7 +762,13 @@ impl Engine {
             let mut step_options = options.clone();
             step_options.explain = false;
             let mut evaluate = |pattern: &spargebra::algebra::GraphPattern| {
-                Self::solutions_of(view, pattern, dataset.clone(), base_iri.clone(), &step_options)
+                Self::solutions_of(
+                    view,
+                    pattern,
+                    dataset.clone(),
+                    base_iri.clone(),
+                    &step_options,
+                )
             };
             crate::pfunc::stage_query(parsed, &mut evaluate)?
         } else {
@@ -804,8 +811,7 @@ impl Engine {
                 view.store(),
                 budget,
                 options.spill_bytes.is_some(),
-            )
-            {
+            ) {
                 // Before the topology rewrite and the bind join, because this re-enters the
                 // evaluator with the `DISTINCT` removed and both would then run on that
                 // inner query anyway.
@@ -1002,8 +1008,7 @@ impl Engine {
         // Checked by both callers before they route here.
         let held = plan.held().unwrap_or_default();
         let token = deadline.as_ref().map(Deadline::token);
-        let variables: std::sync::Arc<[spargebra::term::Variable]> =
-            plan.projected.clone().into();
+        let variables: std::sync::Arc<[spargebra::term::Variable]> = plan.projected.clone().into();
 
         // The same conditions as the bind join itself: nothing in the options may change
         // what the body means. See `query_with`.
@@ -1253,12 +1258,10 @@ impl Engine {
             (results?, Some(explanation))
         } else {
             (
-                prepared
-                    .execute(view)
-                    .map_err(|e| match &deadline {
-                        Some(guard) => guard.explain(e),
-                        None => e,
-                    })?,
+                prepared.execute(view).map_err(|e| match &deadline {
+                    Some(guard) => guard.explain(e),
+                    None => e,
+                })?,
                 None,
             )
         };
@@ -1424,7 +1427,7 @@ fn load_parsed<R: Read + Send>(
 /// A row the evaluator refused with its own bare `Cancelled` — the token tripped at a read
 /// — is answered with the guard's reason instead, so the client is told which limit and
 /// what would change it, the same way every other failure is told.
-fn guard_with_deadline<'a>(results: QueryResults<'a>, deadline: Deadline) -> QueryResults<'a> {
+fn guard_with_deadline(results: QueryResults<'_>, deadline: Deadline) -> QueryResults<'_> {
     match results {
         QueryResults::Solutions(solutions) => {
             let variables = std::sync::Arc::from(solutions.variables().to_vec());
@@ -1447,7 +1450,7 @@ fn guard_with_deadline<'a>(results: QueryResults<'a>, deadline: Deadline) -> Que
             })))
         }
         // A boolean is already computed; there is nothing left to interrupt.
-        other => other,
+        boolean @ QueryResults::Boolean(_) => boolean,
     }
 }
 
@@ -1681,11 +1684,13 @@ mod tests {
             &format!("{px} ASK {{ ex:alice ex:knows*/ex:salary ?s }}")
         ));
         // A subquery is not a way around it either.
-        assert!(solutions(
-            &view,
-            &format!("{px} SELECT ?s WHERE {{ {{ SELECT ?s WHERE {{ ?s ex:salary ?x }} }} }}")
-        )
-        .is_empty());
+        assert_eq!(
+            solutions(
+                &view,
+                &format!("{px} SELECT ?s WHERE {{ {{ SELECT ?s WHERE {{ ?s ex:salary ?x }} }} }}")
+            ),
+            [] as [String; 0]
+        );
     }
 
     #[test]
@@ -1907,11 +1912,13 @@ mod tests {
         ));
         let session = Session::open(e.store(), Principal::anonymous(), policy).unwrap();
         let view = e.view(&session);
-        assert!(solutions(
-            &view,
-            "SELECT ?s ?o WHERE { ?s ?p ?o FILTER(isTRIPLE(?o)) }"
-        )
-        .is_empty());
+        assert_eq!(
+            solutions(
+                &view,
+                "SELECT ?s ?o WHERE { ?s ?p ?o FILTER(isTRIPLE(?o)) }"
+            ),
+            [] as [String; 0]
+        );
         // The asserted triple itself is untouched.
         assert!(ask(
             &view,

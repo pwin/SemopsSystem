@@ -47,10 +47,7 @@ fn engine() -> Engine {
             .insert(
                 quad(
                     "died",
-                    Literal::new_typed_literal(
-                        format!("{year:04}-{month:02}-{dom:02}"),
-                        xsd::DATE,
-                    ),
+                    Literal::new_typed_literal(format!("{year:04}-{month:02}-{dom:02}"), xsd::DATE),
                 )
                 .as_ref(),
             )
@@ -197,10 +194,17 @@ fn a_tie_heavy_sort_is_the_same_rows_as_the_evaluators() {
             .map(|row| row.split_once('\t').expect("two columns").1.to_owned())
             .collect()
     };
-    assert_eq!(ranks(&spilled), ranks(&theirs), "the ranks are not in order");
+    assert_eq!(
+        ranks(&spilled),
+        ranks(&theirs),
+        "the ranks are not in order"
+    );
     spilled.sort();
     theirs.sort();
-    assert_eq!(spilled, theirs, "different rows, not merely a different order");
+    assert_eq!(
+        spilled, theirs,
+        "different rows, not merely a different order"
+    );
 }
 
 /// The differential test is worth nothing if the small budget never actually spilled.
@@ -221,7 +225,9 @@ fn a_small_budget_really_writes_runs() {
     for i in 0..ROWS {
         let value = Literal::new_typed_literal(format!("{i:06}"), xsd::INTEGER);
         let key = vec![Some(ExpressionTerm::from(Term::from(value.clone())))];
-        sorted.push(key, vec![Some(Term::from(value))]).expect("push");
+        sorted
+            .push(key, vec![Some(Term::from(value))])
+            .expect("push");
     }
     assert!(sorted.runs() > 1, "nothing spilled: {} runs", sorted.runs());
 
@@ -253,9 +259,7 @@ fn ties_keep_arrival_order_across_a_spill() {
     let engine = engine();
     let session = Session::unrestricted(engine.store()).expect("session");
     let view = engine.view(&session);
-    let query = format!(
-        "PREFIX ex: <{EX}> SELECT ?s ?r WHERE {{ ?s ex:rank ?r }} ORDER BY ?r"
-    );
+    let query = format!("PREFIX ex: <{EX}> SELECT ?s ?r WHERE {{ ?s ex:rank ?r }} ORDER BY ?r");
 
     let spilled = rows(&view, &query, &spilling());
     assert_eq!(spilled.len(), ROWS);
@@ -274,7 +278,10 @@ fn ties_keep_arrival_order_across_a_spill() {
     for (rank, subjects) in &by_rank {
         let mut sorted = subjects.clone();
         sorted.sort();
-        assert_eq!(subjects, &sorted, "rank {rank} came back out of arrival order");
+        assert_eq!(
+            subjects, &sorted,
+            "rank {rank} came back out of arrival order"
+        );
     }
 }
 
@@ -327,7 +334,9 @@ fn a_sort_that_spills_too_much_is_refused() {
     let query = format!("PREFIX ex: <{EX}> SELECT ?s ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o");
 
     // Spills constantly, and is allowed a fraction of what that adds up to.
-    let options = QueryOptions::new().spilling(4 * 1024).with_spill_disk(64 * 1024);
+    let options = QueryOptions::new()
+        .spilling(4 * 1024)
+        .with_spill_disk(64 * 1024);
     let error = match Engine::query_with(&view, &query, &options) {
         Err(e) => e,
         Ok((results, _)) => {
@@ -367,9 +376,8 @@ fn a_sort_that_never_spills_ignores_the_ceiling() {
     let engine = engine();
     let session = Session::unrestricted(engine.store()).expect("session");
     let view = engine.view(&session);
-    let query = format!(
-        "PREFIX ex: <{EX}> SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 5000"
-    );
+    let query =
+        format!("PREFIX ex: <{EX}> SELECT ?o WHERE {{ ?s ex:died ?o }} ORDER BY ?o LIMIT 5000");
     let options = QueryOptions::new().spilling(64 << 20).with_spill_disk(1);
     assert_eq!(rows(&view, &query, &options).len(), ROWS);
 }

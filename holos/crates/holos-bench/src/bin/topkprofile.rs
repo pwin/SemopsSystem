@@ -46,9 +46,7 @@ struct Phase {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
-    let store_path = args
-        .next()
-        .ok_or("topkprofile <store> [predicate] [k]")?;
+    let store_path = args.next().ok_or("topkprofile <store> [predicate] [k]")?;
     let predicate = args
         .next()
         .unwrap_or_else(|| "http://schema.org/deathDate".to_owned());
@@ -65,8 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         opened.elapsed().as_secs_f64()
     );
 
-    let sparql =
-        format!("SELECT ?o WHERE {{ ?s <{predicate}> ?o }} ORDER BY DESC(?o) LIMIT {k}");
+    let sparql = format!("SELECT ?o WHERE {{ ?s <{predicate}> ?o }} ORDER BY DESC(?o) LIMIT {k}");
     println!("{sparql}\n");
     let parsed = SparqlParser::new().parse_query(&sparql)?;
     let plan = topk::plan(&parsed).ok_or("not a shape the heap answers")?;
@@ -186,7 +183,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if pass == 2 {
                 let answer: Vec<String> = held
                     .iter()
-                    .map(|k| k.clone().map(Term::from).map_or_else(String::new, |t| t.to_string()))
+                    .map(|k| {
+                        k.clone()
+                            .map(Term::from)
+                            .map_or_else(String::new, |t| t.to_string())
+                    })
                     .collect();
                 println!("answer: {}\n", answer.join(" "));
             }

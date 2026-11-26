@@ -77,7 +77,10 @@ ex:bob a ex:Person .
     );
     match CompiledShapes::compile(&store, options()) {
         Err(ShaclError::Unsupported(what)) => {
-            assert!(what.contains("sh:target"), "the refusal should name the construct, got: {what}");
+            assert!(
+                what.contains("sh:target"),
+                "the refusal should name the construct, got: {what}"
+            );
             // The message reaches a Python caller and the CLI as it is, so it names the
             // engine they can choose, in one line.
             assert!(

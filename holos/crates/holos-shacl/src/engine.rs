@@ -26,13 +26,13 @@
 use crate::bridge::{self, Bridged};
 use crate::incremental::Change;
 use crate::{Options, ShaclError};
+use holos_store::Store;
+use oxrdf::Graph as OxGraph;
+use rustc_hash::FxHashMap;
 use shacl::model::Graph as EngineGraph;
 use shacl::report::ValidationReport;
 use shacl::shapes::{ShapeId, Shapes as EngineShapes};
 use shacl::{validate as engine_validate, TermId as EngineId};
-use holos_store::Store;
-use oxrdf::Graph as OxGraph;
-use rustc_hash::FxHashMap;
 
 /// Whether a quad could change what the shapes compile to.
 ///
@@ -94,7 +94,8 @@ fn in_graph(graph_name: Option<holos_core::TermId>, filter: holos_store::GraphFi
 }
 
 /// `sh:SPARQLConstraintComponent`.
-pub(crate) const SPARQL_CONSTRAINT_COMPONENT: &str = "http://www.w3.org/ns/shacl#SPARQLConstraintComponent";
+pub(crate) const SPARQL_CONSTRAINT_COMPONENT: &str =
+    "http://www.w3.org/ns/shacl#SPARQLConstraintComponent";
 
 /// A term of a result from the adapted engine: the store's id where the bridge carried the
 /// term over from the store, and the term itself, for one it did not (a filled-in message).
@@ -136,7 +137,7 @@ impl std::fmt::Debug for EngineRun {
         f.debug_struct("EngineRun")
             .field("triples", &self.bridged.len())
             .field("shapes", &self.shapes.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -334,7 +335,8 @@ impl EngineRun {
         let component = self.term_for_iri(SPARQL_CONSTRAINT_COMPONENT);
         let terms = &self.bridged.terms;
         let reverse = self.bridged.reverse();
-        let reported = |id: EngineId| -> Reported { (reverse.get(&id).copied(), terms.to_oxrdf(id)) };
+        let reported =
+            |id: EngineId| -> Reported { (reverse.get(&id).copied(), terms.to_oxrdf(id)) };
         let delegated = |c: EngineId| {
             Some(c) == component
                 || matches!(terms.to_oxrdf(c), oxrdf::Term::NamedNode(n) if !n.as_str().starts_with("http://www.w3.org/ns/shacl#"))
@@ -684,7 +686,7 @@ mod tests {
     use holos_store::GraphFilter;
     use oxrdfio::{RdfFormat, RdfParser};
 
-    const DOC: &str = r#"
+    const DOC: &str = r"
 @prefix ex:   <http://example.com/> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -697,7 +699,7 @@ ex:PersonShape a sh:NodeShape ;
 
 ex:alice a ex:Person ; ex:age 30 .
 ex:bob   a ex:Person ; ex:age 900 .
-"#;
+";
 
     fn store_from(turtle: &str) -> Store {
         let mut store = Store::new();
@@ -736,7 +738,7 @@ ex:bob   a ex:Person ; ex:age 900 .
     #[test]
     fn a_clean_store_conforms() {
         let store = store_from(
-            r#"
+            r"
 @prefix ex:   <http://example.com/> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -746,7 +748,7 @@ ex:PersonShape a sh:NodeShape ;
     sh:targetClass ex:Person ;
     sh:property [ sh:path ex:age ; sh:datatype xsd:integer ; sh:maxInclusive 150 ] .
 ex:alice a ex:Person ; ex:age 30 .
-"#,
+",
         );
         let mut run = EngineRun::prepare(
             &store,

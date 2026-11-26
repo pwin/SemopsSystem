@@ -246,6 +246,10 @@ mod tests {
     use oxrdf::vocab::{rdf, xsd};
     use oxrdf::Triple;
 
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "the tests build each term inline"
+    )]
     fn round_trip(dict: &mut Dictionary, term: Term) -> TermId {
         let id = dict.encode(term.as_ref()).unwrap();
         assert_eq!(

@@ -346,6 +346,7 @@ pub struct Shape {
 /// A compiled shapes graph.
 #[derive(Debug, Clone)]
 pub struct Shapes {
+    #[allow(clippy::struct_field_names, reason = "the shapes of `Shapes`")]
     shapes: Vec<Shape>,
     paths: Vec<Path>,
     by_id: FxHashMap<TermId, ShapeIdx>,
@@ -498,7 +499,7 @@ fn referenced_shapes(shape: &Shape) -> Vec<ShapeIdx> {
             | Constraint::MemberShape(i)
             | Constraint::SomeValue(i) => out.push(*i),
             Constraint::ReifierShape { shape, .. } | Constraint::NodeByExpression { shape, .. } => {
-                out.push(*shape)
+                out.push(*shape);
             }
             Constraint::And(v) | Constraint::Or(v) | Constraint::Xone(v) => {
                 out.extend(v.iter().copied());
@@ -1040,6 +1041,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    #[allow(clippy::too_many_lines, reason = "one case per constraint component")]
     fn compile_constraints(&mut self, node: TermId) -> Result<Vec<Constraint>, ShaclError> {
         let g = self.graph;
         let sh = self.sh;

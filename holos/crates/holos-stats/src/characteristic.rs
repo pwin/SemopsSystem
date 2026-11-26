@@ -128,10 +128,12 @@ impl Statistics {
     ///
     /// Propagates any error raised while scanning the store.
     pub fn build(store: &Store, graph: GraphFilter) -> Result<Self> {
-        let mut stats = Self::default();
         // Read first, so a write that lands during the scan makes this snapshot stale by
         // its own account rather than silently claiming the generation after it.
-        stats.generation = store.generation();
+        let mut stats = Self {
+            generation: store.generation(),
+            ..Self::default()
+        };
         // Counted, not collected: `close` sees each subject exactly once and knows which
         // predicates it carried, so a set here would only be rediscovering that. The
         // docstring has why this is exact and what it depends on.

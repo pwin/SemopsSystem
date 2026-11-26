@@ -14,6 +14,7 @@
 use std::process::Command;
 
 #[path = "../src/ui.rs"]
+#[allow(dead_code, reason = "the server uses the rest of the module")]
 mod ui;
 
 fn node_available() -> bool {

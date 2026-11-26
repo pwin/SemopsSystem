@@ -448,7 +448,7 @@ mod tests {
                 runs.push(exact(n).into_boxed_slice(), vec![n].into_boxed_slice())
                     .expect("push");
             }
-            assert!(!runs.paths.is_empty());
+            assert_ne!(runs.paths, [] as [std::path::PathBuf; 0]);
         }
         let left: Vec<_> = std::fs::read_dir(scratch.path())
             .expect("read dir")
@@ -462,6 +462,9 @@ mod tests {
         let scratch = dir();
         let runs = DictRuns::new(scratch.path(), "str2id", usize::MAX);
         assert!(runs.is_empty());
-        assert!(drain(runs.merge().expect("merge")).is_empty());
+        assert_eq!(
+            drain(runs.merge().expect("merge")),
+            [] as [(Box<[u8]>, Box<[u8]>); 0]
+        );
     }
 }

@@ -60,7 +60,9 @@ fn report_skips(name: &str, report: &Report) {
         // Up to the em dash: the reason a test was skipped, without the diff that follows
         // it. Grouping on the whole text would put every one of them on its own line and
         // defeat the tally.
-        let category = why.split_once(" — ").map_or(why.as_str(), |(head, _)| head.trim());
+        let category = why
+            .split_once(" — ")
+            .map_or(why.as_str(), |(head, _)| head.trim());
         *by_reason.entry(category).or_default() += 1;
     }
     eprintln!("{name}: {} skipped", report.skipped.len());
@@ -91,7 +93,11 @@ fn portable_id(id: &str) -> String {
 fn ratchet(name: &str, report: &Report) {
     report_skips(name, report);
     let path = baseline_dir().join(format!("{name}.failures"));
-    let actual: BTreeSet<String> = report.failed.iter().map(|(id, _)| portable_id(id)).collect();
+    let actual: BTreeSet<String> = report
+        .failed
+        .iter()
+        .map(|(id, _)| portable_id(id))
+        .collect();
 
     if std::env::var("HOLOS_UPDATE_CONFORMANCE").is_ok() {
         let mut body = format!(
@@ -100,7 +106,11 @@ fn ratchet(name: &str, report: &Report) {
             report.summary()
         );
         for (id, why) in &report.failed {
-            body.push_str(&format!("{}\t{}\n", portable_id(id), why.replace(['\n', '\t'], " ")));
+            body.push_str(&format!(
+                "{}\t{}\n",
+                portable_id(id),
+                why.replace(['\n', '\t'], " ")
+            ));
         }
         std::fs::create_dir_all(baseline_dir()).expect("creating the baseline directory");
         std::fs::write(&path, body).expect("writing the baseline");
