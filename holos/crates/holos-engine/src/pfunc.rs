@@ -621,11 +621,7 @@ impl Stager<'_, '_> {
             TermPattern::Variable(v) => (v.clone(), None),
             other => {
                 let v = self.fresh(what);
-                let constant = match other {
-                    TermPattern::NamedNode(n) => Expression::NamedNode(n.clone()),
-                    TermPattern::Literal(l) => Expression::Literal(l.clone()),
-                    _ => Expression::Literal(Literal::new_simple_literal("")),
-                };
+                let constant = pattern_expression(other);
                 (
                     v.clone(),
                     Some(Expression::Equal(
@@ -635,6 +631,35 @@ impl Stager<'_, '_> {
                 )
             }
         }
+    }
+}
+
+/// The expression that evaluates to what a term pattern denotes: the term, the variable, or
+/// for an RDF 1.2 triple term `TRIPLE(…)` of its parts, at any depth.
+///
+/// It used to answer the empty string for anything but an IRI or a literal. The outputs it
+/// is compared with are a list's length and an index, integers that equal neither a triple
+/// term nor "", so no answer changed; the stand-in only waited for an output it would match.
+fn pattern_expression(t: &TermPattern) -> Expression {
+    match t {
+        TermPattern::Variable(v) => Expression::Variable(v.clone()),
+        TermPattern::NamedNode(n) => Expression::NamedNode(n.clone()),
+        TermPattern::Literal(l) => Expression::Literal(l.clone()),
+        // A blank node in a pattern is a variable that is not projected, as `unblank` has it.
+        TermPattern::BlankNode(b) => {
+            Expression::Variable(Variable::new_unchecked(format!("__semops_b_{}", b.as_str())))
+        }
+        TermPattern::Triple(triple) => Expression::FunctionCall(
+            Function::Triple,
+            vec![
+                pattern_expression(&triple.subject),
+                match &triple.predicate {
+                    NamedNodePattern::NamedNode(n) => Expression::NamedNode(n.clone()),
+                    NamedNodePattern::Variable(v) => Expression::Variable(v.clone()),
+                },
+                pattern_expression(&triple.object),
+            ],
+        ),
     }
 }
 

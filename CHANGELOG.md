@@ -10,6 +10,12 @@ and `tarka/`, for their history before the workspace.
   node everywhere but there, so the pattern matched other focus nodes' reified statements:
   a constraint reported the wrong nodes, and the right ones more than once. In `shacl` and in
   HOLOS, for `sh:select` and `sh:ask` validators alike.
+- HOLOS binds the variables inside an RDF 1.2 triple term in a `SERVICE` clause. They were
+  left out of the query sent to the service, so in
+  `SERVICE <…> { ?r rdf:reifies <<( ?s ?p ?o )>> }` only `?r` came back bound.
+- HOLOS refuses a rule whose `CONSTRUCT` template has a blank node inside a triple term, as
+  it already refused one outside: the blank node is fresh every round, so the rule would
+  never stop deriving.
 
 ## 0.31.0, 25 November 2026
 

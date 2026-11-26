@@ -177,18 +177,35 @@ fn collect_variables(
 ) {
     use spargebra::term::{NamedNodePattern, TermPattern};
 
-    let push = |v: &oxrdf::Variable,
-                out: &mut Vec<oxrdf::Variable>,
-                seen: &mut std::collections::BTreeSet<String>| {
+    fn push(
+        v: &oxrdf::Variable,
+        out: &mut Vec<oxrdf::Variable>,
+        seen: &mut std::collections::BTreeSet<String>,
+    ) {
         if seen.insert(v.as_str().to_owned()) {
             out.push(v.clone());
         }
-    };
-    let from_term = |t: &TermPattern, out: &mut Vec<_>, seen: &mut _| {
-        if let TermPattern::Variable(v) = t {
-            push(v, out, seen);
+    }
+    // An RDF 1.2 triple term has variable positions of its own, at any depth. Skipped, as
+    // they were, `?s` in `<<( ?s ?p ?o )>>` was left out of the `SELECT` a service is asked,
+    // and came back unbound.
+    fn from_term(
+        t: &TermPattern,
+        out: &mut Vec<oxrdf::Variable>,
+        seen: &mut std::collections::BTreeSet<String>,
+    ) {
+        match t {
+            TermPattern::Variable(v) => push(v, out, seen),
+            TermPattern::Triple(triple) => {
+                from_term(&triple.subject, out, seen);
+                if let NamedNodePattern::Variable(v) = &triple.predicate {
+                    push(v, out, seen);
+                }
+                from_term(&triple.object, out, seen);
+            }
+            _ => {}
         }
-    };
+    }
 
     match pattern {
         GraphPattern::Bgp { patterns } => {
@@ -406,5 +423,65 @@ mod tests {
             _ => 0,
         };
         assert_eq!(n, 1, "only ex:a is in both the local data and the service");
+    }
+
+    /// The variables inside an RDF 1.2 triple term are the pattern's too, at any depth. They
+    /// were skipped, so a service was never asked for them and `?s` and `?o` came back
+    /// unbound.
+    #[test]
+    fn a_service_binds_the_variables_inside_a_triple_term() {
+        let reifies = NamedNode::new_unchecked("http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies");
+        let statement = oxrdf::Triple::new(ex("a"), ex("knows"), ex("b"));
+        let remote = Dataset::from_iter([Quad::new(
+            ex("r"),
+            reifies,
+            statement,
+            GraphName::DefaultGraph,
+        )]);
+        let handler = LocalServiceHandler::new().with_endpoint(ex("remote"), remote);
+        let query = SparqlParser::new()
+            .parse_query(
+                "SELECT ?s ?o WHERE { SERVICE <http://example.org/remote> { \
+                 ?r <http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies> \
+                 <<( ?s <http://example.org/knows> ?o )>> } }",
+            )
+            .expect("parse");
+        let evaluator = crate::Engine::evaluator().with_default_service_handler(handler);
+        let local = Dataset::new();
+        let QueryResults::Solutions(solutions) = evaluator
+            .prepare(&query)
+            .execute(&local)
+            .expect("execute")
+        else {
+            panic!("a SELECT gives solutions");
+        };
+        let rows: Vec<_> = solutions.collect::<Result<_, _>>().expect("rows");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].get("s"), Some(&ex("a").into()));
+        assert_eq!(rows[0].get("o"), Some(&ex("b").into()));
+    }
+
+    #[test]
+    fn pattern_variables_reach_into_nested_triple_terms() {
+        let spargebra::Query::Select { pattern, .. } = SparqlParser::new()
+            .parse_query(
+                "SELECT * WHERE { ?r <http://example.org/says> \
+                 <<( ?a ?p <<( ?b <http://example.org/q> ?c )>> )>> }",
+            )
+            .expect("parse")
+        else {
+            panic!("a SELECT");
+        };
+        // The body a SERVICE carries, not the projection `SELECT *` already lists them in.
+        let spargebra::algebra::GraphPattern::Project { inner, .. } = pattern else {
+            panic!("a SELECT body is under its projection");
+        };
+        let names: Vec<String> = pattern_variables(&inner)
+            .iter()
+            .map(|v| v.as_str().to_owned())
+            .collect();
+        for wanted in ["r", "a", "p", "b", "c"] {
+            assert!(names.iter().any(|n| n == wanted), "{wanted} in {names:?}");
+        }
     }
 }

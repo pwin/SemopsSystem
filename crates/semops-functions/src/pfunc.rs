@@ -344,6 +344,12 @@ impl PropertyFunction {
         mu: &Bindings,
         regexes: &mut HashMap<String, Regex>,
     ) -> Result<Vec<Bindings>, String> {
+        // A blank node or an RDF 1.2 triple term gives no value, deliberately. Every function
+        // evaluated here takes strings or IRIs (split, concat, str, splitIRI), where a triple
+        // term is a type error, which in SPARQL is no solution; and none of them produces a
+        // triple term, so one written as an output can never match. A list written in the
+        // query, the one place a triple term could be a value rather than an argument, is
+        // refused before it gets here.
         let value = |t: &TermPattern| -> Option<Term> {
             match t {
                 TermPattern::Variable(v) => mu.get(v).cloned(),

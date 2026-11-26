@@ -320,3 +320,36 @@ fn a_substitution_reaches_the_step_that_uses_it_and_no_other() {
     tags.sort();
     assert_eq!(tags, ["\"green\"", "\"red\""]);
 }
+
+/// RDF 1.2 triple terms are list members like any other term: `list:member` puts the member
+/// into a path pattern, which matches them, variables inside included.
+#[test]
+fn triple_terms_are_list_members_like_any_other_term() {
+    let mut e = Engine::new();
+    e.bulk_load(
+        r#"@prefix ex: <http://example.com/> .
+ex:said ex:items ( <<( ex:a ex:knows ex:b )>> ex:other ) .
+ex:blank ex:items ( "" ex:other ) .
+"#
+        .as_bytes(),
+        RdfFormat::Turtle,
+        None,
+    )
+    .expect("load");
+    assert_eq!(
+        rows(
+            &e,
+            "SELECT ?s WHERE { ?s ex:items ?l . ?l list:member <<( ex:a ex:knows ex:b )>> }"
+        ),
+        ["s=<http://example.com/said>"],
+        "a ground triple term: only the list that holds it"
+    );
+    assert_eq!(
+        rows(
+            &e,
+            "SELECT ?who WHERE { ?s ex:items ?l . ?l list:member <<( ex:a ex:knows ?who )>> }"
+        ),
+        ["who=<http://example.com/b>"],
+        "a variable inside the triple term is bound by the match"
+    );
+}

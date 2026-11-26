@@ -255,9 +255,19 @@ fn check(query: &Query) -> Result<(), String> {
     else {
         return Err("a rule must be a CONSTRUCT: SELECT, ASK and DESCRIBE derive nothing".into());
     };
+    // A blank node inside an RDF 1.2 triple term is as fresh every round as one outside.
+    fn has_blank_node(term: &TermPattern) -> bool {
+        match term {
+            TermPattern::BlankNode(_) => true,
+            TermPattern::Triple(triple) => {
+                has_blank_node(&triple.subject) || has_blank_node(&triple.object)
+            }
+            _ => false,
+        }
+    }
     for triple in template {
         for term in [&triple.subject, &triple.object] {
-            if matches!(term, TermPattern::BlankNode(_)) {
+            if has_blank_node(term) {
                 return Err(
                     "the template contains a blank node, which is a fresh node every round, \
                      so the rule would derive something new for ever"
@@ -534,6 +544,15 @@ mod tests {
             ("SELECT ?x WHERE { ?x ex:parentOf ?y }", "no rules"),
             (
                 "CONSTRUCT { ?x ex:knows _:b } WHERE { ?x ex:parentOf ?y }",
+                "blank node",
+            ),
+            // Inside a triple term too, at any depth.
+            (
+                "CONSTRUCT { ?x ex:said <<( _:b ex:knows ?y )>> } WHERE { ?x ex:parentOf ?y }",
+                "blank node",
+            ),
+            (
+                "CONSTRUCT { ?x ex:said <<( ?x ex:heard <<( _:b ex:knows ?y )>> )>> } WHERE { ?x ex:parentOf ?y }",
                 "blank node",
             ),
             (
