@@ -566,6 +566,15 @@ fn fold_term_pattern(
             Some(Term::Literal(l)) => T::Literal(l),
             _ => t.clone(),
         },
+        // An RDF 1.2 triple term, `<<( $this ?p ?o )>>`, has variable positions of its own,
+        // at any depth. Passed through unchanged, as it was, a pre-bound `$this` inside one
+        // stayed free and the pattern matched every reified statement, whatever its subject.
+        #[cfg(feature = "rdf-12")]
+        T::Triple(triple) => T::Triple(Box::new(spargebra::term::TriplePattern {
+            subject: fold_term_pattern(&triple.subject, pre),
+            predicate: fold_named_node_pattern(&triple.predicate, pre),
+            object: fold_term_pattern(&triple.object, pre),
+        })),
         other => other.clone(),
     }
 }
